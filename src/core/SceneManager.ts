@@ -4,6 +4,7 @@ import { Game } from './Game';
 export interface Scene {
   readonly name: string;
   readonly container: PIXI.Container;
+  prepare?(): Promise<void>;
   onEnter?(): void;
   onExit?(): void;
   update?(dt: number): void;
@@ -24,6 +25,14 @@ class SceneManagerClass {
       });
       this.hooked = true;
     }
+  }
+
+  async prepare(name: string): Promise<void> {
+    const scene = this.scenes.get(name);
+    if (!scene) {
+      throw new Error(`Scene "${name}" is not registered`);
+    }
+    await scene.prepare?.();
   }
 
   switchTo(name: string): void {

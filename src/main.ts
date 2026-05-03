@@ -3,6 +3,7 @@ import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
 import { SceneManager } from '@/core/SceneManager';
 import { Platform } from '@/core/PlatformService';
+import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { CloudSyncManager } from '@/managers/CloudSyncManager';
 import { BowlScene } from '@/scenes/BowlScene';
 import { CatalogScene } from '@/scenes/CatalogScene';
@@ -19,9 +20,17 @@ async function main(): Promise<void> {
     }
 
     Game.init(canvas);
+    const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
+    Game.stage.addChild(loadingOverlay.container);
+    loadingOverlay.setProgress(0.08);
+    await loadingOverlay.loadAssets();
+    loadingOverlay.setProgress(0.28);
+
     CloudSyncManager.prewarm();
+    loadingOverlay.setProgress(0.48);
     const startupSync = await CloudSyncManager.awaitAuthoritativeStartup();
     console.log(`[CloudSync] startup gate result status=${startupSync.status}, reason=${startupSync.reason}`);
+    loadingOverlay.setProgress(0.72);
     AudioManager.initBackgroundMusic();
     Platform.onHide(() => {
       void CloudSyncManager.flushNow('app-hide');
@@ -35,6 +44,9 @@ async function main(): Promise<void> {
     SceneManager.register(bowlScene);
     SceneManager.register(fruitSliceScene);
     SceneManager.register(catalogScene);
+    loadingOverlay.setProgress(1);
+    Game.stage.removeChild(loadingOverlay.container);
+    loadingOverlay.destroy();
     SceneManager.switchTo('home');
   } catch (error) {
     console.error('[main] boot failed', error);

@@ -4,13 +4,9 @@ import { Game } from '@/core/Game';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { getBowlLevelIndex } from '@/game/BowlProgress';
+import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
 import { TextureCache } from '@/utils/TextureCache';
-import {
-  loadSettingsButtonTexture,
-  mountSettingsButtonSprite,
-  SETTINGS_BTN_TEXTURE_KEY,
-} from '@/utils/settingsButtonSprite';
 
 /** 底栏雪碧图：左图鉴、右果切（进包路径；未放入时回退矢量） */
 const HOME_FOOTER_SHEET = 'assets/images/home_footer_buttons.png';
@@ -45,14 +41,14 @@ export class HomeScene implements Scene {
   private homeLogoMaxHeight = 0;
   private bgFill!: PIXI.Graphics;
   private gradFill!: PIXI.Graphics;
-  private readonly gearBtnRoot = new PIXI.Container();
   private readonly gameClubFallbackRoot = new PIXI.Container();
   private gameClubButton: ReturnType<NonNullable<typeof wx.createGameClubButton>> | null = null;
+  private enteringBowl = false;
 
   constructor() {
     this.settingsOverlay = new SettingsPauseOverlay(Game.logicWidth, Game.logicHeight, {
       onReplay: () => {
-        SceneManager.switchTo('bowl');
+        void this.enterBowlWithLoading();
       },
       onHome: () => {},
       onContinue: () => {},
@@ -94,9 +90,7 @@ export class HomeScene implements Scene {
       TextureCache.load('__home_bg', 'assets/images/home_bg_summer.jpg'),
       TextureCache.load('home_play_btn', HOME_PLAY_BTN_TEXTURE),
       TextureCache.load('game_logo_title', HOME_LOGO_TITLE_TEXTURE),
-      loadSettingsButtonTexture(),
     ]);
-    mountSettingsButtonSprite(this.gearBtnRoot, TextureCache.get(SETTINGS_BTN_TEXTURE_KEY), 48);
     const tex = TextureCache.get('__home_bg');
     if (!tex) {
       this.applyPlayEntryArt();
@@ -217,7 +211,7 @@ export class HomeScene implements Scene {
     this.gradFill.endFill();
     this.container.addChild(this.bgFill, this.gradFill);
 
-    /** 无顶栏木条：背景全屏，仅保留左上角设置 */
+    /** 无顶栏木条：背景全屏 */
     const contentTop = top + 8;
     const bottomBarTop = H - 100;
     const btnW = 440;
@@ -257,7 +251,7 @@ export class HomeScene implements Scene {
     this.playEntryRoot.hitArea = new PIXI.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH);
     this.playEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
-      SceneManager.switchTo('bowl');
+      void this.enterBowlWithLoading();
     });
     this.container.addChild(this.playEntryRoot);
 
@@ -293,17 +287,35 @@ export class HomeScene implements Scene {
     const gameClubY = Math.min(H - 48, Math.max(sideBtnY + 72, H - 76));
     this.mountGameClubFallback(Math.round(W * 0.5), gameClubY);
 
-    this.gearBtnRoot.position.set(40, top + 36);
-    this.gearBtnRoot.eventMode = 'static';
-    this.gearBtnRoot.cursor = 'pointer';
-    mountSettingsButtonSprite(this.gearBtnRoot, null, 48);
-    this.gearBtnRoot.on('pointertap', () => {
-      AudioManager.playButtonSound();
-      this.settingsOverlay.visible = true;
-    });
-    this.container.addChild(this.gearBtnRoot);
-
     this.container.addChild(this.settingsOverlay);
+  }
+
+  private async enterBowlWithLoading(): Promise<void> {
+    if (this.enteringBowl) {
+      return;
+    }
+    this.enteringBowl = true;
+    this.hideGameClubNativeButton();
+    const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
+    Game.stage.addChild(loadingOverlay.container);
+    try {
+      loadingOverlay.setProgress(0.12);
+      await loadingOverlay.loadAssets();
+      loadingOverlay.setProgress(0.42);
+      await SceneManager.prepare('bowl');
+      loadingOverlay.setProgress(1);
+      SceneManager.switchTo('bowl');
+    } catch (error) {
+      console.error('[HomeScene] enter bowl failed', error);
+      const api = typeof wx !== 'undefined' ? wx : null;
+      api?.showToast?.({ title: '加载失败，请重试', icon: 'none' });
+    } finally {
+      if (loadingOverlay.container.parent) {
+        loadingOverlay.container.parent.removeChild(loadingOverlay.container);
+      }
+      loadingOverlay.destroy();
+      this.enteringBowl = false;
+    }
   }
 
   private mountGameClubFallback(x: number, y: number): void {

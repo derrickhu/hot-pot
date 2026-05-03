@@ -27,6 +27,12 @@ import { FRUIT_CONFIGS, FRUIT_MAP, type FruitId } from '@/config/fruits';
 import { getBowlLevelIndex, recordBowlBadgeUnlocked, setBowlLevelIndex } from '@/game/BowlProgress';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
+import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
+import {
+  loadSettingsButtonTexture,
+  mountSettingsButtonSprite,
+  SETTINGS_BTN_TEXTURE_KEY,
+} from '@/utils/settingsButtonSprite';
 import { FruitItem } from '@/gameobjects/FruitItem';
 import { BowlFailSettlementOverlay } from '@/gameobjects/BowlFailSettlementOverlay';
 import { BowlBadgeUnlockOverlay } from '@/gameobjects/BowlBadgeUnlockOverlay';
@@ -349,6 +355,10 @@ export class BowlScene implements Scene {
     this.startRound();
   }
 
+  prepare(): Promise<void> {
+    return this.ensureTexturesPreloaded();
+  }
+
   private ensureTexturesPreloaded(): Promise<void> {
     if (!this.texturePreloadPromise) {
       this.texturePreloadPromise = this.preloadTextures()
@@ -413,10 +423,10 @@ export class BowlScene implements Scene {
     this.container.addChild(this.themeBg, this.themeBackdropSprite, this.themeHeaderDecor);
     this.paintSceneTheme(this.currentTheme);
 
-    this.settingsBtnRoot.position.set(44, Game.safeTop + 34);
+    this.settingsBtnRoot.position.set(58, Game.safeTop + 42);
     this.settingsBtnRoot.eventMode = 'static';
     this.settingsBtnRoot.cursor = 'pointer';
-    this.mountTropicalSettingsButton();
+    this.mountGameplaySettingsButton();
     this.settingsBtnRoot.on('pointertap', () => {
       if (
         this.failSettlementOverlay.visible ||
@@ -433,8 +443,13 @@ export class BowlScene implements Scene {
     });
     this.container.addChild(this.settingsBtnRoot);
 
-    this.mountGmClearButton();
-    this.container.addChild(this.gmClearBtnRoot);
+    if (isWxDevtoolsSimulator()) {
+      this.mountGmClearButton();
+      this.container.addChild(this.gmClearBtnRoot);
+    } else {
+      this.gmClearBtnRoot.visible = false;
+      this.gmClearBtnRoot.eventMode = 'none';
+    }
 
     this.hudPillBg = new PIXI.Graphics();
     this.container.addChild(this.hudPillBg);
@@ -844,52 +859,16 @@ export class BowlScene implements Scene {
       jobs.push(TextureCache.load(fruit.id, fruit.asset));
       jobs.push(TextureCache.load(`${fruit.id}__b2`, fruit.bowlAsset2));
     }
+    jobs.push(loadSettingsButtonTexture());
     await Promise.all(jobs);
-    this.mountTropicalSettingsButton();
+    this.mountGameplaySettingsButton();
     this.applyBowlArtTextures();
     this.mountToolButtons();
     this.mountBoardPlateArt();
   }
 
-  private mountTropicalSettingsButton(): void {
-    this.settingsBtnRoot.removeChildren();
-    const shadow = new PIXI.Graphics();
-    shadow.beginFill(0x17313c, 0.36);
-    shadow.drawCircle(4, 7, 38);
-    shadow.endFill();
-    this.settingsBtnRoot.addChild(shadow);
-
-    const bg = new PIXI.Graphics();
-    bg.lineStyle(6, 0x6c47ff, 1);
-    bg.beginFill(0x18d5e8, 1);
-    bg.drawCircle(0, 0, 36);
-    bg.endFill();
-    bg.lineStyle(3, 0xffffff, 0.9);
-    bg.drawCircle(0, 0, 29);
-    bg.lineStyle(0);
-    bg.beginFill(0xb7fff5, 0.58);
-    bg.drawEllipse(-10, -14, 17, 8);
-    bg.endFill();
-    this.settingsBtnRoot.addChild(bg);
-
-    const gear = new PIXI.Graphics();
-    gear.lineStyle(4, 0x5b351e, 1);
-    gear.beginFill(0xffd33f, 1);
-    const teeth = 10;
-    const points: number[] = [];
-    for (let i = 0; i < teeth * 2; i += 1) {
-      const r = i % 2 === 0 ? 19 : 14;
-      const a = -Math.PI / 2 + (i / (teeth * 2)) * Math.PI * 2;
-      points.push(Math.cos(a) * r, Math.sin(a) * r);
-    }
-    gear.drawPolygon(points);
-    gear.endFill();
-    gear.lineStyle(3, 0x5b351e, 1);
-    gear.beginFill(0xfff4c8, 1);
-    gear.drawCircle(0, 0, 6);
-    gear.endFill();
-    this.settingsBtnRoot.addChild(gear);
-    this.settingsBtnRoot.hitArea = new PIXI.Circle(0, 0, 42);
+  private mountGameplaySettingsButton(): void {
+    mountSettingsButtonSprite(this.settingsBtnRoot, TextureCache.get(SETTINGS_BTN_TEXTURE_KEY), 66);
   }
 
   private applyBowlArtTextures(): void {
