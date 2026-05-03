@@ -38,18 +38,92 @@ class GameClass {
 
     this.scale = realWidth / this.designWidth;
 
-    this.app = new PIXI.Application({
-      view: canvas,
-      width: realWidth,
-      height: realHeight,
-      resolution: 1,
-      backgroundColor: 0xf7e4c4,
-      antialias: true,
-    });
+    let renderer: PIXI.IRenderer | null = null;
+    let app: PIXI.Application | null = null;
 
-    this.stage = this.app.stage;
-    this.ticker = this.app.ticker;
+    try {
+      app = new PIXI.Application({
+        view: canvas,
+        width: realWidth,
+        height: realHeight,
+        resolution: 1,
+        backgroundColor: 0xf7e4c4,
+        antialias: true,
+        preferWebGLVersion: 1,
+      } as any);
+    } catch (error) {
+      console.error('[Game] new PIXI.Application failed', error);
+    }
+
+    if (app?.stage && app.ticker && app.renderer) {
+      this.app = app;
+      this.stage = app.stage;
+      this.ticker = app.ticker;
+      renderer = app.renderer;
+    } else {
+      if (app?.renderer) {
+        renderer = app.renderer;
+      }
+
+      if (!renderer) {
+        try {
+          renderer = new PIXI.Renderer({
+            view: canvas,
+            width: realWidth,
+            height: realHeight,
+            resolution: 1,
+            backgroundColor: 0xf7e4c4,
+            antialias: true,
+            preferWebGLVersion: 1,
+          } as any);
+        } catch (error) {
+          console.error('[Game] new PIXI.Renderer failed', error);
+        }
+      }
+
+      if (!renderer) {
+        try {
+          renderer = PIXI.autoDetectRenderer({
+            view: canvas,
+            width: realWidth,
+            height: realHeight,
+            resolution: 1,
+            backgroundColor: 0xf7e4c4,
+            antialias: true,
+            preferWebGLVersion: 1,
+          } as any) as PIXI.IRenderer;
+        } catch (error) {
+          console.error('[Game] autoDetectRenderer failed', error);
+        }
+      }
+
+      this.stage = new PIXI.Container();
+      this.ticker = new PIXI.Ticker();
+      this.ticker.start();
+
+      if (renderer) {
+        this.ticker.add(() => {
+          renderer!.render(this.stage);
+        });
+      } else {
+        throw new Error('Failed to create Pixi renderer');
+      }
+
+      this.app = {
+        stage: this.stage,
+        ticker: this.ticker,
+        renderer,
+        view: canvas,
+      } as any;
+    }
+
     this.stage.scale.set(this.scale, this.scale);
+
+    try {
+      if (typeof GameGlobal !== 'undefined') {
+        GameGlobal.__hotPotRendered = true;
+      }
+    } catch (error) {}
 
     try {
       const events = (this.app.renderer as PIXI.Renderer & { events?: any }).events;

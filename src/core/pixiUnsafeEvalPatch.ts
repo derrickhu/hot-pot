@@ -56,7 +56,12 @@ if (api) {
       getWebGLRenderingContext: (): any => {
         try {
           const nextCanvas = api.createCanvas();
-          const gl = nextCanvas.getContext('webgl');
+          const gl = nextCanvas.getContext('webgl', {
+            stencil: true,
+            antialias: true,
+            alpha: true,
+            depth: true,
+          });
           return gl ? gl.constructor : Object;
         } catch (error) {
           return Object;
