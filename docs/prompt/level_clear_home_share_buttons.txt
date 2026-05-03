@@ -1,0 +1,27 @@
+Create a two-cell sprite sheet for mobile casual game UI buttons.
+
+Task:
+Generate ONLY two standalone square action buttons for a level-clear popup.
+
+Layout:
+- One horizontal sprite sheet, exactly 2 columns and 1 row.
+- Left cell: home button.
+- Right cell: share button.
+- Center each button in its own cell with generous empty margin.
+- Both buttons must have identical size, perspective, lighting, and style.
+
+Button style:
+- Rounded square button, soft cream / warm beige base, honey-gold rim, subtle shadow.
+- Polished 2D casual mobile game UI.
+- Match a summer tropical dessert game style: warm, clean, premium, cute, not noisy.
+- Slight beveled surface, glossy highlight, tactile clickable look.
+
+Icons:
+- Left button icon: simple house outline, warm brown/gold, centered.
+- Right button icon: simple share/export arrow icon, warm brown/gold, centered.
+- Icons should be graphic symbols only.
+
+Restrictions:
+- No text, no labels, no captions, no Chinese characters, no English letters, no numbers.
+- No full popup panel, no background board, no food items, no watermark.
+- Use a flat pure white or very light neutral background for easy background removal.

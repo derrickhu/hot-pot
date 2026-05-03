@@ -1,0 +1,9 @@
+One image, 5 rows × 3 columns grid, thin light gray grid lines, generous padding in each cell. Mobile game 2D cartoon fruit for yogurt fruit-bowl, bold outlines, saturated colors, unified soft lighting top-left, 3/4 view. Single centered subject per cell. Unused areas flat cream #F5E6D3 only.
+
+Row1 BAYBERRY (yangmei): col1 whole spiky berry. col2 tiny 1–2 berries cluster bite-sized. col3 same tiny cluster different angle.
+Row2 BLACKBERRY: col1 whole aggregate berry. col2 tiny 2–3 drupelets cluster. col3 tiny cluster different angle.
+Row3 BLACKCURRANT: col1 whole black currant sprig or small group. col2 tiny 2–4 berries cluster. col3 tiny cluster different angle.
+Row4 CRANBERRY: col1 whole red cranberry. col2 tiny 2–4 berries small pile. col3 tiny pile different angle.
+Row5 RASPBERRY: col1 whole raspberry. col2 tiny 2–3 drupelets cluster. col3 tiny cluster different angle.
+
+No photorealism, no busy background, no UI, no huge half-fruit cross-section filling a cell, no text, no watermark, no plates, no hands.

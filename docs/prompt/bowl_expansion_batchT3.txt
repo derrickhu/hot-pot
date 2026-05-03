@@ -1,0 +1,22 @@
+One image, 4 rows × 4 columns grid, thin light gray grid lines, generous padding; first 14 cells left-to-right top-to-bottom filled, cells 15–16 empty flat cream #F5E6D3 only. Mobile game 2D cartoon Chinese/dessert toppings, bold outlines, saturated colors, unified lighting top-left, 3/4 view.
+
+CRITICAL each filled cell: **ONE piece** OR **TWO pieces as a pair**. Never a scoop, heap, pile, or many dice. For dice-shaped items: at most **one cube OR two cubes touching**.
+
+Cell1 BLACK RICE: ONE small compact sticky rice lump (reads as one portion) OR two grains glued as pair — not a loose scoop pile.
+Cell2 DRIED LONGAN: ONE longan flesh piece OR two pieces touching — not many bits.
+Cell3 FOXNUT (gorgon): ONE seed OR two seeds side-by-side — not a pile.
+Cell4 LILY BULB: ONE white lily petal-scale piece OR two pieces — not a heap.
+Cell5 LOTUS SEED: ONE peeled lotus seed OR two seeds — not a pile.
+Cell6 LOTUS ROOT: ONE holey round slice OR two thin slices stacked — not a dice pile.
+Cell7 PEACH GUM: ONE amber peach gum chunk OR two chunks touching — not many chunks.
+Cell8 PUMPKIN: ONE orange pumpkin cube OR two cubes — not many.
+Cell9 RADISH HEART: ONE red radish heart dice cube OR two cubes — not many.
+Cell10 SWEET POTATO: ONE orange sweet-potato cube OR two — not a pile.
+Cell11 TARO DICE: ONE purple-white taro cube OR two cubes (not round taro balls).
+Cell12 WATER CHESTNUT: ONE translucent diced piece OR two pieces — not many.
+Cell13 MINT: ONE mint leaf OR TWO leaves overlapping — not a bundle.
+Cell14 OSMANTHUS: ONE tiny dried osmanthus flower OR two tiny blooms — not a pinch heap.
+
+Cells15-16: empty cream only.
+
+No photorealism, no busy background, no UI, no text, no watermark, no plates, no hands, no spoons.

@@ -1,0 +1,5 @@
+STRICT square 1:1 output canvas. Orthographic TOP-DOWN view ONLY: one thick creamy milk-white liquid disk whose OUTLINE is a MATHEMATICAL PERFECT CIRCLE in the image — same pixel radius on X and Y from image center, diameter about 65% of frame width. Absolutely NOT an ellipse, NOT oval, NOT oblate, NOT a wide flat pool. No bowl, no fruit.
+
+Opaque matte gouache paint only: ivory highlights, warm cream and pale gray swirls for depth. NO semi-transparency: solid magenta #FF00FF background must NEVER show through any milk pixel; every milk pixel fully opaque.
+
+Background OUTSIDE the circular liquid: ONLY flat solid #FF00FF. No text, no watermark, no shadows.

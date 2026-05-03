@@ -1,0 +1,29 @@
+Create a 3 columns x 3 rows sprite sheet of nine cute mobile game achievement badge icons for a fruit dessert puzzle game.
+
+CRITICAL LAYOUT:
+- Exactly 3 columns and 3 rows, nine separate square cells.
+- Each cell contains exactly one complete round or soft-round badge icon.
+- Center the icon in each cell with generous margin; no icon may be cropped.
+- Transparent background is preferred. If transparency is unavailable, use a very light plain pastel background that is easy to remove.
+- NO TEXT, no numbers, no labels, no captions, no writing anywhere, no logo, no watermark.
+
+STYLE:
+- Colorful casual mobile game art, Q-style hand-painted illustration, glossy and juicy.
+- Thick clean white outline around each badge and around the drink/dessert subject.
+- Vivid summer palette with a cool refreshing finish: ice cubes, condensation drops, bubbles, mint leaves, shiny fruit.
+- Each badge must be visually distinct but part of the same collection.
+- Consistent camera angle: cute front 3/4 view, readable at small icon size.
+
+BADGES, left to right, top to bottom:
+10. Orange grapefruit double iced tea badge: clear cup with orange tea and pink grapefruit tea layered in two colors, orange slice, grapefruit wedge, kumquat, green grape, sparkling ice.
+11. Twelve-fruit ice bowl badge: overflowing mixed fruit bowl on crushed ice, strawberry, blueberry, orange, kiwi, pineapple, grape, watermelon, starfruit, bright rainbow fruit arrangement.
+12. Lychee rose fruit tea cup badge: pale pink lychee fruit tea in a short glass, peeled lychee, cherry, white jelly, peach slice, mint, soft rose-pink highlights and blue ice.
+13. Sour plum osmanthus iced drink badge: deep purple sour plum tea cup, plum fruit, tiny golden osmanthus petals, ice cubes, mint garnish, elegant purple-gold contrast.
+14. Snow pear cucumber shaved ice bowl badge: creamy pale shaved ice bowl, pear slices, lime slices, cucumber ribbons, honey drops, crushed ice, aqua blue rim.
+15. Melon peach summer ice cup badge: pastel green honeydew and peach drink, honeydew cubes, peach wedges, cantaloupe balls, ice cubes, mint, cheerful green-orange palette.
+16. Grand berry snow mountain badge: purple berry shaved ice bowl shaped like a small snow mountain, raspberry, mulberry, blueberry, blackberry, white cream peak, icy sparkles.
+17. Coconut lime crystal ice tea cup badge: white coconut drink with blue ice crystals, coconut jelly, lime slice, small pineapple star, mint leaf, clean tropical freshness.
+18. Mixed fruit syrup dessert bowl badge: colorful fruit soup bowl, orange, berry, grape, kiwi, sago pearls, jelly cubes, glossy syrup, bright festive rainbow look.
+
+NEGATIVE PROMPT:
+NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no realistic photo, no messy background, no human hands, no UI panels, no cropped icon, no duplicate icon in one cell.

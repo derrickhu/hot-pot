@@ -1,0 +1,44 @@
+# 合图英文提示（水果捞小块版，5×3 网格，仅用前 3 列）
+
+通用尾部（每张追加）：
+Columns 4-5 empty cream only. One small centered subject per filled cell, generous padding. 2D mobile game cartoon fruit, bold outlines, saturated colors, unified lighting. No text, no watermark.
+
+---
+
+## batch0_strawberry_watermelon_pineapple
+
+Row1 STRAWBERRY: col1 whole berry with green top. col2 SMALL fruit-hotpot piece: thick small slice OR quarter wedge, tiny NOT half berry. col3 another tiny strawberry chunk same small scale, different angle.
+
+Row2 WATERMELON: col1 whole striped melon. col2 tiny red flesh cube/dice with black seeds ZERO green rind. col3 same tiny cube silhouette, only rotated view.
+
+Row3 PINEAPPLE: col1 whole with crown. col2 small diced pineapple chunk with eye holes texture, bite-sized. col3 same small chunk type, different angle NOT full ring.
+
+---
+
+## batch1_blueberry_orange_lemon
+
+Row1 BLUEBERRY: col1 one whole. col2 1-2 berries small cluster bite-sized. col3 same small scale different angle.
+
+Row2 ORANGE: col1 whole. col2 thin round orange slice like drink garnish small diameter. col3 thin slice or small wedge same thinness different angle NO large segment.
+
+Row3 LEMON: col1 whole yellow lemon. col2 thin round lemon slice small. col3 thin slice same thickness different angle NO big wedge.
+
+---
+
+## batch2_grape_kiwi_peach
+
+Row1 GRAPE: col1 small bunch. col2 2-4 grapes tiny cluster bite-sized. col3 same small cluster different angle.
+
+Row2 KIWI: col1 whole fuzzy. col2 small thin kiwi round slice green black seeds. col3 small wedge piece tiny NOT half kiwi.
+
+Row3 PEACH: col1 whole fuzzy peach. col2 small peach dice/cube pink-yellow flesh skin edge. col3 small chunk same scale different angle NO half peach.
+
+---
+
+## batch3_apple_banana_mango
+
+Row1 APPLE: col1 whole red apple. col2 tiny apple wedge eighth OR small dice with red skin edge, bite-sized NO half apple. col3 small piece same type different angle.
+
+Row2 BANANA: col1 whole yellow peeled look optional. col2 PEELED banana short segment finger-length OR thin cross slice, creamy yellow NO long peeled half-banana. col3 same small peeled piece different angle.
+
+Row3 MANGO: col1 whole mango. col2 small golden mango dice/cube bite-sized. col3 small chunk same scale different angle NO half mango face.

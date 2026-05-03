@@ -1,0 +1,34 @@
+Create a two-cell sprite sheet of colorful standalone game UI icons.
+
+Task:
+Generate ONLY two colorful icon-style action assets for a mobile casual fruit dessert game level-clear popup.
+
+Layout:
+- One horizontal sprite sheet, exactly 2 columns and 1 row.
+- Left cell: home icon.
+- Right cell: share icon.
+- Center each icon in its cell with transparent-looking empty margin.
+- Both icons should have similar visual weight, lighting, and polish.
+
+Icon style:
+- NOT square buttons, no rounded square background, no UI tile.
+- Colorful standalone illustrated icons with a clear silhouette.
+- Cute premium 2D mobile game art, soft shadow, glossy highlights, thick clean outline.
+- Tropical summer dessert vibe: mango orange, coral pink, mint green, coconut cream, warm gold accents.
+
+Left home icon:
+- A charming tiny tropical fruit stand / beach hut / home symbol.
+- Use a small roof/canopy, bamboo or palm leaf accent, warm doorway shape.
+- It must clearly read as "home" even without text.
+- Colorful, playful, attractive.
+
+Right share icon:
+- A colorful share symbol, such as a paper airplane with fruit-leaf trail, or curved arrow with small star/sparkle accents.
+- It must clearly read as "share/export" even without text.
+- Dynamic, light, playful, attractive.
+
+Restrictions:
+- No text, no labels, no captions, no Chinese characters, no English letters, no numbers.
+- No square button base, no rectangular background, no full popup panel.
+- No watermark.
+- Use a flat pure white or very light neutral background for easy background removal.

@@ -1,0 +1,25 @@
+Create a high-quality mobile game UI concept image for a casual fruit hot-pot / dessert bowl puzzle game.
+
+Use the attached screenshot only as layout reference: portrait phone screen, top HUD/order area, a large circular bowl in the middle-lower area, five small buffer slots under the order row, three tool buttons near the bottom. Redesign the visual style completely.
+
+Theme: summer poolside ice drink.
+
+Visual direction:
+- Fresh swimming-pool summer feeling, aqua blue, mint, white foam, translucent ice, sparkling water highlights.
+- Top area becomes a playful pool deck / ice drink bar with soft wave shapes instead of the current wooden board.
+- Order bubbles look like frosty drink coasters or mini floating trays, with blank icon placeholders only.
+- Buffer slots look like small white floating pads on water, glossy and rounded.
+- Main bowl remains the clear focus, large and readable, as if sitting on a sunny poolside dessert table with water caustic reflections.
+- Bottom tool buttons may become round lifebuoy-like badges, ice-cube buttons, or glossy drink-lid buttons, all consistent.
+- Overall style should be polished 2D mobile game art, refreshing, cool, summery, unique, cohesive, premium casual game UI.
+
+Composition constraints:
+- 9:16 vertical mobile UI, no phone frame, full-screen game screenshot composition.
+- Keep the center bowl area clear and not too busy.
+- Leave enough contrast behind future UI text and icons.
+- No real readable text anywhere. No Chinese characters, no English letters, no numbers, no captions, no labels, no logo, no watermark.
+- If text-like areas are needed, use abstract blank rounded bars or decorative marks only.
+
+Rendering style:
+- Clean 2D illustration, soft shadows, glossy translucent UI pieces, water light effects, high clarity.
+- Similar production quality to a polished WeChat mini game.

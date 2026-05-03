@@ -1,0 +1,23 @@
+Create a 3 columns x 1 row sprite sheet of three cute mobile game achievement badge icons for a fruit dessert puzzle game.
+
+CRITICAL LAYOUT:
+- Exactly 3 columns and 1 row, three separate square cells.
+- Each cell contains exactly one complete round or soft-round badge icon.
+- Center the icon in each cell with generous margin; no icon may be cropped.
+- Transparent background is preferred. If transparency is unavailable, use a very light plain pastel background that is easy to remove.
+- NO TEXT, no numbers, no labels, no captions, no writing anywhere, no logo, no watermark.
+
+STYLE:
+- Colorful casual mobile game art, Q-style hand-painted illustration, glossy and juicy.
+- Thick clean white outline around each badge and around the drink/dessert subject.
+- Very vivid, beautiful, refreshing summer dessert feel, with frosty blue highlights, sparkling ice, water droplets, and mint.
+- These are the final three level badges, so they should look a little more impressive and collectible.
+- Consistent camera angle: cute front 3/4 view, readable at small icon size.
+
+BADGES, left to right:
+28. Grass jelly red bean ice bowl badge: dark grass jelly dessert bowl, red bean, sago, taro balls, pink jelly, coconut milk swirl, bright blue rim, ice sparkles.
+29. Popping boba rainbow fruit tea badge: orange-pink fruit tea cup, colorful popping boba pearls, strawberry, grape, lemon, kiwi, fizz bubbles, crushed ice, very lively and bright.
+30. Dragon fruit ice crown final badge: grand final vivid dragon fruit shaved ice bowl, pink and white dragon fruit cubes, golden citrus crown shape, mint leaves, sparkling celebratory aqua-gold rim.
+
+NEGATIVE PROMPT:
+NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no realistic photo, no messy background, no human hands, no UI panels, no cropped icon, no duplicate icon in one cell.

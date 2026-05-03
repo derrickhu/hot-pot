@@ -1,0 +1,9 @@
+One image, 5 rows × 3 columns grid, thin light gray grid lines, generous padding. Mobile game 2D cartoon fruit for yogurt fruit-bowl, bold outlines, saturated colors, unified lighting top-left, 3/4 view. Single subject per cell. Unused areas flat cream #F5E6D3 only.
+
+Row1 GOOSEBERRY: col1 whole green gooseberry. col2 tiny 2–3 berries cluster. col3 tiny cluster different angle.
+Row2 GRAPE_GREEN: col1 small bunch green grapes. col2 tiny 2–4 grapes cluster. col3 tiny cluster different angle.
+Row3 MULBERRY: col1 whole mulberry. col2 tiny 2–4 berries cluster dark purple. col3 tiny cluster different angle.
+Row4 SOUR_PLUM: col1 whole preserved sour plum. col2 tiny wedge/dice bite-sized. col3 tiny piece different angle.
+Row5 CHESTNUT: col1 whole brown chestnut in shell. col2 tiny peeled kernel chunk. col3 tiny chunk different angle.
+
+No photorealism, no busy background, no UI, no huge half-fruit cross-section, no text, no watermark, no plates, no hands.

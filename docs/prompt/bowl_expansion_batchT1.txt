@@ -1,0 +1,16 @@
+One image, 5 rows × 2 columns grid, thin light gray grid lines, generous padding. Mobile game 2D cartoon toppings for yogurt bowl, bold outlines, saturated colors, unified lighting top-left, 3/4 view. Unused margin flat cream #F5E6D3 only.
+
+CRITICAL per cell: show **exactly ONE single piece** OR **exactly TWO pieces touching as a pair**. Never a heap, pile, scoop of many, cluster, mound, or bowlful. Count ≤ 2 objects visible.
+
+Row1 col1 BASIL SEEDS: ONE small basil-seed drink gel blob (hydrated seeds) OR TWO tiny gel clumps touching — not a spread heap.
+Row1 col2 BOBA PEARLS: ONE black tapioca pearl OR TWO pearls stuck together — not many pearls.
+Row2 col1 COCONUT JELLY: ONE translucent white jelly cube OR TWO cubes side-by-side — not a pile.
+Row2 col2 CRYSTAL JELLY: ONE clear jelly cube OR TWO cubes — not a pile.
+Row3 col1 GRASS JELLY: ONE dark grass-jelly cube OR TWO cubes — not a pile.
+Row3 col2 MINI MOCHI: ONE pastel mini mochi ball OR TWO balls touching — not many.
+Row4 col1 PUDDING CUBE: ONE egg-yellow pudding cube OR TWO cubes touching — not a pile.
+Row4 col2 SWEET RED BEAN: ONE neat dollop / one spoon lump with at most two whole beans visible — not a mound of beans.
+Row5 col1 SAGO: ONE clear sago pearl OR TWO pearls — not many.
+Row5 col2 TARO BALL: ONE purple-streaked taro Q-ball OR TWO balls touching — not a pile (not diced taro).
+
+No photorealism, no busy background, no UI, no text, no watermark, no plates, no hands, no spoons.

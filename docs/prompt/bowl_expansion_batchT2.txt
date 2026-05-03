@@ -1,0 +1,15 @@
+One image, 3 rows × 3 columns grid, thin light gray grid lines, generous padding. Mobile game 2D cartoon toppings for yogurt bowl, bold outlines, saturated colors, unified lighting top-left, 3/4 view. Unused margin flat cream #F5E6D3 only.
+
+CRITICAL per cell: **ONE single object** OR **TWO objects as a pair**. No piles, heaps, scoops, clusters of many, no scattered handfuls.
+
+Row1 col1 POPPING BOBA: ONE juice boba sphere OR TWO spheres touching — not many.
+Row1 col2 COOKIE CRUMB: ONE small crumb clump reading as one bite OR TWO crumbs stuck — not a debris pile.
+Row1 col3 OAT FLAKES: ONE oat flake OR TWO flakes overlapping — not a pile.
+Row2 col1 MINI MARSHMALLOWS: ONE mini marshmallow OR TWO touching — not a pile.
+Row2 col2 CHOCOLATE CHIPS: ONE chip OR TWO chips — not many chips.
+Row2 col3 ALMOND SLICES: ONE almond slice OR TWO slices — not a heap.
+Row3 col1 WALNUT: ONE walnut kernel chunk OR TWO small chunks touching — not a pile.
+Row3 col2 PEANUT: ONE peanut piece OR TWO pieces — not crushed handful.
+Row3 col3 SNOW FUNGUS: ONE small white tremella frill piece OR TWO fronds touching — not a big fluffy heap.
+
+No photorealism, no busy background, no UI, no text, no watermark, no plates, no hands, no spoons.

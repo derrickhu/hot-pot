@@ -1,0 +1,24 @@
+Create a polished bottom action board asset for a mobile casual fruit dessert game level-clear popup.
+
+Use the attached screenshot as reference for layout context only.
+
+Task:
+Design ONLY the decorative bottom board/base area that sits behind the three action buttons in a level-clear popup.
+
+Visual direction:
+- Warm summer tropical dessert style, matching cream, honey, bamboo, soft gold, and fruit-dessert colors.
+- Rounded rectangular base with soft bevel, subtle shadow, glossy highlights, premium casual game UI.
+- It should feel lighter, cleaner, and more modern than the current parchment reward strip.
+- Leave clean open spaces for three buttons: small square button on the left, large rounded main button in the center, small square button on the right.
+- The board should support icons and text being drawn by the game later.
+
+Composition:
+- Horizontal UI asset, aspect ratio about 4:1.
+- Transparent-looking or pure white background for easy cutout.
+- Board centered with enough padding around it.
+- No text, no labels, no Chinese characters, no English letters, no numbers.
+- No buttons, no icons, no reward text, no food items, no watermark.
+
+Style:
+- Clean 2D illustrated UI, soft shadows, smooth edges, cohesive with tropical fruit stand art.
+- High readability and not visually noisy.

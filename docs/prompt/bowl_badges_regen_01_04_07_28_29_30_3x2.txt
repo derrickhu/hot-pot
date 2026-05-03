@@ -1,0 +1,28 @@
+Create a 3 columns x 2 rows sprite sheet of six cute mobile game dessert drink icons.
+
+CRITICAL LAYOUT:
+- Exactly 3 columns and 2 rows, six separate square cells.
+- Each cell contains exactly one complete isolated drink or dessert bowl icon.
+- NO circular badge base, NO round medallion, NO circular ring, NO plate-like background, NO halo disk behind the food.
+- The subject itself should have a thick clean white outline, like a sticker icon.
+- Transparent background is preferred. If transparency is unavailable, use plain white or very light pastel background that is easy to remove.
+- Center each object with generous margin; do not crop any object.
+- NO TEXT, no numbers, no labels, no captions, no writing anywhere, no logo, no watermark.
+
+STYLE:
+- Match the other generated icons in the collection: colorful casual mobile game art, Q-style hand-painted illustration, glossy and juicy.
+- Bright saturated summer colors, refreshing and beautiful.
+- Include ice cubes, frosty highlights, water droplets, sparkling bubbles, mint leaves, shiny fruit.
+- No circular badge frame or background. The silhouette should be the cup or bowl plus fruit decorations only.
+- Cute front 3/4 view, readable at small icon size.
+
+ICONS, left to right, top to bottom:
+1. Yogurt berry cup icon: a cute clear rounded cup filled with creamy white yogurt drink, strawberry halves, blueberries, a small lemon wheel, mint leaves, ice sparkles, thick white sticker outline, no round base.
+2. Watermelon starfruit fruit sago bowl icon: pink watermelon sago dessert in a cute transparent bowl, watermelon triangles, starfruit slices, green jelly balls, mint leaves, crushed ice, thick white sticker outline, no round base.
+3. Coconut longan lychee ice bowl icon: milky coconut dessert in a shallow glass bowl, longan, lychee, coconut cubes, translucent ice crystals, pale gold syrup, thick white sticker outline, no round base.
+4. Grass jelly red bean ice bowl icon: black grass jelly dessert bowl, red bean, sago pearls, taro balls, pink jelly cubes, coconut milk swirl, crushed ice, thick white sticker outline, no round base.
+5. Popping boba rainbow fruit tea icon: tall orange-pink fruit tea cup, colorful popping boba pearls, strawberry, grape, lemon, kiwi slices, fizz bubbles, crushed ice, thick white sticker outline, no round base.
+6. Dragon fruit ice crown final bowl icon: vivid dragon fruit shaved ice bowl, pink and white dragon fruit cubes, golden citrus crown-shaped garnish on top, mint leaves, sparkling ice, thick white sticker outline, no round base.
+
+NEGATIVE PROMPT:
+NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no circular badge base, no round medallion, no circular frame, no halo disk, no decorative ring behind the icon, no plate-like background, no realistic photo, no messy background, no human hands, no UI panels, no cropped icon, no duplicate icon in one cell.

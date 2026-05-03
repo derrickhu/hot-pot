@@ -1,0 +1,30 @@
+Create a clean mobile game background map image based on the attached reference concept.
+
+Important task:
+Generate ONLY the environment/background layer. Do NOT include any gameplay objects inside the marked red rectangles from the reference.
+
+Keep and restore:
+- The same cheerful summer tropical fruit stand feeling.
+- Top bamboo/rattan canopy, warm wooden dessert counter, palm leaves in the top corners, soft sunny cream background.
+- The upper stall structure and decorative plants should feel very close to the reference concept.
+- A polished 2D casual mobile game look, soft shadows, warm highlights, clean edges.
+
+Remove / leave empty:
+- No order plates, no small dishes, no ingredient icons, no speech bubbles in the top gameplay area.
+- No progress bar, no badge, no milestone dots.
+- No big bowl, no soup, no food pile, no fruit objects in the middle gameplay area.
+- No bottom tool buttons, no button labels, no UI icons.
+- No red rectangles or annotation marks from the reference.
+- No text, no Chinese characters, no English letters, no numbers, no logo, no watermark.
+
+Composition:
+- 9:16 vertical full-screen game background, no phone frame.
+- Keep a decorative top stall area occupying roughly the upper quarter of the image.
+- Keep a large clean open central-lower area for the game engine to place the bowl, progress bar, buffer slots, and buttons later.
+- The open area should not be plain white: use a subtle warm summer tabletop/floor gradient, soft sparkles, faint fruit-leaf decorations near edges only.
+- Avoid placing detailed objects where the bowl and buttons will be added.
+
+Output style:
+- High-quality 2D illustrated game art.
+- Warm cream, bamboo tan, mango yellow, coconut green palette.
+- Cohesive, cute, appetizing summer atmosphere.

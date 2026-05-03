@@ -1,0 +1,11 @@
+One image, 5 rows × 3 columns grid, thin light gray grid lines, generous padding. Mobile game 2D cartoon fruit for yogurt fruit-bowl, bold outlines, saturated colors, unified lighting top-left, 3/4 view. Unused areas flat cream #F5E6D3 only.
+
+GLOBAL for cols 2–3: EXACTLY ONE single object per cell — never a pile, heap, cluster, or multiple cubes. Count = 1.
+
+Row1 CANTALOUPE: col1 whole netted melon. col2 ONE single orange melon wedge slice (crescent / one “tooth” slice), small bite-sized, optional thin rind on outer arc. col3 ONE wedge same type, different tilt — still only one wedge.
+Row2 HONEYDEW: col1 whole pale melon. col2 ONE single pale-green flesh wedge slice (crescent), NOT cubes. col3 ONE wedge slice, different angle — still only one piece.
+Row3 CUCUMBER: col1 whole green cucumber. col2 ONE single round cucumber cross-section disk slice (thin wheel with green skin ring). col3 ONE disk slice, slightly different angle — still only one slice, NOT diced pile.
+Row4 STARFRUIT: col1 whole starfruit. col2 ONE thin star-shaped cross slice only. col3 ONE star slice, different rotation — still one slice each cell.
+Row5 YOUNG_COCONUT: col1 young coconut cup shape. col2 ONE single chunk of white coconut jelly / young coconut meat. col3 ONE chunk, different angle — NOT multiple cubes in a pile.
+
+No photorealism, no busy background, no UI, no text, no watermark, no plates, no hands.

@@ -1,0 +1,25 @@
+Create a high-quality mobile game UI concept image for a casual fruit hot-pot / dessert bowl puzzle game.
+
+Use the attached screenshot only as layout reference: portrait phone screen, top HUD/order area, a large circular bowl in the middle-lower area, five small buffer slots under the order row, three tool buttons near the bottom. Redesign the visual style completely.
+
+Theme: summer seaside night market.
+
+Visual direction:
+- Warm sunset-to-evening summer feeling, peach orange, coral pink, deep teal, soft purple, small glowing lantern lights.
+- Top area becomes a charming seaside dessert stall signboard with string lights, awning shapes, and subtle beach-market decorations.
+- Order bubbles look like small paper food trays or illuminated menu chips, with blank icon placeholders only.
+- Buffer slots look like soft glowing rounded shells or tiny serving plates.
+- Main bowl remains the clear focus, large and readable, sitting in a cozy night-market dessert booth atmosphere.
+- Bottom tool buttons may become lantern badges, shell tokens, or rounded stall-sign buttons, all consistent and attractive.
+- Overall style should be polished 2D mobile game art, cozy, summery, festive, unique, cohesive, premium casual game UI.
+
+Composition constraints:
+- 9:16 vertical mobile UI, no phone frame, full-screen game screenshot composition.
+- Keep the center bowl area clear and not too busy.
+- Leave enough contrast behind future UI text and icons.
+- No real readable text anywhere. No Chinese characters, no English letters, no numbers, no captions, no labels, no logo, no watermark.
+- If text-like areas are needed, use abstract blank rounded bars or decorative marks only.
+
+Rendering style:
+- Clean 2D illustration, soft shadows, gentle glow effects, rich but readable colors.
+- Similar production quality to a polished WeChat mini game.

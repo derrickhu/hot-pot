@@ -1,0 +1,11 @@
+One image, 5 rows × 3 columns grid, thin light gray grid lines, generous padding. Mobile game 2D cartoon fruit for yogurt fruit-bowl, bold outlines, saturated colors, unified lighting top-left, 3/4 view. Unused areas flat cream #F5E6D3 only.
+
+GLOBAL for cols 2–3: EXACTLY ONE single object per cell — never piles, clusters, or multiple cubes. Count = 1.
+
+Row1 CHERRY: col1 two cherries with stems. col2 ONE single pitted cherry half or ONE small cherry piece. col3 ONE piece, different angle — not a pile. Must differ from tomato: deeper red, heart shape, stems on col1.
+Row2 CHERRY_TOMATO: col1 whole grape tomato round glossy. col2 ONE single half cherry tomato OR one small wedge. col3 ONE piece, different angle — no stem, rounder; still only one piece per cell.
+Row3 PLUM: col1 whole purple plum. col2 ONE single plum wedge slice. col3 ONE wedge, different angle — not multiple chunks.
+Row4 PERSIMMON: col1 whole persimmon with calyx. col2 ONE half persimmon cut vertically showing interior flesh (orange, glossy) — NOT diced cubes, NOT cubes. col3 ONE half persimmon, different viewing angle — still a half fruit exposing inside, never cubes.
+Row5 RED_DATE (jujube): col1 whole dried red date. col2 ONE single cut date piece showing inner flesh OR one whole small date — one object only. col3 ONE piece, different angle — not a pile.
+
+No photorealism, no busy background, no UI, no text, no watermark, no plates, no hands.

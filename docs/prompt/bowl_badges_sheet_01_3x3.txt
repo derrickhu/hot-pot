@@ -1,0 +1,30 @@
+Create a 3 columns x 3 rows sprite sheet of nine cute mobile game achievement badge icons for a fruit dessert puzzle game.
+
+CRITICAL LAYOUT:
+- Exactly 3 columns and 3 rows, nine separate square cells.
+- Each cell contains exactly one complete round or soft-round badge icon.
+- Center the icon in each cell with generous margin; no icon may be cropped.
+- Transparent background is preferred. If transparency is unavailable, use a very light plain pastel background that is easy to remove.
+- NO TEXT, no numbers, no labels, no captions, no writing anywhere, no logo, no watermark.
+
+STYLE:
+- Colorful casual mobile game art, Q-style hand-painted illustration, glossy and juicy.
+- Thick clean white outline around each badge and around the drink/dessert subject.
+- Vivid summer palette: aqua blue, lemon yellow, strawberry pink, mango orange, mint green, grape purple.
+- Strong refreshing feeling: visible ice cubes, frosty highlights, water droplets, sparkling bubbles, mint leaves.
+- Each badge is a different chilled fruit tea, shaved ice, fruit sago, fruit bowl, milk tea, or dessert drink.
+- Consistent camera angle: cute front 3/4 view, readable at small icon size.
+
+BADGES, left to right, top to bottom:
+1. Yogurt berry cup badge: clear rounded cup filled with creamy white yogurt drink, strawberry halves, blueberries, a small lemon wheel, mint leaves, icy aqua badge rim, tiny ice sparkles.
+2. Lemon blueberry iced tea badge: bright lemon-yellow iced tea in a tall clear cup, lemon slices, blueberries, crushed ice, blue bubbles, mint sprig, very fresh citrus look.
+3. Tropical mango dragonfruit shaved ice bowl badge: shallow bowl with orange mango shaved ice mound, mango cubes, pink dragon fruit cubes, pineapple wedge, syrup shine, frosty blue highlights.
+4. Watermelon starfruit fruit sago bowl badge: pink watermelon sago dessert in a round bowl, watermelon chunks, starfruit slices, green jelly cubes, mint, cool cyan rim.
+5. Berry grapefruit sparkling tea badge: pink sparkling fruit tea cup, grapefruit wedge, raspberry, blackberry, strawberry, visible fizz bubbles and ice cubes, bright coral and purple accents.
+6. Nutty peach snow-top cup badge: peach milk drink in a cute cup, whipped cream snow cap, peach wedges, almond flakes, walnut bits, honey drizzle, golden warm color balanced with blue ice.
+7. Coconut longan lychee ice bowl badge: milky coconut dessert bowl, longan, lychee, coconut cubes, pale gold syrup, translucent ice crystals, soft aqua badge border.
+8. Colorful topping milk tea badge: caramel milk tea cup, black boba pearls, pink jelly cubes, yellow pudding, purple taro balls, coconut jelly, striped straw, icy shine.
+9. Crunchy berry smoothie bowl badge: magenta berry smoothie bowl with icy cream peak, cookie crumbs, cranberries, blackberries, blueberries, frosty white highlights and purple rim.
+
+NEGATIVE PROMPT:
+NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no realistic photo, no messy background, no human hands, no UI panels, no cropped icon, no duplicate icon in one cell.

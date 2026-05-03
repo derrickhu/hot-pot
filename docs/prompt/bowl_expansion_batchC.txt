@@ -1,0 +1,9 @@
+One image, 5 rows × 3 columns grid, thin light gray grid lines, generous padding. Mobile game 2D cartoon fruit for yogurt fruit-bowl, bold outlines, saturated colors, unified lighting top-left, 3/4 view. Single subject per cell. Unused areas flat cream #F5E6D3 only.
+
+Row1 KUMQUAT: col1 whole tiny orange kumquat. col2 thin cross slice small. col3 thin slice different angle.
+Row2 MANDARIN (shatangju): col1 whole small mandarin. col2 tiny peeled segment wedge bite-sized. col3 small segment different angle.
+Row3 LIME: col1 whole green lime. col2 thin round slice small. col3 thin slice different angle.
+Row4 GRAPEFRUIT: col1 whole grapefruit. col2 thin pink flesh wedge small NOT huge half. col3 small wedge different angle.
+Row5 NECTARINE: col1 whole smooth nectarine. col2 tiny flesh dice with red skin edge. col3 tiny dice different angle.
+
+No photorealism, no busy background, no UI, no huge half-fruit cross-section, no text, no watermark, no plates, no hands.

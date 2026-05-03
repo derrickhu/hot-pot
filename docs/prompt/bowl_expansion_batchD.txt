@@ -1,0 +1,11 @@
+One image, 5 rows × 3 columns grid, thin light gray grid lines, generous padding. Mobile game 2D cartoon fruit for yogurt fruit-bowl, bold outlines, saturated colors, unified lighting top-left, 3/4 view. Unused areas flat cream #F5E6D3 only.
+
+GLOBAL for cols 2–3: EXACTLY ONE single object per cell — never piles, clusters, or groups of cubes. Count = 1.
+
+Row1 DRAGONFRUIT: col1 whole magenta fruit with green tips. col2 ONE single wedge of white flesh with scattered black seeds, tiny bite-sized, NO shell. col3 ONE single wedge same material, different angle — NOT multiple cubes, NOT a heap.
+Row2 DURIAN: col1 whole spiky durian. col2 ONE single yellow flesh pod chunk. col3 ONE single chunk, different angle — not a pile.
+Row3 LYCHEE: col1 whole pink rough lychee. col2 ONE peeled single lychee jelly sphere OR one small peeled piece only. col3 ONE piece, different angle — not a cluster.
+Row4 LONGAN: col1 whole brown longan. col2 ONE peeled single translucent orb. col3 ONE orb, different angle — not a cluster.
+Row5 PASSIONFRUIT: col1 whole purple passionfruit. col2 ONE half passionfruit shell cup holding pulp with seeds, OR one neat single spoon scoop — still only ONE clear focal piece, no splatter. col3 ONE small neat dollop / half-shell of pulp — single object only, no heap.
+
+No photorealism, no busy background, no UI, no text, no watermark, no plates, no hands.

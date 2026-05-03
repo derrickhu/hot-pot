@@ -1,0 +1,35 @@
+Create a two-cell sprite sheet for a mobile casual fruit dessert game, matching the attached reference image.
+
+Purpose:
+Two UI plate assets that will be placed on a tropical fruit stand background. They must match the same camera angle, perspective, colors, and lighting as the reference.
+
+Layout:
+- One horizontal sprite sheet, exactly 2 columns and 1 row.
+- Left cell: one small square icy serving plate for the top order area.
+- Right cell: one long rounded empty tray / popsicle-like buffer plate for the temporary slots.
+- Center each object in its cell with generous transparent-looking empty margin.
+- Both objects should be similar visual scale and share the same perspective angle.
+
+Left cell details:
+- A shallow square blue glass/ice plate viewed from a slightly top-front angle.
+- Rounded square corners, pale cyan glass rim, subtle white highlight, soft shadow below.
+- It should look like the small plates on the wooden stand in the reference.
+- Empty plate only, no food item on it.
+
+Right cell details:
+- A horizontal rounded rectangular pale blue glass/ice tray viewed from the same slightly top-front angle.
+- Soft cyan rim, glossy white center, subtle inner bevel and highlight.
+- It should match the lower buffer trays in the reference, but empty.
+- No stick handle, no food, no icon.
+
+Style:
+- Polished 2D casual game art.
+- Warm summer tropical stand lighting.
+- Clean outlines, soft shadows, glossy ice/glass material.
+- Match the reference perspective so the plates sit naturally on the wooden counter.
+
+Background and restrictions:
+- Use a flat pure white or very light neutral background for easy background removal.
+- No text, no labels, no captions, no Chinese characters, no English letters, no numbers.
+- No ingredient icons, no UI symbols, no red boxes, no watermark.
+- Do not include the wooden counter itself, only the two plate assets.
