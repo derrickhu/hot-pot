@@ -75,19 +75,8 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
       lineJoin: 'round',
     });
     this.badgeTitle.anchor.set(0.5, 0);
-    this.badgeTitle.position.set(0, 88);
+    this.badgeTitle.position.set(0, 132);
     this.panelRoot.addChild(this.badgeTitle);
-
-    const congrats = new PIXI.Text('恭喜获得', {
-      fontSize: 26,
-      fill: 0xffffff,
-      fontWeight: '800',
-      stroke: 0x2b1a12,
-      strokeThickness: 4,
-    });
-    congrats.anchor.set(0.5);
-    congrats.position.set(0, 52);
-    this.panelRoot.addChild(congrats);
 
     this.hintText = new PIXI.Text('点击任意处关闭', {
       fontSize: 24,
