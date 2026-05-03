@@ -10,10 +10,12 @@ declare const wx: {
     windowHeight?: number;
   };
   getMenuButtonBoundingClientRect?: () => { top?: number };
+  login?: (options: { success?: (res: { code?: string }) => void; fail?: (err: unknown) => void }) => void;
   getStorageSync: (key: string) => string | null;
   setStorageSync: (key: string, value: string) => void;
   removeStorageSync: (key: string) => void;
   request: (options: Record<string, unknown>) => void;
+  onHide?: (handler: () => void) => void;
   onTouchStart: (handler: (event: any) => void) => void;
   onTouchMove: (handler: (event: any) => void) => void;
   onTouchEnd: (handler: (event: any) => void) => void;
@@ -50,6 +52,7 @@ declare const wx: {
     destroy: () => void;
   };
   showToast?: (options: { title: string; icon?: string }) => void;
+  shareAppMessage?: (options: { title: string; imageUrl?: string; query?: string }) => void;
   createInnerAudioContext?: () => {
     src: string;
     loop: boolean;
@@ -64,6 +67,16 @@ declare const wx: {
     onError?: (handler: (error: unknown) => void) => void;
     onEnded?: (handler: () => void) => void;
   };
+};
+
+declare const tt: {
+  login?: (options: { success?: (res: { code?: string }) => void; fail?: (err: unknown) => void }) => void;
+  getStorageSync?: (key: string) => string | null;
+  setStorageSync?: (key: string, value: string) => void;
+  removeStorageSync?: (key: string) => void;
+  request?: (options: Record<string, unknown>) => void;
+  onHide?: (handler: () => void) => void;
+  getSystemInfoSync?: () => Record<string, unknown>;
 };
 
 declare const GameGlobal: Record<string, any>;

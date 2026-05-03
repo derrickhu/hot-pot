@@ -27,6 +27,7 @@
     "disableSWC": true
   },
   "compileType": "game",
+  "cloudfunctionRoot": "cloudfunctions/",
   "libVersion": "3.15.1",
   "appid": "wxe56f9e1228fd4b5b",
   "projectname": "hot-pot",
@@ -62,6 +63,10 @@
       {
         "type": "folder",
         "value": "docs"
+      },
+      {
+        "type": "folder",
+        "value": "cloudfunctions"
       },
       {
         "type": "folder",

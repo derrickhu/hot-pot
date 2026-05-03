@@ -1,42 +1,44 @@
-const BOWL_LEVEL_KEY = 'hotPot.bowlLevelIndex';
-const BOWL_MAX_UNLOCKED_LEVEL_KEY = 'hotPot.bowlMaxUnlockedLevelIndex';
-const BOWL_MAX_UNLOCKED_BADGE_LEVEL_KEY = 'hotPot.bowlMaxUnlockedBadgeLevelNumber';
+import { BOWL_PROGRESS_KEY } from '@/config/CloudConfig';
+import { PersistService } from '@/core/PersistService';
 
-function readNumber(key: string): number | null {
-  try {
-    const api = typeof wx !== 'undefined' ? wx : null;
-    const raw = api?.getStorageSync?.(key) ?? (typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null);
-    if (raw === null || raw === undefined || raw === '') {
-      return null;
-    }
-    const n = Number(raw);
-    return Number.isFinite(n) ? n : null;
-  } catch {
-    return null;
-  }
+interface BowlProgressState {
+  levelIndex: number;
+  maxUnlockedLevelIndex: number;
+  maxUnlockedBadgeLevelNumber: number;
 }
 
-function writeNumber(key: string, value: number): void {
-  try {
-    const text = String(Math.max(0, Math.floor(value)));
-    const api = typeof wx !== 'undefined' ? wx : null;
-    if (api?.setStorageSync) {
-      api.setStorageSync(key, text);
-      return;
-    }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(key, text);
-    }
-  } catch {
-    // 存储失败不影响本局游玩，内存值仍然可用。
-  }
+function sanitizeIndex(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
 }
 
-/** 碗内玩法关卡进度 */
-let bowlLevelIndex = readNumber(BOWL_LEVEL_KEY) ?? 0;
-let maxUnlockedBowlLevelIndex = Math.max(bowlLevelIndex, readNumber(BOWL_MAX_UNLOCKED_LEVEL_KEY) ?? 0);
-let maxUnlockedBowlBadgeLevelNumber =
-  readNumber(BOWL_MAX_UNLOCKED_BADGE_LEVEL_KEY) ?? Math.max(0, maxUnlockedBowlLevelIndex);
+function readState(): BowlProgressState {
+  const stored = PersistService.readJSON<Partial<BowlProgressState>>(BOWL_PROGRESS_KEY);
+  const levelIndex = sanitizeIndex(stored?.levelIndex);
+  return {
+    levelIndex,
+    maxUnlockedLevelIndex: Math.max(levelIndex, sanitizeIndex(stored?.maxUnlockedLevelIndex)),
+    maxUnlockedBadgeLevelNumber: sanitizeIndex(stored?.maxUnlockedBadgeLevelNumber),
+  };
+}
+
+function writeState(): void {
+  PersistService.writeJSON(BOWL_PROGRESS_KEY, {
+    levelIndex: bowlLevelIndex,
+    maxUnlockedLevelIndex: maxUnlockedBowlLevelIndex,
+    maxUnlockedBadgeLevelNumber: maxUnlockedBowlBadgeLevelNumber,
+  });
+}
+
+let {
+  levelIndex: bowlLevelIndex,
+  maxUnlockedLevelIndex: maxUnlockedBowlLevelIndex,
+  maxUnlockedBadgeLevelNumber: maxUnlockedBowlBadgeLevelNumber,
+} = readState();
+
+PersistService.subscribeCloudImport(() => {
+  reloadBowlProgressFromPersist();
+});
 
 export function getBowlLevelIndex(): number {
   return bowlLevelIndex;
@@ -45,8 +47,7 @@ export function getBowlLevelIndex(): number {
 export function setBowlLevelIndex(index: number): void {
   bowlLevelIndex = Math.max(0, Math.floor(index));
   maxUnlockedBowlLevelIndex = Math.max(maxUnlockedBowlLevelIndex, bowlLevelIndex);
-  writeNumber(BOWL_LEVEL_KEY, bowlLevelIndex);
-  writeNumber(BOWL_MAX_UNLOCKED_LEVEL_KEY, maxUnlockedBowlLevelIndex);
+  writeState();
 }
 
 export function getMaxUnlockedBowlLevelIndex(): number {
@@ -59,14 +60,19 @@ export function getMaxUnlockedBowlBadgeLevelNumber(): number {
 
 export function recordBowlBadgeUnlocked(levelNumber: number): void {
   maxUnlockedBowlBadgeLevelNumber = Math.max(maxUnlockedBowlBadgeLevelNumber, Math.max(0, Math.floor(levelNumber)));
-  writeNumber(BOWL_MAX_UNLOCKED_BADGE_LEVEL_KEY, maxUnlockedBowlBadgeLevelNumber);
+  writeState();
 }
 
 export function resetBowlProgress(): void {
   bowlLevelIndex = 0;
   maxUnlockedBowlLevelIndex = 0;
   maxUnlockedBowlBadgeLevelNumber = 0;
-  writeNumber(BOWL_LEVEL_KEY, bowlLevelIndex);
-  writeNumber(BOWL_MAX_UNLOCKED_LEVEL_KEY, maxUnlockedBowlLevelIndex);
-  writeNumber(BOWL_MAX_UNLOCKED_BADGE_LEVEL_KEY, maxUnlockedBowlBadgeLevelNumber);
+  writeState();
+}
+
+export function reloadBowlProgressFromPersist(): void {
+  const next = readState();
+  bowlLevelIndex = next.levelIndex;
+  maxUnlockedBowlLevelIndex = next.maxUnlockedLevelIndex;
+  maxUnlockedBowlBadgeLevelNumber = next.maxUnlockedBadgeLevelNumber;
 }

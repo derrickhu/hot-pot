@@ -1,9 +1,15 @@
+import { USER_SETTINGS_KEY } from '@/config/CloudConfig';
+import { PersistService } from '@/core/PersistService';
+
 const BGM_SRC = 'assets/audio/melon_spoon_loop.mp3';
 const SCOOP_SFX_SRC = 'assets/audio/scoop_2.mp3';
 const ORDER_COMPLETE_SFX_SRC = 'assets/audio/order_complete.mp3';
 const BUTTON_SFX_SRC = 'assets/audio/button_common.mp3';
-const MUSIC_ENABLED_KEY = 'hotPot.musicEnabled';
-const SOUND_ENABLED_KEY = 'hotPot.soundEnabled';
+
+interface UserAudioSettings {
+  musicEnabled: boolean;
+  soundEnabled: boolean;
+}
 
 type WxInnerAudioContext = {
   src: string;
@@ -25,8 +31,14 @@ class AudioManagerClass {
   private webBgm: HTMLAudioElement | null = null;
   private initialized = false;
   private firstGestureBound = false;
-  private musicEnabled = this.readMusicEnabled();
-  private soundEnabled = this.readSoundEnabled();
+  private musicEnabled = this.readSettings().musicEnabled;
+  private soundEnabled = this.readSettings().soundEnabled;
+
+  constructor() {
+    PersistService.subscribeCloudImport(() => {
+      this.reloadSettingsFromPersist();
+    });
+  }
 
   initBackgroundMusic(): void {
     if (this.initialized) {
@@ -66,7 +78,7 @@ class AudioManagerClass {
 
   setMusicEnabled(enabled: boolean): void {
     this.musicEnabled = enabled;
-    this.writeMusicEnabled(enabled);
+    this.writeSettings();
     if (enabled) {
       this.playBackgroundMusic();
     } else {
@@ -80,7 +92,7 @@ class AudioManagerClass {
 
   setSoundEnabled(enabled: boolean): void {
     this.soundEnabled = enabled;
-    this.writeSoundEnabled(enabled);
+    this.writeSettings();
   }
 
   playScoopSound(): void {
@@ -201,52 +213,33 @@ class AudioManagerClass {
     root?.addEventListener?.('touchstart', () => this.playBackgroundMusic(), { once: true });
   }
 
-  private readMusicEnabled(): boolean {
-    try {
-      const api = typeof wx !== 'undefined' ? wx : null;
-      const raw = api?.getStorageSync?.(MUSIC_ENABLED_KEY) ?? globalThis.localStorage?.getItem(MUSIC_ENABLED_KEY);
-      return raw !== '0';
-    } catch {
-      return true;
-    }
-  }
-
-  private readSoundEnabled(): boolean {
-    try {
-      const api = typeof wx !== 'undefined' ? wx : null;
-      const raw = api?.getStorageSync?.(SOUND_ENABLED_KEY) ?? globalThis.localStorage?.getItem(SOUND_ENABLED_KEY);
-      return raw !== '0';
-    } catch {
-      return true;
-    }
-  }
-
-  private writeMusicEnabled(enabled: boolean): void {
-    try {
-      const text = enabled ? '1' : '0';
-      const api = typeof wx !== 'undefined' ? wx : null;
-      if (api?.setStorageSync) {
-        api.setStorageSync(MUSIC_ENABLED_KEY, text);
-        return;
+  reloadSettingsFromPersist(): void {
+    const next = this.readSettings();
+    const musicChanged = next.musicEnabled !== this.musicEnabled;
+    this.musicEnabled = next.musicEnabled;
+    this.soundEnabled = next.soundEnabled;
+    if (musicChanged) {
+      if (this.musicEnabled) {
+        this.playBackgroundMusic();
+      } else {
+        this.pauseBackgroundMusic();
       }
-      globalThis.localStorage?.setItem(MUSIC_ENABLED_KEY, text);
-    } catch {
-      // Preference persistence is best-effort.
     }
   }
 
-  private writeSoundEnabled(enabled: boolean): void {
-    try {
-      const text = enabled ? '1' : '0';
-      const api = typeof wx !== 'undefined' ? wx : null;
-      if (api?.setStorageSync) {
-        api.setStorageSync(SOUND_ENABLED_KEY, text);
-        return;
-      }
-      globalThis.localStorage?.setItem(SOUND_ENABLED_KEY, text);
-    } catch {
-      // Preference persistence is best-effort.
-    }
+  private readSettings(): UserAudioSettings {
+    const stored = PersistService.readJSON<Partial<UserAudioSettings>>(USER_SETTINGS_KEY);
+    return {
+      musicEnabled: stored?.musicEnabled !== false,
+      soundEnabled: stored?.soundEnabled !== false,
+    };
+  }
+
+  private writeSettings(): void {
+    PersistService.writeJSON(USER_SETTINGS_KEY, {
+      musicEnabled: this.musicEnabled,
+      soundEnabled: this.soundEnabled,
+    });
   }
 }
 

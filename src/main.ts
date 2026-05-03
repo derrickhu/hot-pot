@@ -2,6 +2,8 @@ import '@/core/pixiUnsafeEvalPatch';
 import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
 import { SceneManager } from '@/core/SceneManager';
+import { Platform } from '@/core/PlatformService';
+import { CloudSyncManager } from '@/managers/CloudSyncManager';
 import { BowlScene } from '@/scenes/BowlScene';
 import { CatalogScene } from '@/scenes/CatalogScene';
 import { FruitSliceScene } from '@/scenes/FruitSliceScene';
@@ -17,7 +19,13 @@ async function main(): Promise<void> {
     }
 
     Game.init(canvas);
+    CloudSyncManager.prewarm();
+    const startupSync = await CloudSyncManager.awaitAuthoritativeStartup();
+    console.log(`[CloudSync] startup gate result status=${startupSync.status}, reason=${startupSync.reason}`);
     AudioManager.initBackgroundMusic();
+    Platform.onHide(() => {
+      void CloudSyncManager.flushNow('app-hide');
+    });
 
     const homeScene = new HomeScene();
     const bowlScene = new BowlScene();
