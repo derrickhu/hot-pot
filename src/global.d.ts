@@ -53,6 +53,13 @@ declare const wx: {
   };
   showToast?: (options: { title: string; icon?: string }) => void;
   shareAppMessage?: (options: { title: string; imageUrl?: string; query?: string }) => void;
+  showShareMenu?: (options?: {
+    withShareTicket?: boolean;
+    menus?: Array<'shareAppMessage' | 'shareTimeline'>;
+    success?: () => void;
+    fail?: (err: unknown) => void;
+  }) => void;
+  onShareAppMessage?: (handler: () => { title: string; imageUrl?: string; query?: string }) => void;
   createInnerAudioContext?: () => {
     src: string;
     loop: boolean;

@@ -1,0 +1,31 @@
+# 微信小游戏分享图（5:4 聊天卡片）
+
+用途：微信小游戏 `shareAppMessage.imageUrl` 分享图。模型生成原图和中间产物放在仓库外 `/Users/rosa/rosa_games/game_assets/hot-pot/assets/raw/share/`，游戏内定稿放 `assets/images/share_card.jpg`。
+
+生成目标：聊天会话卡片里一眼看出“清凉水果捞小游戏”，主体要大、颜色鲜艳、对比明显，不依赖文字。
+
+Prompt v1:
+
+```text
+Wechat mini game share card illustration, 5:4 composition safe area, summer fruit dessert game, cute 2D hand-painted cartoon style matching a casual mobile game. A large transparent glass bowl filled with bright shaved ice, big readable ice cubes, watermelon, orange slices, kiwi, strawberries, blueberries, pineapple chunks, and mint leaves. The bowl should be the hero subject in the center-right, big and appetizing, with glossy highlights and strong clean outlines.
+
+Background: refreshing tropical seaside vacation mood, soft mint aqua gradient, gentle ocean wave shapes, small floating fruit slices and ice cubes around the edges, bright sunshine sparkles, cool and comfortable summer feeling. High saturation, clean contrast, cheerful, attractive, polished game promotional art.
+
+Composition must work when cropped to 5:4 share card and viewed small in chat. Keep important elements away from the outer 8% border. No busy clutter, no tiny details.
+
+NO TEXT, no Chinese characters, no English words, no logo, no watermark, no UI, no phone frame, no buttons.
+```
+
+Prompt v2（内置模型重生成，漫画萌感，多水果，避免写实）:
+
+```text
+WeChat mini game share card illustration, 5:4 composition. MUST be cute 2D hand-drawn cartoon style matching a casual mobile game. Strong clean dark outlines, soft cel shading, simple readable shapes, bright saturated colors. NOT realistic, NOT photorealistic, NOT semi-realistic, NOT 3D render, NOT glossy CG, NOT food photography, NOT detailed realistic fruit texture.
+
+Theme: refreshing summer fruit scooping game. A big cute transparent glass dessert bowl in the center, filled with crushed ice and MANY colorful cartoon fruits. Include lots of large readable fruit pieces: watermelon cubes, watermelon wedges, orange slices, lemon slices, kiwi slices, pineapple rings, pineapple chunks, strawberries, blueberries, grapes, peach slices, apple slices, mango cubes, mint leaves, and big ice cubes. Fruits should be abundant, playful, and layered like a full fruit feast, but still clean and readable.
+
+Composition: the bowl and fruit pile fill most of the card, with several oversized fruits flying around the edges for energy. Use a cool mint-blue tropical background with simple wave shapes, small cartoon ice cubes, sparkle highlights, and a happy vacation feeling. Keep all important elements inside the safe center area for chat card cropping.
+
+Style details: hand-painted mobile game asset, chubby cute proportions, thick outline, bright color blocks, simple highlights, low-detail texture, adorable and juicy, same vibe as a cartoon puzzle game UI.
+
+NO TEXT, no Chinese characters, no English words, no logo, no watermark, no UI, no phone frame, no buttons.
+```

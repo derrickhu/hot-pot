@@ -33,6 +33,7 @@ import {
   mountSettingsButtonSprite,
   SETTINGS_BTN_TEXTURE_KEY,
 } from '@/utils/settingsButtonSprite';
+import { shareGame } from '@/utils/wechatShare';
 import { FruitItem } from '@/gameobjects/FruitItem';
 import { BowlFailSettlementOverlay } from '@/gameobjects/BowlFailSettlementOverlay';
 import { BowlBadgeUnlockOverlay } from '@/gameobjects/BowlBadgeUnlockOverlay';
@@ -2013,9 +2014,7 @@ export class BowlScene implements Scene {
           this.startRound();
         },
         onShare: () => {
-          const api = typeof wx !== 'undefined' ? wx : null;
-          if (api?.shareAppMessage) {
-            api.shareAppMessage({ title: '火锅碗里捞一捞，来挑战！' });
+          if (shareGame()) {
             this.toast('转发成功');
           } else {
             this.toast('转发请在微信小游戏中使用');

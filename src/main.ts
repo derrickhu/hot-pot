@@ -10,6 +10,7 @@ import { BowlScene } from '@/scenes/BowlScene';
 import { CatalogScene } from '@/scenes/CatalogScene';
 import { FruitSliceScene } from '@/scenes/FruitSliceScene';
 import { HomeScene } from '@/scenes/HomeScene';
+import { setupWechatShare } from '@/utils/wechatShare';
 
 async function main(): Promise<void> {
   try {
@@ -21,6 +22,7 @@ async function main(): Promise<void> {
     }
 
     Game.init(canvas);
+    setupWechatShare();
     const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
     Game.stage.addChild(loadingOverlay.container);
     loadingOverlay.setProgress(0.08);
