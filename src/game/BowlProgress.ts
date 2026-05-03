@@ -44,6 +44,16 @@ export function getBowlLevelIndex(): number {
   return bowlLevelIndex;
 }
 
+export function hasBowlProgressRecord(): boolean {
+  return PersistService.readRaw(BOWL_PROGRESS_KEY) !== null;
+}
+
+export function markBowlProgressStarted(): void {
+  if (!hasBowlProgressRecord()) {
+    writeState();
+  }
+}
+
 export function setBowlLevelIndex(index: number): void {
   bowlLevelIndex = Math.max(0, Math.floor(index));
   maxUnlockedBowlLevelIndex = Math.max(maxUnlockedBowlLevelIndex, bowlLevelIndex);

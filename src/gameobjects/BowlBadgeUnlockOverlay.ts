@@ -112,6 +112,7 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
     mountBowlBadgeIcon(this.badgeRoot, options.badge, options.texture, 192);
     this.badgeTitle.text = options.badge.title;
     this.visible = true;
+    AudioManager.playBadgeUnlockSound();
   }
 
   hide(): void {

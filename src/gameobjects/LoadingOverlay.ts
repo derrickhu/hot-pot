@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import { TextureCache } from '@/utils/TextureCache';
 
 const LOADING_BG_KEY = 'loading_page_cool_vacation';
-const LOADING_BG_PATH = 'assets/images/loading_page_cool_vacation.png';
+const LOADING_BG_PATH = 'assets/images/loading_page_cool_vacation.jpg';
 const LOGO_KEY = 'loading_game_logo_title';
 const LOGO_PATH = 'assets/images/game_logo_title.png';
 

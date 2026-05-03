@@ -2111,6 +2111,7 @@ export class BowlScene implements Scene {
         parent.removeChild(fruit);
         fruit.position.set(0, 0);
         fruit.scale.set(0.88);
+        this.resetFruitStandaloneVisual(fruit);
         anchor.addChild(fruit);
         this.bufferSlots[emptyIdx] = fruit;
         this.tryConsumeOrderFromBuffer();
@@ -2179,6 +2180,7 @@ export class BowlScene implements Scene {
     const lp = this.fruitLayer.toLocal(worldStart);
     fruit.position.copyFrom(lp);
     fruit.scale.set(this.randomInRange(1.24, 1.46));
+    this.resetFruitStandaloneVisual(fruit);
     this.flyingFruitLayer.addChild(fruit);
     fruit.phase = 'flying';
     fruit.picked = true;
@@ -2556,6 +2558,14 @@ export class BowlScene implements Scene {
     }
   }
 
+  private resetFruitStandaloneVisual(fruit: FruitItem): void {
+    const display = fruit.display as PIXI.DisplayObject & { tint?: number };
+    fruit.alpha = 1;
+    if (typeof display.tint === 'number') {
+      display.tint = 0xffffff;
+    }
+  }
+
   private getSubmergedFruitTint(): number {
     switch (this.currentSoupKey) {
       case 'berry_tomato':
@@ -2577,7 +2587,7 @@ export class BowlScene implements Scene {
   private liftFruitToFlyingLayer(fruit: FruitItem): void {
     const parent = fruit.parent;
     if (!parent || parent === this.flyingFruitLayer) {
-      fruit.alpha = 1;
+      this.resetFruitStandaloneVisual(fruit);
       this.flyingFruitLayer.addChild(fruit);
       return;
     }
@@ -2585,7 +2595,7 @@ export class BowlScene implements Scene {
     parent.removeChild(fruit);
     const local = this.flyingFruitLayer.toLocal(world);
     fruit.position.copyFrom(local);
-    fruit.alpha = 1;
+    this.resetFruitStandaloneVisual(fruit);
     this.flyingFruitLayer.addChild(fruit);
   }
 

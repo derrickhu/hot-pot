@@ -5,6 +5,7 @@ const BGM_SRC = 'assets/audio/melon_spoon_loop.mp3';
 const SCOOP_SFX_SRC = 'assets/audio/scoop_2.mp3';
 const ORDER_COMPLETE_SFX_SRC = 'assets/audio/order_complete.mp3';
 const BUTTON_SFX_SRC = 'assets/audio/button_common.mp3';
+const BADGE_UNLOCK_SFX_SRC = 'assets/audio/badge_unlock.mp3';
 
 interface UserAudioSettings {
   musicEnabled: boolean;
@@ -105,6 +106,10 @@ class AudioManagerClass {
 
   playButtonSound(): void {
     this.playSoundEffect(BUTTON_SFX_SRC);
+  }
+
+  playBadgeUnlockSound(): void {
+    this.playSoundEffect(BADGE_UNLOCK_SFX_SRC);
   }
 
   playBackgroundMusic(): void {

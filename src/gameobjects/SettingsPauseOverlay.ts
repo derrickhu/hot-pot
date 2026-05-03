@@ -179,19 +179,22 @@ export class SettingsPauseOverlay extends PIXI.Container {
     textColor: number,
     onTap: () => void,
   ): void {
-    const g = new PIXI.Graphics();
-    g.beginFill(bg);
-    g.lineStyle(3, 0x3d2a1f, 0.25);
-    g.drawRoundedRect(x, y, w, h, 18);
-    g.endFill();
-    g.eventMode = 'static';
-    g.cursor = 'pointer';
-    g.hitArea = new PIXI.Rectangle(x, y, w, h);
-    g.on('pointertap', () => {
+    const root = new PIXI.Container();
+    root.position.set(x, y);
+    root.eventMode = 'static';
+    root.cursor = 'pointer';
+    root.hitArea = new PIXI.Rectangle(0, 0, w, h);
+    root.on('pointertap', () => {
       AudioManager.playButtonSound();
       onTap();
     });
-    this.addChild(g);
+
+    const g = new PIXI.Graphics();
+    g.beginFill(bg);
+    g.lineStyle(3, 0x3d2a1f, 0.25);
+    g.drawRoundedRect(0, 0, w, h, 18);
+    g.endFill();
+    root.addChild(g);
 
     const t = new PIXI.Text(label, {
       fontSize: 28,
@@ -199,7 +202,9 @@ export class SettingsPauseOverlay extends PIXI.Container {
       fontWeight: '700',
     });
     t.anchor.set(0.5);
-    t.position.set(x + w / 2, y + h / 2);
-    this.addChild(t);
+    t.position.set(w / 2, h / 2);
+    t.eventMode = 'none';
+    root.addChild(t);
+    this.addChild(root);
   }
 }

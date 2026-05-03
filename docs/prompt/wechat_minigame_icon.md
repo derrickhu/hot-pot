@@ -28,5 +28,36 @@ Square 1:1 WeChat mini-game app icon. Art style MUST match 2D hand-painted carto
 | `wechat_minigame_icon_1024.png` | v1 居中裁切正方形 1024×1024 |
 | `wechat_minigame_icon_v2_glass_ice.png` | v2 模型原始导出 |
 | `wechat_minigame_icon_v2_glass_ice_1024.png` | v2 居中裁切正方形 1024×1024 |
+| `wechat_minigame_icon_v3_high_contrast_readable_raw.png` | v3 小图标强化版原始导出 |
+| `wechat_minigame_icon_v3_high_contrast_readable_1024.png` | v3 1024×1024 导出版 |
+| `wechat_minigame_icon_v3_high_contrast_readable_preview_1024_and_64.png` | v3 大图与 64px 小图预览拼图 |
 
 确认进包前：按需抠图/压缩，再**拷贝**到游戏仓库 `assets/images/`。
+
+---
+
+## v3 提示词（小图标可读性强化）
+
+目标：解决小尺寸下碗和背景分不清、水果不够醒目的问题。图标必须像微信小游戏列表里的小图标一样能一眼看懂：**大碗、大水果、少元素、高对比、粗轮廓**。
+
+```text
+Square 1:1 WeChat mini-game app icon, optimized for tiny icon readability at 48px and 64px. 2D hand-painted cartoon food illustration, cute, bright, clean, NOT photorealistic, NOT 3D render, NOT flat corporate vector.
+
+Composition: one large transparent glass bowl fills 78% to 85% of the icon width, centered and slightly lower. The bowl silhouette must be very readable, with thick dark teal / navy outline and bright white rim highlights. Do not make the bowl too transparent; use visible cyan-blue glass tint and strong outline so it separates clearly from the background.
+
+Hero fruits: use only a few large fruits, no clutter. One oversized pineapple chunk or pineapple crown at center-back, one big red watermelon wedge front-left, two big strawberries front-right, several large blueberries as accents. Fruits should be large, saturated, and simple shapes with thick clean outlines. Avoid many tiny fruit pieces.
+
+Ice: use 5 to 7 large readable ice cubes in the bowl, bright white and cyan highlights, not too many small cubes.
+
+Background: very simple high-contrast circular app icon background, solid deep aqua / turquoise gradient or flat mint-blue, darker than the glass highlights. Add a soft pale circular halo behind the bowl to make the fruit bowl pop, but keep background clean. No busy texture, no small sparkles except a few large simple highlights.
+
+Small icon rule: all major shapes must remain recognizable when scaled to 48px. Strong silhouette, high contrast, thick outline, simple fruit count, no thin details.
+
+No text, no logo, no watermark, no UI, no phone frame.
+```
+
+文件路径：
+
+- 原始：`/Users/rosa/rosa_games/game_assets/hot-pot/assets/raw/wechat_icon/wechat_minigame_icon_v3_high_contrast_readable_raw.png`
+- 1024：`/Users/rosa/rosa_games/game_assets/hot-pot/assets/raw/wechat_icon/wechat_minigame_icon_v3_high_contrast_readable_1024.png`
+- 64px 预览拼图：`/Users/rosa/rosa_games/game_assets/hot-pot/assets/raw/wechat_icon/wechat_minigame_icon_v3_high_contrast_readable_preview_1024_and_64.png`

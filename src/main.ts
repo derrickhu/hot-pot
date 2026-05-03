@@ -3,6 +3,7 @@ import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
 import { SceneManager } from '@/core/SceneManager';
 import { Platform } from '@/core/PlatformService';
+import { hasBowlProgressRecord, markBowlProgressStarted } from '@/game/BowlProgress';
 import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { CloudSyncManager } from '@/managers/CloudSyncManager';
 import { BowlScene } from '@/scenes/BowlScene';
@@ -44,10 +45,16 @@ async function main(): Promise<void> {
     SceneManager.register(bowlScene);
     SceneManager.register(fruitSliceScene);
     SceneManager.register(catalogScene);
+    const shouldEnterFirstLevel = !hasBowlProgressRecord();
+    if (shouldEnterFirstLevel) {
+      markBowlProgressStarted();
+      loadingOverlay.setProgress(0.86);
+      await SceneManager.prepare('bowl');
+    }
     loadingOverlay.setProgress(1);
     Game.stage.removeChild(loadingOverlay.container);
     loadingOverlay.destroy();
-    SceneManager.switchTo('home');
+    SceneManager.switchTo(shouldEnterFirstLevel ? 'bowl' : 'home');
   } catch (error) {
     console.error('[main] boot failed', error);
   }
