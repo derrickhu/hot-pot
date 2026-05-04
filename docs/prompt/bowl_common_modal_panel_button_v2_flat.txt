@@ -1,0 +1,43 @@
+Generate a single transparent PNG sprite sheet containing exactly TWO reusable blank UI assets for a cute flat 2D summer fruit dessert mobile game:
+
+1. One large empty modal dialog panel.
+2. One matching empty rounded confirmation button.
+
+Canvas and layout:
+- Transparent background outside the assets.
+- Put the modal panel centered in the upper 70% of the canvas.
+- Put the button centered below the panel, separated with generous transparent spacing so both assets can be cropped independently.
+- Panel ratio about 1.35:1 width-to-height.
+- Button ratio about 3.2:1 width-to-height.
+
+Flat panel design:
+- Clean flat 2D cartoon style, close to casual WeChat mini game UI.
+- Rounded rectangle with simple warm brown fill, light cream rim, and one thin darker inner outline.
+- Use mostly flat color areas with only very subtle soft gradient, no strong highlights.
+- Keep the center clean and empty for program-rendered title, icon, and text.
+- Small fruit accents are allowed only near corners, but keep them simple, flat, and not too detailed.
+- The panel should feel lightweight, cute, and readable, not luxury, not glossy, not 3D.
+
+Flat button design:
+- Matching simple rounded pill button.
+- Warm orange or honey fill, cream rim, thin darker inner outline.
+- Empty center for program-rendered text.
+- Simple flat color with tiny subtle top highlight only if needed.
+- No icons or symbols inside the button.
+
+Strict constraints:
+- NO TEXT, no numbers, no letters, no captions, no readable marks anywhere.
+- NO watermark.
+- Transparent outside the two assets.
+- NO full background scene.
+- NO cast shadow outside the assets.
+- NO strong 3D bevels, NO realistic glossy gel, NO plastic shine, NO heavy rim, NO perspective depth.
+- NO complex decorations invading the center area.
+- Crisp clean edges suitable for alpha trimming.
+
+Style keywords:
+- flat 2D hand-painted cartoon UI
+- warm fruit dessert palette
+- simple casual mobile game popup
+- cute, clean, rounded, soft, readable
+- closer to flat game UI than premium glossy illustration

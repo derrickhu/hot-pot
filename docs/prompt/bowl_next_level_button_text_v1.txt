@@ -1,0 +1,28 @@
+Generate one transparent PNG UI asset for a cute flat 2D summer fruit dessert mobile game.
+
+Asset:
+- One rounded "next level" button.
+- The button image MUST include the Chinese text exactly: 下一关
+- The button image MUST NOT include any other text.
+
+Canvas and layout:
+- Transparent background outside the button.
+- One centered horizontal rounded pill button.
+- Button ratio about 3.4:1 width-to-height.
+- Keep enough padding around the button for alpha trimming.
+
+Button design:
+- Flat 2D cartoon casual game UI.
+- Friendly rounded pill shape.
+- Fresh blue fill, cream or pale rim, thin darker blue outline.
+- Slight soft highlight is okay, but keep it mostly flat and not glossy 3D.
+- The text 下一关 should be centered, large, clear, white or pale cream with a subtle darker outline.
+
+Strict constraints:
+- The ONLY text allowed anywhere in the image is: 下一关
+- NO subtitle, NO smaller text, NO numbers, NO English letters, NO captions.
+- NO icon inside or outside the button.
+- NO watermark.
+- NO full scene background, only the button asset on transparent background.
+- NO cast shadow outside the button.
+- Crisp clean edges suitable for alpha trimming.

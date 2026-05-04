@@ -1,0 +1,38 @@
+Generate a single transparent PNG sprite sheet containing exactly TWO reusable blank UI assets for a cute summer fruit hot-pot / dessert mobile game:
+
+1. One large empty modal dialog panel.
+2. One matching empty rounded confirmation button.
+
+Canvas and layout:
+- Transparent background outside the assets.
+- Put the modal panel centered in the upper 70% of the canvas.
+- Put the button centered below the panel, separated with generous transparent spacing so both assets can be cropped independently.
+- The panel should be approximately 1.35:1 width-to-height ratio, suitable for a mobile game popup.
+- The button should be approximately 3.2:1 width-to-height ratio, suitable for program-rendered text.
+
+Panel design:
+- Warm dessert / fruit drink game style, hand-painted 2D cartoon UI.
+- Rounded rectangle with a soft cream-gold outer rim and a slightly darker caramel / cocoa brown inner body.
+- The center must be clean and empty, with enough quiet space for program-rendered title, icon, and multiline text.
+- Add subtle glossy highlights, soft inner lighting, and tiny fruit-dessert decorative accents only near the outer corners or rim.
+- Decorations may include tiny mint leaves, citrus slice corners, berry dots, or cream highlights, but they must not invade the center text area.
+- No text, no icon, no label, no placeholder line in the panel center.
+
+Button design:
+- Matching warm orange / honey button with cream-gold rim.
+- Rounded pill shape, juicy and tactile, empty center for program-rendered text.
+- Clear silhouette, readable edge, polished mobile game quality.
+- No text, no icon, no symbol inside the button.
+
+Strict constraints:
+- NO TEXT, no numbers, no letters, no captions, no readable marks anywhere in the image.
+- NO watermark.
+- NO full background scene, only the two UI assets on transparent background.
+- NO drop shadow or cast shadow outside the assets.
+- NO dark generic RPG frame, keep it cute, clean, bright, and dessert-themed.
+- Keep edges crisp enough for background removal and alpha trimming.
+
+Style reference:
+- Cute polished WeChat mini game UI.
+- Soft hand-painted cartoon, warm fruit dessert palette.
+- Rounded, friendly, premium casual game popup, not corporate vector, not realistic 3D.

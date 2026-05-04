@@ -1,0 +1,43 @@
+Generate a single transparent PNG sprite sheet containing exactly TWO home screen secondary buttons for a cute summer fruit mobile game.
+
+Canvas and layout:
+- Transparent background.
+- EXACTLY TWO equal-width columns in one row.
+- Left button: collection / fruit book.
+- Right button: fruit slicing mode.
+- Leave enough transparent margin around each button for later cropping.
+
+Shared button shape:
+- Rounded vertical badge button, not flat and not skinny.
+- Approximate ratio: width : height around 1 : 1.25.
+- ONE continuous smooth button surface from top to bottom.
+- Cream or very pale mint fill, dark teal outline, thin cream inner rim.
+- Soft hand-painted highlight on the top edge is okay.
+
+ABSOLUTELY FORBIDDEN:
+- NO text, NO numbers, NO letters, NO readable marks.
+- NO grooves, NO inset slots, NO recessed areas.
+- NO horizontal divider line.
+- NO lower label band.
+- NO separated bottom strip.
+- NO line across the middle or near the bottom.
+- NO external shadow, NO cast shadow outside the button.
+- NO background color outside the buttons.
+- NO watermark.
+
+Left button icon:
+- Cute open illustrated fruit guide book / collection album icon.
+- Clearly recognizable two open pages, small fruit sticker accents such as strawberry, lemon, or orange.
+- Centered in the middle of the button.
+
+Right button icon:
+- Cute fruit slicing icon: small friendly kitchen knife cutting a triangular watermelon slice.
+- Clear fruit slicing meaning, playful and safe.
+- NO blood, NO horror, no realistic violence.
+- Centered in the middle of the button.
+
+Style:
+- 2D hand-painted cartoon mobile game UI.
+- Polished WeChat mini game quality.
+- Rounded tactile fruit-game buttons, clean outlines, appetizing colors.
+- The button body must be a single uninterrupted rounded card with no internal panel divisions.

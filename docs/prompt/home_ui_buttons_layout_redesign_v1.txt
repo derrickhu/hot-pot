@@ -1,0 +1,39 @@
+Generate a polished 9:16 vertical mobile game HOME SCREEN UI prototype for a cute casual fruit hot-pot / fruit puzzle WeChat mini game.
+
+Goal: redesign the HOME screen layout, especially button style and button placement. Keep the same game identity: summer fruits, mint water, playful dessert bowl mood. This is a UI prototype / concept mockup, not a final implementation screenshot.
+
+Current issues to improve:
+- The central level button feels plain and floating.
+- Left and right side buttons feel detached and too low-contrast.
+- Button positions feel scattered; the screen needs a clearer vertical hierarchy.
+- The bottom "game circle" entry should be secondary and unobtrusive.
+
+Required layout:
+- Full-screen portrait mobile game composition, no phone frame, no black device border.
+- Top area: decorative fruit logo/title area near the upper third, large enough to feel like the game brand. Do not rely on readable text accuracy; use a stylized blank logo plaque or decorative title-like shapes.
+- Main action: one large central "play / current level" button below the logo, around the visual center. It should be the strongest call-to-action.
+- The main button should be a juicy rounded pill or soft fruit-stand sign, not a flat rectangle. Use mint green / lime / cream highlight, clear outline, soft drop shadow, and small fruit/leaf decorations on the edges.
+- Secondary buttons: two side buttons for collection and fruit-slicing mode. Place them symmetrically below or diagonally beside the main button, not too close to screen edges. They should look like small rounded badges/cards with clear icon space and label space.
+- Bottom entry: a small rounded "game circle" style button centered near the bottom, very secondary, not competing with the main play button.
+- Keep large breathing space and avoid clutter. Decorative fruits and leaves should frame the UI but not cover buttons.
+
+Button style direction:
+- Premium cute 2D hand-painted mobile game UI.
+- Rounded, tactile, glossy but not 3D plastic.
+- Unified style: mint green, ice blue, lemon yellow, watermelon red accents, cream highlights.
+- Buttons should have clear hit-area shapes and consistent shadows.
+- Use icon placeholders or simple fruit/book/knife silhouettes, but avoid unreadable text.
+
+Background direction:
+- Refresh the existing pale mint summer background: soft aqua gradient, subtle flowing water shapes, floating leaves, ice cubes, citrus slices, watermelon corners at the bottom.
+- Bottom fruit decorations can frame the scene, but keep the central UI clean.
+
+Important constraints:
+- NO readable Chinese text, NO English text, NO numbers, NO captions, NO watermark.
+- If labels are needed, use short abstract bars or decorative placeholder glyphs only.
+- Make the button positions and hierarchy clear enough for a game UI designer to implement later in code.
+- The resulting image should look like a complete polished home screen mockup for a WeChat mini game.
+
+Rendering style:
+- 2D hand-painted cartoon, clean outlines, soft highlights, appetizing fruit colors, polished casual mobile game quality.
+- High-resolution concept art, crisp UI edges, no photorealism.

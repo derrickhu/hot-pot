@@ -1,0 +1,44 @@
+Generate one complete transparent PNG UI asset for a cute flat 2D summer fruit dessert mobile game.
+
+Purpose:
+- A single "challenge failed" popup panel image that combines fail settlement and revive choices.
+- The image must include the full panel artwork and exactly THREE blank button backgrounds.
+- Program code will render all Chinese text later, so the generated image must contain NO text.
+
+Canvas and layout:
+- Transparent background outside the popup.
+- One centered vertical popup panel, suitable for a mobile game failure dialog.
+- Panel ratio about 0.86:1 width-to-height, slightly taller than wide.
+- Use flat 2D cartoon style, warm cream / honey / cocoa colors, matching a casual WeChat mini game.
+- Include a small top title badge area as part of the art, but it must be empty with no text.
+- Keep a large clean content area in the middle for program-rendered text and an optional icon.
+- At the bottom, include exactly THREE blank rounded buttons:
+  1. Top large primary revive button, wider and warmer honey-orange.
+  2. Middle secondary retry button, same width or slightly narrower, orange.
+  3. Bottom secondary home button, smaller or lighter cream-orange.
+- Buttons must be horizontally centered and clearly separated vertically.
+- Leave enough flat empty space inside every button for program-rendered text.
+
+Panel visual style:
+- Flat 2D hand-painted cartoon UI, not realistic 3D.
+- Simple rounded rectangle panel with light cream rim and warm pale inner fill.
+- Thin darker outline for readability.
+- Very subtle gradient is okay, but no strong glossy gel, no thick 3D bevels, no heavy shadows.
+- Small fruit/dessert corner accents are allowed, but keep them simple and away from text/button centers.
+
+Strict constraints:
+- NO TEXT, no numbers, no letters, no captions, no readable marks anywhere.
+- NO icons inside the buttons.
+- NO watermark.
+- NO full scene background, only the popup asset on transparent background.
+- NO cast shadow outside the popup.
+- NO realistic glossy plastic or luxury 3D style.
+- Exactly three blank buttons, all visible and tappable-looking.
+- Crisp clean edges suitable for alpha trimming.
+
+Style keywords:
+- flat 2D casual game UI
+- cute fruit dessert theme
+- rounded friendly popup
+- warm cream and honey palette
+- clean readable mobile game dialog

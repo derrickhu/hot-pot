@@ -1,0 +1,40 @@
+Generate a single transparent PNG sprite sheet containing exactly TWO home screen secondary buttons for a cute summer fruit mobile game.
+
+Canvas and layout:
+- Transparent background.
+- EXACTLY TWO equal-width columns in one row.
+- Left button: collection / fruit book.
+- Right button: fruit slicing mode.
+- Leave transparent margin around each button, but keep both buttons in one horizontal sprite sheet.
+
+Shared button shape:
+- Rounded vertical badge button, but NOT too flat and NOT too narrow.
+- Approximate silhouette: rounded capsule-card, about 1:1.25 to 1:1.45 width-to-height ratio.
+- Use the same style family as a mint green summer fruit home UI.
+- Cream or very pale mint fill, dark teal outline, thin cream inner rim.
+- Soft hand-painted highlight is allowed.
+- NO drop shadow, NO cast shadow outside the button.
+- NO grooves, NO inset slots, NO recessed label bars, NO bottom text strip.
+- Keep a clean empty lower area if future program text is needed, but do not draw a label container.
+
+Left button icon:
+- Cute open illustrated fruit guide book / collection album icon.
+- The book should be clearly recognizable: two open pages, small fruit sticker accents such as strawberry or lemon on the page or corner.
+- Centered in the upper-middle of the button.
+
+Right button icon:
+- Cute fruit slicing icon: a small friendly kitchen knife cutting a triangular watermelon slice OR a watermelon slice with a small knife.
+- Clear fruit slicing meaning, playful and safe.
+- NO blood, NO horror, no realistic sharp violence.
+- Centered in the upper-middle of the button.
+
+Strict constraints:
+- NO text, NO numbers, NO letters, NO readable marks anywhere.
+- NO labels, NO captions, NO watermark.
+- NO background color outside the buttons; transparent PNG.
+- Do not create gear, gift box, settings, reward, shopping, or lock icons.
+
+Style:
+- 2D hand-painted cartoon mobile game UI.
+- Cute polished WeChat mini game quality.
+- Rounded tactile fruit-game buttons, clean outlines, appetizing colors.

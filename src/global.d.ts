@@ -52,6 +52,15 @@ declare const wx: {
     destroy: () => void;
   };
   showToast?: (options: { title: string; icon?: string }) => void;
+  createRewardedVideoAd?: (options: { adUnitId: string }) => {
+    load: () => Promise<void>;
+    show: () => Promise<void>;
+    onClose: (handler: (res?: { isEnded?: boolean }) => void) => void;
+    offClose?: (handler: (res?: { isEnded?: boolean }) => void) => void;
+    onError: (handler: (err: { errMsg?: string; errCode?: number }) => void) => void;
+    offError?: (handler: (err: { errMsg?: string; errCode?: number }) => void) => void;
+    destroy?: () => void;
+  };
   shareAppMessage?: (options: { title: string; imageUrl?: string; query?: string }) => void;
   showShareMenu?: (options?: {
     withShareTicket?: boolean;

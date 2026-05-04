@@ -1,0 +1,30 @@
+Generate one transparent PNG UI asset for a cute flat 2D summer fruit dessert mobile game.
+
+Asset:
+- One small rounded square action button background.
+- This button background will be reused for Home and Share actions.
+- The image must contain NO text and NO icon.
+
+Canvas and layout:
+- Transparent background outside the button.
+- One centered rounded square / soft squircle button.
+- Ratio about 1:1.
+- Enough padding around the button for alpha trimming.
+
+Button design:
+- Flat 2D cartoon casual game UI.
+- Color must clearly stand out from a warm yellow / cream panel background.
+- Use a mostly single-color fill, preferably fresh teal-blue or mint-turquoise.
+- Cream or pale rim, thin darker teal outline.
+- Simple flat color with very subtle top highlight only.
+- No fruit decorations, no detailed pattern, no glossy 3D.
+- Strong enough contrast so a small icon and label placed by code will be readable.
+
+Strict constraints:
+- NO TEXT, no numbers, no letters, no captions.
+- NO icon, NO symbol, NO house, NO share arrow.
+- NO watermark.
+- NO full scene background, only the button asset on transparent background.
+- NO cast shadow outside the button.
+- NO realistic glossy plastic or luxury 3D style.
+- Crisp clean edges suitable for alpha trimming.

@@ -1,0 +1,34 @@
+Generate one transparent PNG UI asset for a cute flat 2D summer fruit dessert mobile game.
+
+Asset:
+- One unlock-content popup panel background.
+- The panel image MUST include the Chinese title text exactly: 解锁新内容
+- The panel image MUST NOT include any buttons.
+- The panel image MUST NOT include any item cards, unlock cards, fruit cards, icons, labels, or item names.
+
+Canvas and layout:
+- Transparent background outside the panel.
+- One centered vertical popup panel, suitable for a mobile game "new content unlocked" dialog.
+- Rounded rectangle panel, portrait layout, similar to a casual WeChat mini game reward popup.
+- Top title area contains only the Chinese title text: 解锁新内容
+- Large clean empty area below the title for program-rendered unlock cards.
+- Bottom area should remain empty so program buttons can be placed later.
+
+Visual style:
+- Flat 2D hand-painted cartoon UI.
+- Warm cream panel fill, soft honey/gold rim, thin brown outline.
+- Cute summer fruit dessert theme, but decorations must be small and stay near corners or rim.
+- Simple, clean, readable, not too glossy, not 3D.
+- Match flat casual mobile game UI style.
+
+Strict constraints:
+- The ONLY text allowed anywhere in the image is: 解锁新内容
+- NO other Chinese text, no English text, no numbers, no captions, no labels.
+- NO buttons.
+- NO unlock cards.
+- NO item cards.
+- NO icons in the center content area.
+- NO watermark.
+- NO full scene background, only the panel asset on transparent background.
+- NO cast shadow outside the panel.
+- Crisp clean edges suitable for alpha trimming.

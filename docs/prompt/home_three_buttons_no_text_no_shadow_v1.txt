@@ -1,0 +1,32 @@
+Generate a single transparent PNG sprite sheet containing exactly THREE home screen UI buttons for a cute summer fruit mobile game.
+
+Canvas and layout:
+- Transparent background.
+- Arrange the three buttons in one clean composition for review: one large horizontal main button on the top row, two smaller secondary buttons below it, left and right.
+- Leave generous transparent spacing between the buttons so they can be cropped later.
+
+Button 1: main play / level button
+- Large horizontal rounded pill button, about 3.8:1 width-to-height ratio.
+- Fresh mint green to soft lime gradient fill, glossy hand-painted highlight.
+- Clear dark teal outline plus a thin cream inner rim.
+- Small fruit and leaf decorations may peek from the outside corners: lemon slice, strawberry, mint leaves.
+- Empty center area for future program text.
+
+Button 2 and 3: secondary home buttons
+- Two matching rounded vertical badge buttons, same style family as the main button.
+- Cream or very pale mint fill with teal outline.
+- Simple fruit/utility icon placeholder is allowed in the center, but keep it clean and minimal.
+- Same size and same silhouette for both secondary buttons.
+
+Strict constraints:
+- NO text, NO numbers, NO letters, NO readable marks anywhere.
+- NO grooves, NO inset slots, NO recessed label bars, NO inner concave panels.
+- NO drop shadows, NO cast shadows outside the buttons.
+- NO background color, transparent outside the buttons.
+- NO watermark, NO captions.
+
+Style:
+- 2D hand-painted cartoon mobile game UI.
+- Cute polished WeChat mini game quality.
+- Soft clean highlights on the buttons are okay, but no external shadows.
+- Rounded, tactile, juicy fruit UI, not 3D plastic and not flat corporate vector.
