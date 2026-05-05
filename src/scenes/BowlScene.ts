@@ -23,7 +23,7 @@ import {
   type BowlThemeDef,
 } from '@/config/bowlThemes';
 import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
-import { FRUIT_CONFIGS, FRUIT_MAP, type FruitId } from '@/config/fruits';
+import { FRUIT_MAP, type FruitId } from '@/config/fruits';
 import { getBowlLevelIndex, recordBowlBadgeUnlocked, setBowlLevelIndex } from '@/game/BowlProgress';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
@@ -367,6 +367,8 @@ export class BowlScene implements Scene {
   private hiddenReserveFruits: FruitItem[] = [];
   /** 并行订单：广告/复活可逐步解锁更多订单入口 */
   private parallelPlateCount: 2 | 3 | 4 = 2;
+  /** 订单盘飞行动画中的预占进度，防止快速点击把同一订单投超 */
+  private pendingOrderPlateCounts: [number, number, number, number] = [0, 0, 0, 0];
   private parallelOrders: [
     { fruitId: FruitId; progress: number } | null,
     { fruitId: FruitId; progress: number } | null,
@@ -483,7 +485,13 @@ export class BowlScene implements Scene {
       return;
     }
 
-    this.startRound();
+    this.ensureTexturesForLevel(getBowlLevelIndex())
+      .then(() => {
+        this.startRound();
+      })
+      .catch((err) => {
+        console.error('Failed to load bowl level textures', err);
+      });
   }
 
   prepare(): Promise<void> {
@@ -1063,22 +1071,10 @@ export class BowlScene implements Scene {
   private async preloadTextures(): Promise<void> {
     await loadBowlSubpackage();
     const jobs: Promise<unknown>[] = [];
-    for (const [key, asset] of Object.entries(BOWL_SOUP_ASSETS)) {
-      jobs.push(TextureCache.load(`bowl_soup_${key}`, asset));
-    }
-    for (const [key, asset] of Object.entries(BOWL_RIM_ASSETS)) {
-      jobs.push(TextureCache.load(`bowl_rim_${key}`, asset));
-    }
-    for (const theme of Object.values(BOWL_THEMES)) {
-      jobs.push(TextureCache.load(`bowl_theme_${theme.key}`, theme.backdropAsset));
-    }
     jobs.push(TextureCache.load('bowl_tool_sheet', BOWL_TOOL_SHEET_TEXTURE));
     jobs.push(TextureCache.load('bowl_tool_panels', BOWL_TOOL_PANELS_TEXTURE));
     jobs.push(TextureCache.load('ui_panel_free_btn', UI_PANEL_FREE_BTN_TEXTURE));
     jobs.push(TextureCache.load('bowl_plates', BOWL_PLATES_TEXTURE));
-    for (const badge of BOWL_BADGES) {
-      jobs.push(TextureCache.load(`bowl_badge_${badge.levelNumber}`, badge.asset));
-    }
     jobs.push(TextureCache.load(LEVEL_CLEAR_ACTION_ICONS_TEXTURE_KEY, LEVEL_CLEAR_ACTION_ICONS_ASSET));
     jobs.push(TextureCache.load(BOWL_UNLOCK_PANEL_TEXTURE_KEY, BOWL_UNLOCK_PANEL_ASSET));
     jobs.push(TextureCache.load(BOWL_NEXT_LEVEL_BUTTON_TEXTURE_KEY, BOWL_NEXT_LEVEL_BUTTON_ASSET));
@@ -1087,12 +1083,9 @@ export class BowlScene implements Scene {
     jobs.push(TextureCache.load(BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY, BOWL_COMMON_MODAL_PANEL_ASSET));
     jobs.push(TextureCache.load(BOWL_COMMON_MODAL_BUTTON_TEXTURE_KEY, BOWL_COMMON_MODAL_BUTTON_ASSET));
     jobs.push(TextureCache.load(BOWL_FAIL_REVIVE_PANEL_TEXTURE_KEY, BOWL_FAIL_REVIVE_PANEL_ASSET));
-    for (const fruit of FRUIT_CONFIGS) {
-      jobs.push(TextureCache.load(fruit.id, fruit.asset));
-      jobs.push(TextureCache.load(`${fruit.id}__b2`, fruit.bowlAsset2));
-    }
     jobs.push(loadSettingsButtonTexture());
     await Promise.all(jobs);
+    await this.ensureTexturesForLevel(getBowlLevelIndex());
     this.mountGameplaySettingsButton();
     this.applyBowlArtTextures();
     this.mountToolButtons();
@@ -1108,6 +1101,53 @@ export class BowlScene implements Scene {
       TextureCache.get(BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY),
       TextureCache.get(BOWL_COMMON_MODAL_BUTTON_TEXTURE_KEY),
     );
+  }
+
+  private async ensureTexturesForLevel(levelIndex: number): Promise<void> {
+    const jobs: Promise<unknown>[] = [];
+    const addLevel = (index: number): void => {
+      const def = getBowlLevelDef(index);
+      const levelNumber = def.levelNumber;
+      const soupKey = def.soupKey ?? getBowlSoupKeyForLevel(levelNumber);
+      const rimKey = def.bowlKey ?? getBowlRimKeyForLevel(levelNumber);
+      const themeKey = def.themeKey ?? getBowlThemeKeyForLevel(levelNumber);
+      const theme = BOWL_THEMES[themeKey];
+      jobs.push(TextureCache.load(`bowl_soup_${soupKey}`, BOWL_SOUP_ASSETS[soupKey]));
+      jobs.push(TextureCache.load(`bowl_rim_${rimKey}`, BOWL_RIM_ASSETS[rimKey]));
+      jobs.push(TextureCache.load(`bowl_theme_${theme.key}`, theme.backdropAsset));
+
+      const badge = getBowlBadgeDef(levelNumber);
+      jobs.push(TextureCache.load(`bowl_badge_${badge.levelNumber}`, badge.asset));
+      for (const unlock of getBowlSkinUnlocksInLevel(levelNumber + 1)) {
+        if (unlock.kind === 'soup') {
+          const key = unlock.key as BowlSoupKey;
+          jobs.push(TextureCache.load(`bowl_soup_${key}`, BOWL_SOUP_ASSETS[key]));
+        } else {
+          const key = unlock.key;
+          jobs.push(TextureCache.load(`bowl_rim_${key}`, BOWL_RIM_ASSETS[key]));
+        }
+      }
+
+      const fruitIds = new Set<FruitId>([
+        ...def.fruitIds,
+        ...getNewFruitsIntroducedInLevel(Math.min(index + 1, BOWL_LEVEL_COUNT - 1)),
+        ICE_CUBE_ID,
+      ]);
+      for (const fruitId of fruitIds) {
+        const fruit = FRUIT_MAP[fruitId];
+        if (!fruit) {
+          continue;
+        }
+        jobs.push(TextureCache.load(fruit.id, fruit.asset));
+        jobs.push(TextureCache.load(`${fruit.id}__b2`, fruit.bowlAsset2));
+      }
+    };
+
+    addLevel(levelIndex);
+    if (levelIndex + 1 < BOWL_LEVEL_COUNT) {
+      addLevel(levelIndex + 1);
+    }
+    await Promise.all(jobs);
   }
 
   private mountGameplaySettingsButton(): void {
@@ -1871,6 +1911,7 @@ export class BowlScene implements Scene {
     this.fruits = [];
     this.hiddenReserveFruits = [];
     this.pendingBufferSlotIndexes.clear();
+    this.pendingOrderPlateCounts = [0, 0, 0, 0];
     this.driftAccumSec = 0;
     this.shuffleSurfaceRevealSec = 0;
 
@@ -2250,6 +2291,11 @@ export class BowlScene implements Scene {
     return -1;
   }
 
+  private getOrderReservedProgress(plateIdx: PlateIdx): number {
+    const order = this.parallelOrders[plateIdx];
+    return (order?.progress ?? 0) + this.pendingOrderPlateCounts[plateIdx];
+  }
+
   private totalRemainingInLevel(): number {
     return this.orderFruitIds.reduce((sum, id) => sum + (this.remainingCounts[id] ?? 0), 0);
   }
@@ -2368,7 +2414,7 @@ export class BowlScene implements Scene {
     for (let p = 0; p < this.parallelPlateCount; p += 1) {
       const plateIdx = p as PlateIdx;
       const o = this.parallelOrders[plateIdx];
-      if (o && o.fruitId === fruitId && o.progress < this.orderSize) {
+      if (o && o.fruitId === fruitId && this.getOrderReservedProgress(plateIdx) < this.orderSize) {
         candidates.push(plateIdx);
       }
     }
@@ -2379,8 +2425,8 @@ export class BowlScene implements Scene {
       return candidates[0]!;
     }
     candidates.sort((a, b) => {
-      const pa = this.parallelOrders[a]!.progress;
-      const pb = this.parallelOrders[b]!.progress;
+      const pa = this.getOrderReservedProgress(a);
+      const pb = this.getOrderReservedProgress(b);
       if (pa !== pb) {
         return pa - pb;
       }
@@ -2723,7 +2769,13 @@ export class BowlScene implements Scene {
           } else {
             setBowlLevelIndex(idx + 1);
           }
-          this.startRound();
+          void this.ensureTexturesForLevel(getBowlLevelIndex())
+            .then(() => {
+              this.startRound();
+            })
+            .catch((err) => {
+              console.error('Failed to load next bowl level textures', err);
+            });
         },
         onShare: () => {
           if (shareGame()) {
@@ -2801,8 +2853,11 @@ export class BowlScene implements Scene {
       this.liftFruitToFlyingLayer(fruit);
       const fromX = fruit.x;
       const fromY = fruit.y;
-      const world = this.getPlateSlotWorld(plateIdx, slot.progress);
+      const reservedProgress = this.getOrderReservedProgress(plateIdx);
+      this.pendingOrderPlateCounts[plateIdx] += 1;
+      const world = this.getPlateSlotWorld(plateIdx, reservedProgress);
       this.runFlightToPlate(fruit, fromX, fromY, world.x, world.y, () => {
+        this.pendingOrderPlateCounts[plateIdx] = Math.max(0, this.pendingOrderPlateCounts[plateIdx] - 1);
         this.finishOrderCommitForFruit(fruit, plateIdx);
       });
       return;
@@ -2904,7 +2959,7 @@ export class BowlScene implements Scene {
 
     const { bufIdx, plateIdx } = match;
     const slotState = this.parallelOrders[plateIdx];
-    if (!slotState || slotState.progress >= this.orderSize) {
+    if (!slotState || this.getOrderReservedProgress(plateIdx) >= this.orderSize) {
       return;
     }
 
@@ -2929,21 +2984,42 @@ export class BowlScene implements Scene {
     fruit.eventMode = 'none';
     fruit.bufferSlotIndex = null;
 
-    const world = this.getPlateSlotWorld(plateIdx, slotState.progress);
+    const reservedProgress = this.getOrderReservedProgress(plateIdx);
+    this.pendingOrderPlateCounts[plateIdx] += 1;
+    const world = this.getPlateSlotWorld(plateIdx, reservedProgress);
     const fromX = fruit.x;
     const fromY = fruit.y;
     this.runFlightToPlate(fruit, fromX, fromY, world.x, world.y, () => {
+      this.pendingOrderPlateCounts[plateIdx] = Math.max(0, this.pendingOrderPlateCounts[plateIdx] - 1);
       this.bufferFlightBusy = false;
       this.finishOrderCommitForFruit(fruit, plateIdx);
     });
   }
 
   private finishOrderCommitForFruit(fruit: FruitItem, plateIdx: PlateIdx): void {
-    this.remainingCounts[fruit.fruitId] = Math.max(0, (this.remainingCounts[fruit.fruitId] ?? 0) - 1);
     const slot = this.parallelOrders[plateIdx];
-    if (slot) {
-      slot.progress += 1;
+    if (!slot || slot.fruitId !== fruit.fruitId || slot.progress >= this.orderSize) {
+      console.error(
+        `[BowlScene] 订单提交异常：${fruit.fruitId} 无法提交到盘 ${plateIdx}。` +
+          `当前盘=${slot ? `${slot.fruitId} ${slot.progress}/${this.orderSize}` : 'empty'}`,
+      );
+      fruit.removeFromParent();
+      const fi = this.fruits.indexOf(fruit);
+      if (fi >= 0) {
+        this.fruits.splice(fi, 1);
+      }
+      fruit.destroy({ children: true });
+      this.renderOrders();
+      this.refreshHud();
+      this.checkLevelClear();
+      if (!this.isBowlInteractionBlocked()) {
+        this.tryConsumeOrderFromBuffer();
+      }
+      return;
     }
+
+    this.remainingCounts[fruit.fruitId] = Math.max(0, (this.remainingCounts[fruit.fruitId] ?? 0) - 1);
+    slot.progress += 1;
     fruit.removeFromParent();
     const fi = this.fruits.indexOf(fruit);
     if (fi >= 0) {

@@ -121,7 +121,7 @@ export class BowlReviveOverlay extends PIXI.Container {
     const line1Parts = [
       this.makeDescText('复活增加', 0x6f4c35, 28),
       this.makeDescText('1', highlight, 36),
-      this.makeDescText('个订单', 0x6f4c35, 28),
+      this.makeDescText('个订单盘子', 0x6f4c35, 28),
     ];
     const line2Parts = [
       this.makeDescText('并', 0x6f4c35, 28),
