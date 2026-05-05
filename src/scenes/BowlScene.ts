@@ -2772,6 +2772,9 @@ export class BowlScene implements Scene {
       });
     };
     const badge = getBowlBadgeDef(this.levelDef.levelNumber);
+    if (!isLast) {
+      setBowlLevelIndex(idx + 1);
+    }
     recordBowlBadgeUnlocked(badge.levelNumber);
     this.badgeUnlockOverlay.show({
       badge,
