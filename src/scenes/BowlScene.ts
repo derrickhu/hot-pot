@@ -1845,38 +1845,18 @@ export class BowlScene implements Scene {
   }
 
   /**
-   * 从订单水果池随机抽 N 颗水果 ID，作为「冻果」额外注入碗中。
-   * 冻果不计入订单总数（remainingCounts 不变），只是诱导玩家点击的障碍：
-   * 点击后强制进 buffer 槽并开始解冻，解冻后才能按普通水果交付。
+   * 从本关订单库存里挑 N 颗标记为冻果。
+   * 冻果仍然占用订单库存，必须点击进 buffer 并解冻后才能交付，不能作为通关后的多余水果。
    */
-  private spawnFrozenFruits(): void {
+  private pickFrozenFruitIndexes(ids: FruitId[]): Set<number> {
     const count = Math.max(0, this.levelDef.frozenCount ?? 0);
-    if (count <= 0 || this.orderFruitIds.length === 0) {
-      return;
+    if (count <= 0) {
+      return new Set();
     }
-    for (let i = 0; i < count; i += 1) {
-      const fruitId = this.orderFruitIds[Math.floor(Math.random() * this.orderFruitIds.length)]!;
-      const config = FRUIT_MAP[fruitId];
-      const key = this.bowlTextureKey(fruitId);
-      const texture = TextureCache.get(key) ?? TextureCache.get(fruitId);
-      const frostTexture = TextureCache.get(`${ICE_CUBE_ID}__b2`) ?? TextureCache.get(ICE_CUBE_ID);
-      const fruit = new FruitItem(config, texture);
-      const point = this.randomBowlPoint();
-      fruit.position.set(point.x, point.y);
-      fruit.scale.set(this.randomBowlFruitScale(fruit.fruitId));
-      fruit.velocityX = this.randomInRange(-10, 10);
-      fruit.velocityY = this.randomInRange(-7, 7);
-      fruit.zIndex = this.fruits.length;
-      fruit.phase = 'bowl';
-      fruit.bufferSlotIndex = null;
-      fruit.setFrostTexture(frostTexture);
-      fruit.setFrozen(true);
-      fruit.on('pointertap', () => {
-        this.pickFruit(fruit);
-      });
-      this.fruits.push(fruit);
-      this.mountFruitInBowlLayer(fruit);
-    }
+    const candidates = ids
+      .map((id, index) => ({ id, index }))
+      .filter(({ id }) => !NON_ORDER_FRUIT_IDS.has(id));
+    return new Set(shuffle(candidates).slice(0, count).map(({ index }) => index));
   }
 
   /**
@@ -1947,6 +1927,8 @@ export class BowlScene implements Scene {
         ...Array.from({ length: this.levelDef.iceCount ?? 0 }, () => ICE_CUBE_ID),
       ],
     );
+    const frozenIndexes = this.pickFrozenFruitIndexes(ids);
+    const frostTexture = TextureCache.get(`${ICE_CUBE_ID}__b2`) ?? TextureCache.get(ICE_CUBE_ID);
     const visibleIndexes = this.pickInitialVisibleIndexes(ids);
 
     ids.forEach((fruitId, index) => {
@@ -1962,6 +1944,10 @@ export class BowlScene implements Scene {
       fruit.zIndex = index;
       fruit.phase = 'bowl';
       fruit.bufferSlotIndex = null;
+      if (frozenIndexes.has(index)) {
+        fruit.setFrostTexture(frostTexture);
+        fruit.setFrozen(true);
+      }
       fruit.on('pointertap', () => {
         this.pickFruit(fruit);
       });
@@ -1971,7 +1957,6 @@ export class BowlScene implements Scene {
       }
       this.mountFruitInBowlLayer(fruit);
     });
-    this.spawnFrozenFruits();
     this.revealHiddenReserveForActiveOrders();
 
     this.hudLevelText.text = this.levelDef.displayName;
