@@ -25,6 +25,7 @@ import {
 import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
 import { FRUIT_MAP, type FruitId } from '@/config/fruits';
 import { getBowlLevelIndex, recordBowlBadgeUnlocked, setBowlLevelIndex } from '@/game/BowlProgress';
+import { analytics, EVENT_NAMES } from '@/analytics';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
@@ -393,6 +394,8 @@ export class BowlScene implements Scene {
   private ordersRemaining = 0;
   private totalOrdersForProgress = 0;
   private hasShownClearForRound = false;
+  /** 本关开始时间戳（毫秒），通关 / 失败时计算时长上报 analytics */
+  private roundStartTs = 0;
   private orderTransitionBusy = false;
   private currentTheme: BowlThemeDef = getBowlTheme(DEFAULT_BOWL_THEME_KEY);
   private readonly themeBg = new PIXI.Graphics();
@@ -1561,7 +1564,7 @@ export class BowlScene implements Scene {
         return;
       }
       this.hideToolHelpPanel();
-      void this.runRewardedGameplayAction(() => {
+      void this.runRewardedGameplayAction('tool_help_free', () => {
         this.useTool(toolIndex);
       });
     });
@@ -1658,14 +1661,17 @@ export class BowlScene implements Scene {
     api?.showToast?.({ title, icon: 'none' });
   }
 
-  private async runRewardedGameplayAction(action: () => void): Promise<void> {
+  private async runRewardedGameplayAction(scene: string, action: () => void): Promise<void> {
     if (this.rewardedAdBusy) {
       this.toast('广告加载中');
       return;
     }
     this.rewardedAdBusy = true;
     try {
-      const result = await showGameplayRewardedAd();
+      const result = await showGameplayRewardedAd({
+        scene,
+        levelId: this.levelDef?.levelNumber,
+      });
       if (result === 'completed' || result === 'unavailable') {
         action();
       } else if (result === 'skipped') {
@@ -1903,6 +1909,12 @@ export class BowlScene implements Scene {
     this.applySceneThemeForLevel();
     this.applyBowlArtTextures();
     this.hasShownClearForRound = false;
+    // 关卡进入打点：每次 startRound 都算一次新的尝试（失败重试也会重新打）
+    this.roundStartTs = Date.now();
+    analytics.track(EVENT_NAMES.LEVEL_START, {
+      level_id: getBowlLevelIndex() + 1,
+      level_name: this.levelDef.displayName,
+    });
     this.levelFruitIds = this.levelDef.fruitIds.slice();
     this.orderFruitIds = this.levelFruitIds.filter((id) => !NON_ORDER_FRUIT_IDS.has(id));
     this.orderSize = this.levelDef.orderTarget;
@@ -2573,6 +2585,14 @@ export class BowlScene implements Scene {
   private showLoseGiveUpOverlay(): void {
     this.hideToolHelpPanel();
     this.fruitLayer.eventMode = 'none';
+    // 关卡失败打点：玩家主动放弃这一关，记下还剩多少订单未完成 + 本关耗时
+    analytics.track(EVENT_NAMES.LEVEL_FAIL, {
+      level_id: getBowlLevelIndex() + 1,
+      level_name: this.levelDef.displayName,
+      orders_remaining: this.ordersRemaining,
+      duration_ms: this.roundStartTs > 0 ? Date.now() - this.roundStartTs : 0,
+      reason: 'give_up',
+    });
     this.failSettlementOverlay.show({
       levelLabel: this.levelDef.displayName,
       ordersRemaining: this.ordersRemaining,
@@ -2735,6 +2755,12 @@ export class BowlScene implements Scene {
     this.hideToolHelpPanel();
     this.fruitLayer.eventMode = 'none';
     const idx = getBowlLevelIndex();
+    // 关卡通关打点：在解锁徽章 / 切下一关之前先把成功事件上报
+    analytics.track(EVENT_NAMES.LEVEL_CLEAR, {
+      level_id: idx + 1,
+      level_name: this.levelDef.displayName,
+      duration_ms: this.roundStartTs > 0 ? Date.now() - this.roundStartTs : 0,
+    });
     const isLast = idx >= BOWL_LEVEL_COUNT - 1;
     const introduced = isLast ? [] : getNewFruitsIntroducedInLevel(idx + 1);
     const skinUnlocks = isLast ? [] : getBowlSkinUnlocksInLevel(idx + 2);
@@ -2788,7 +2814,7 @@ export class BowlScene implements Scene {
     this.fruitLayer.eventMode = 'none';
     this.reviveOverlay.show({
       onRevive: () => {
-        void this.runRewardedGameplayAction(() => {
+        void this.runRewardedGameplayAction('level_fail_revive', () => {
           this.performRevive();
           this.reviveOverlay.hide();
           this.fruitLayer.eventMode = 'static';
@@ -3286,7 +3312,7 @@ export class BowlScene implements Scene {
           return;
         }
         AudioManager.playButtonSound();
-        void this.runRewardedGameplayAction(() => {
+        void this.runRewardedGameplayAction('unlock_next_order_plate', () => {
           this.unlockNextOrderPlateReward();
         });
       });
