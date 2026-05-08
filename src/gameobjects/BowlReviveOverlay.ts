@@ -156,12 +156,11 @@ export class BowlReviveOverlay extends PIXI.Container {
     const total = Math.max(1, this.totalOrders);
     const remaining = Math.max(0, Math.min(total, this.ordersRemaining));
     const completed = Math.max(0, Math.min(total, total - remaining));
-    const percent = Math.round((completed / total) * 100);
 
     const lineParts = [
-      this.makeProgressText('订单已完成', 0x6e4a34, 22),
-      this.makeProgressText(`${percent}%`, highlight, 30),
-      this.makeProgressText('！', 0x6e4a34, 22),
+      this.makeProgressText('已完成', 0x6e4a34, 22),
+      this.makeProgressText(`${completed}`, highlight, 30),
+      this.makeProgressText('个订单', 0x6e4a34, 22),
     ];
     this.mountPartsLine(lineParts, 0, this.progressHintRoot);
 

@@ -8,6 +8,7 @@ import { BOWL_BADGES, type BowlBadgeDef } from '@/config/bowlBadges';
 import { getMaxUnlockedBowlBadgeLevelNumber } from '@/game/BowlProgress';
 import { mountBowlBadgeIcon } from '@/gameobjects/BowlBadgeIcon';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
+import { showInterstitialAd } from '@/utils/interstitialAd';
 import { TextureCache } from '@/utils/TextureCache';
 
 type PixiEventsHost = {
@@ -23,20 +24,60 @@ interface BadgeCatalogSlot {
   unlocked: boolean;
 }
 
+interface TabButton {
+  container: PIXI.Container;
+  activeSprite: PIXI.Sprite;
+  inactiveSprite: PIXI.Sprite;
+  label: PIXI.Text;
+  /** 当前展示的 sprite（active/inactive 之一），决定 hitArea 命中范围 */
+  refresh: () => void;
+}
+
+const CHROME_TEX_BASEBOARD = 'assets/images/catalog_baseboard.png';
+const CHROME_TEX_TAB_ACTIVE = 'assets/images/catalog_tab_active.png';
+const CHROME_TEX_TAB_INACTIVE = 'assets/images/catalog_tab_inactive.png';
+const CHROME_TEX_ITEM_CARD = 'assets/images/catalog_item_card.png';
+
+/** 底板 PNG 内已经画好的"图鉴"标题 / 返回按钮在缩到 logicWidth 后的近似坐标 */
+const PAINTED_BACK_X = 80;
+const PAINTED_BACK_Y = 112;
+const PAINTED_BACK_HIT_R = 64;
+
+/** 在底板上叠 Tab / 网格的相对 Y 偏移（相对 baseboardY） */
+const TAB_ROW_OFFSET_Y = 220;
+const GRID_TOP_OFFSET_Y = 305;
+
+const TAB_DISPLAY_W = 220;
+const TAB_DISPLAY_H = 80;
+const TAB_GAP = 28;
+
+const GRID_PAD_X = 22;
+const GRID_GAP = 14;
+const GRID_COLS = 3;
+const ROW_GAP_Y = 22;
+
 /** 图鉴：水果图鉴 / 徽章图鉴 */
 export class CatalogScene implements Scene {
   readonly name = 'catalog';
   readonly container = new PIXI.Container();
 
+  private readonly bgFill = new PIXI.Graphics();
+  private readonly baseboardSprite = new PIXI.Sprite();
+  private readonly headerHit = new PIXI.Container();
+
+  private readonly chromeRoot = new PIXI.Container();
+  private readonly tabsRoot = new PIXI.Container();
+  private readonly tabButtons: Record<CatalogTab, TabButton>;
+
   private readonly gridRoot = new PIXI.Container();
   private readonly gridMask = new PIXI.Graphics();
-  private readonly titleText: PIXI.Text;
-  private readonly tabButtons: Record<CatalogTab, PIXI.Container>;
   private readonly loadedTabs = new Set<CatalogTab>();
   /** 透明命中层：仅用 hitArea，避免极低 alpha 的 Graphics 在部分环境下不命中 */
   private readonly scrollHit = new PIXI.Container();
   private activeTab: CatalogTab = 'fruit';
   private loading = false;
+  private chromeReady = false;
+  private baseboardY = 0;
   private gridTop = 0;
   private scrollY = 0;
   private maxScrollY = 0;
@@ -48,10 +89,27 @@ export class CatalogScene implements Scene {
   private domDragCleanup: (() => void) | null = null;
 
   constructor() {
-    const chrome = this.buildChrome();
-    this.titleText = chrome.titleText;
-    this.tabButtons = chrome.tabButtons;
-    this.gridTop = Game.safeTop + 154;
+    this.computeLayout();
+
+    this.bgFill.beginFill(0xf7e4c4);
+    this.bgFill.drawRect(0, 0, Game.logicWidth, Game.logicHeight);
+    this.bgFill.endFill();
+    this.container.addChild(this.bgFill);
+
+    this.baseboardSprite.position.set(0, this.baseboardY);
+    this.container.addChild(this.baseboardSprite);
+
+    this.bindBackButton();
+    this.container.addChild(this.headerHit);
+
+    this.tabButtons = {
+      fruit: this.createTabButton('水果图鉴', 'fruit'),
+      badge: this.createTabButton('徽章图鉴', 'badge'),
+    };
+    this.tabsRoot.addChild(this.tabButtons.fruit.container, this.tabButtons.badge.container);
+    this.chromeRoot.addChild(this.tabsRoot);
+    this.container.addChild(this.chromeRoot);
+
     this.gridRoot.position.set(0, this.gridTop);
     this.gridRoot.eventMode = 'none';
     this.gridRoot.mask = this.gridMask;
@@ -59,14 +117,151 @@ export class CatalogScene implements Scene {
     this.buildScrollArea();
     this.container.addChild(this.gridRoot);
     this.container.addChild(this.scrollHit);
+
+    void this.loadChromeTextures();
   }
 
   onEnter(): void {
     void this.preloadAndBuild(this.activeTab);
+    // 进入图鉴时尝试展示插屏广告；微信平台自带频次限制，业务侧无需节流
+    void showInterstitialAd({ scene: 'catalog_open' });
   }
 
   onExit(): void {
     this.stopCatalogDrag();
+  }
+
+  private computeLayout(): void {
+    // 底板 PNG 顶部已经留了 ~70px 的"竹席留白"作为状态栏安全区，
+    // 设备 safeTop > 这个安全区时把底板整体下移，确保画面里的"图鉴"标题永远落在状态栏下方。
+    this.baseboardY = Math.max(0, Game.safeTop - 70);
+    this.gridTop = this.baseboardY + GRID_TOP_OFFSET_Y;
+  }
+
+  private async loadChromeTextures(): Promise<void> {
+    await Promise.all([
+      TextureCache.load('catalog_baseboard', CHROME_TEX_BASEBOARD),
+      TextureCache.load('catalog_tab_active', CHROME_TEX_TAB_ACTIVE),
+      TextureCache.load('catalog_tab_inactive', CHROME_TEX_TAB_INACTIVE),
+      TextureCache.load('catalog_item_card', CHROME_TEX_ITEM_CARD),
+    ]);
+    this.applyChromeTextures();
+  }
+
+  private applyChromeTextures(): void {
+    const baseTex = TextureCache.get('catalog_baseboard');
+    if (baseTex) {
+      this.baseboardSprite.texture = baseTex;
+      const targetW = Game.logicWidth;
+      const scale = targetW / baseTex.width;
+      this.baseboardSprite.scale.set(scale);
+    }
+
+    const activeTex = TextureCache.get('catalog_tab_active');
+    const inactiveTex = TextureCache.get('catalog_tab_inactive');
+    if (activeTex) {
+      this.fitTabSprite(this.tabButtons.fruit.activeSprite, activeTex);
+      this.fitTabSprite(this.tabButtons.badge.activeSprite, activeTex);
+    }
+    if (inactiveTex) {
+      this.fitTabSprite(this.tabButtons.fruit.inactiveSprite, inactiveTex);
+      this.fitTabSprite(this.tabButtons.badge.inactiveSprite, inactiveTex);
+    }
+
+    this.layoutTabs();
+    this.refreshTabs();
+    this.chromeReady = true;
+    if (this.activeTab && this.loadedTabs.has(this.activeTab)) {
+      this.buildActiveGrid();
+    }
+  }
+
+  private fitTabSprite(sp: PIXI.Sprite, tex: PIXI.Texture): void {
+    sp.texture = tex;
+    sp.anchor.set(0.5);
+    sp.width = TAB_DISPLAY_W;
+    sp.height = TAB_DISPLAY_H;
+  }
+
+  private layoutTabs(): void {
+    const W = Game.logicWidth;
+    const tabY = this.baseboardY + TAB_ROW_OFFSET_Y;
+    const halfSpan = TAB_DISPLAY_W / 2 + TAB_GAP / 2;
+    this.tabButtons.fruit.container.position.set(W / 2 - halfSpan, tabY);
+    this.tabButtons.badge.container.position.set(W / 2 + halfSpan, tabY);
+  }
+
+  private bindBackButton(): void {
+    this.headerHit.position.set(this.baseboardY ? 0 : 0, this.baseboardY);
+    const btn = new PIXI.Container();
+    btn.position.set(PAINTED_BACK_X, PAINTED_BACK_Y);
+    btn.eventMode = 'static';
+    btn.cursor = 'pointer';
+    btn.hitArea = new PIXI.Circle(0, 0, PAINTED_BACK_HIT_R);
+    btn.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      SceneManager.switchTo('home');
+    });
+    this.headerHit.addChild(btn);
+  }
+
+  private createTabButton(label: string, tab: CatalogTab): TabButton {
+    const container = new PIXI.Container();
+    container.eventMode = 'static';
+    container.cursor = 'pointer';
+    container.hitArea = new PIXI.RoundedRectangle(
+      -TAB_DISPLAY_W / 2,
+      -TAB_DISPLAY_H / 2,
+      TAB_DISPLAY_W,
+      TAB_DISPLAY_H,
+      TAB_DISPLAY_H / 2,
+    );
+
+    const inactiveSprite = new PIXI.Sprite();
+    inactiveSprite.anchor.set(0.5);
+    const activeSprite = new PIXI.Sprite();
+    activeSprite.anchor.set(0.5);
+
+    const text = new PIXI.Text(label, {
+      fontSize: 26,
+      fill: 0xffffff,
+      fontWeight: '800',
+      stroke: 0x6a3a18,
+      strokeThickness: 4,
+    });
+    text.anchor.set(0.5);
+    // 文字略微下移，与按钮立体厚度的视觉中心对齐
+    text.position.set(0, -2);
+
+    container.addChild(inactiveSprite, activeSprite, text);
+
+    container.on('pointertap', () => {
+      if (this.activeTab === tab) {
+        return;
+      }
+      AudioManager.playButtonSound();
+      this.activeTab = tab;
+      this.scrollY = 0;
+      this.refreshTabs();
+      void this.preloadAndBuild(tab);
+    });
+
+    const refresh = (): void => {
+      const isActive = this.activeTab === tab;
+      activeSprite.visible = isActive;
+      inactiveSprite.visible = !isActive;
+      text.style.fill = isActive ? 0xffffff : 0x8b5a3c;
+      text.style.stroke = isActive ? 0x6a3a18 : 0xfff4dc;
+      text.style.strokeThickness = isActive ? 4 : 3;
+      container.alpha = isActive ? 1 : 0.94;
+    };
+
+    return { container, activeSprite, inactiveSprite, label: text, refresh };
+  }
+
+  private refreshTabs(): void {
+    this.tabButtons.fruit.refresh();
+    this.tabButtons.badge.refresh();
   }
 
   private getPixiEvents(): PixiEventsHost | null {
@@ -178,116 +373,11 @@ export class CatalogScene implements Scene {
         }
         this.loadedTabs.add(tab);
       }
-      if (tab === this.activeTab) {
+      if (tab === this.activeTab && this.chromeReady) {
         this.buildActiveGrid();
       }
     } finally {
       this.loading = false;
-    }
-  }
-
-  private buildChrome(): { titleText: PIXI.Text; tabButtons: Record<CatalogTab, PIXI.Container> } {
-    const W = Game.logicWidth;
-    const H = Game.logicHeight;
-    const top = Game.safeTop;
-
-    const bg = new PIXI.Graphics();
-    bg.beginFill(0xe8dcc8);
-    bg.drawRect(0, 0, W, H);
-    bg.endFill();
-    this.container.addChild(bg);
-
-    const band = new PIXI.Graphics();
-    band.beginFill(0xd4c4a8, 0.45);
-    band.drawRect(0, top + 200, W, H - top - 200);
-    band.endFill();
-    this.container.addChild(band);
-
-    const header = new PIXI.Graphics();
-    header.beginFill(0x7a5a3d);
-    header.drawRect(0, top, W, 72);
-    header.endFill();
-    this.container.addChild(header);
-
-    const backBtn = new PIXI.Container();
-    backBtn.position.set(44, top + 36);
-    backBtn.eventMode = 'static';
-    backBtn.cursor = 'pointer';
-    const backBg = new PIXI.Graphics();
-    backBg.beginFill(0xfff4e0);
-    backBg.drawCircle(0, 0, 24);
-    backBg.endFill();
-    backBtn.addChild(backBg);
-    const backTxt = new PIXI.Text('‹', { fontSize: 34, fill: 0x4a3228, fontWeight: '700' });
-    backTxt.anchor.set(0.5);
-    backBtn.addChild(backTxt);
-    backBtn.hitArea = new PIXI.Circle(0, 0, 30);
-    backBtn.on('pointertap', () => {
-      AudioManager.playButtonSound();
-      SceneManager.switchTo('home');
-    });
-    this.container.addChild(backBtn);
-
-    const title = new PIXI.Text('图鉴', {
-      fontSize: 28,
-      fill: 0xfff6e8,
-      fontWeight: '800',
-    });
-    title.anchor.set(0.5);
-    title.position.set(W / 2, top + 36);
-    this.container.addChild(title);
-
-    const tabButtons = {
-      fruit: this.createTabButton('水果图鉴', 'fruit'),
-      badge: this.createTabButton('徽章图鉴', 'badge'),
-    } satisfies Record<CatalogTab, PIXI.Container>;
-    tabButtons.fruit.position.set(W / 2 - 124, top + 104);
-    tabButtons.badge.position.set(W / 2 + 124, top + 104);
-    this.container.addChild(tabButtons.fruit, tabButtons.badge);
-
-    this.refreshTabs(tabButtons);
-    return { titleText: title, tabButtons };
-  }
-
-  private createTabButton(label: string, tab: CatalogTab): PIXI.Container {
-    const btn = new PIXI.Container();
-    btn.eventMode = 'static';
-    btn.cursor = 'pointer';
-    btn.hitArea = new PIXI.RoundedRectangle(-104, -30, 208, 60, 28);
-    const bg = new PIXI.Graphics();
-    const text = new PIXI.Text(label, {
-      fontSize: 23,
-      fill: 0xffffff,
-      fontWeight: '800',
-    });
-    text.anchor.set(0.5);
-    btn.addChild(bg, text);
-    btn.on('pointertap', () => {
-      if (this.activeTab === tab) {
-        return;
-      }
-      AudioManager.playButtonSound();
-      this.activeTab = tab;
-      this.scrollY = 0;
-      this.refreshTabs();
-      void this.preloadAndBuild(tab);
-    });
-    return btn;
-  }
-
-  private refreshTabs(tabButtons = this.tabButtons): void {
-    for (const tab of ['fruit', 'badge'] as const) {
-      const btn = tabButtons[tab];
-      const bg = btn.getChildAt(0) as PIXI.Graphics;
-      const label = btn.getChildAt(1) as PIXI.Text;
-      const active = this.activeTab === tab;
-      bg.clear();
-      bg.lineStyle(3, active ? 0xfff3cf : 0x8d7052, 1);
-      bg.beginFill(active ? 0xb87438 : 0x9c8264, 1);
-      bg.drawRoundedRect(-104, -30, 208, 60, 28);
-      bg.endFill();
-      label.style.fill = active ? 0xffffff : 0xffedd2;
-      btn.alpha = active ? 1 : 0.88;
     }
   }
 
@@ -344,91 +434,110 @@ export class CatalogScene implements Scene {
 
   private buildActiveGrid(): void {
     if (this.activeTab === 'fruit') {
-      this.titleText.text = '图鉴';
       this.buildFruitGrid(getCatalogSlots());
     } else {
-      this.titleText.text = '图鉴';
       this.buildBadgeGrid(this.getBadgeSlots());
     }
+  }
+
+  /** 通用：用卡片贴图作为格子底板，返回 (cardWidth, cardHeight, innerSize) */
+  private mountCardBackground(cell: PIXI.Container, cellW: number): {
+    cardW: number;
+    cardH: number;
+    innerSize: number;
+    locked?: boolean;
+  } {
+    const tex = TextureCache.get('catalog_item_card');
+    const cardW = cellW;
+    const aspect = tex && tex.height > 0 ? tex.height / tex.width : 1;
+    const cardH = cardW * aspect;
+    if (tex) {
+      const sp = new PIXI.Sprite(tex);
+      sp.anchor.set(0.5, 0);
+      sp.width = cardW;
+      sp.height = cardH;
+      cell.addChild(sp);
+    } else {
+      const ph = new PIXI.Graphics();
+      ph.beginFill(0xf6e6cd);
+      ph.lineStyle(4, 0xc99a5e, 1);
+      ph.drawRoundedRect(-cardW / 2, 0, cardW, cardH, 18);
+      ph.endFill();
+      cell.addChild(ph);
+    }
+    // 卡片中央的纸面区大约占 75% 宽度
+    return { cardW, cardH, innerSize: cardW * 0.7 };
   }
 
   private buildFruitGrid(slots: CatalogSlot[]): void {
     this.gridRoot.removeChildren();
 
     const W = Game.logicWidth;
-    const pad = 20;
-    const cols = 3;
-    const gap = 14;
-    const cellW = (W - pad * 2 - gap * (cols - 1)) / cols;
-    const iconTarget = Math.min(112, cellW - 16);
-    const rowH = iconTarget + 50;
-    const rowCount = Math.ceil(slots.length / cols);
-    this.maxScrollY = Math.max(0, rowCount * rowH + 20 - (Game.logicHeight - this.gridTop - 24));
+    const cellW = (W - GRID_PAD_X * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
+    const tex = TextureCache.get('catalog_item_card');
+    const aspect = tex && tex.height > 0 ? tex.height / tex.width : 1;
+    const cardH = cellW * aspect;
+    const labelH = 38;
+    const rowH = cardH + labelH + ROW_GAP_Y;
+
+    const rowCount = Math.ceil(slots.length / GRID_COLS);
+    this.maxScrollY = Math.max(
+      0,
+      rowCount * rowH + ROW_GAP_Y - (Game.logicHeight - this.gridTop - 24),
+    );
     this.setScrollY(Math.min(this.scrollY, this.maxScrollY));
 
-    let i = 0;
-    for (const slot of slots) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = pad + col * (cellW + gap);
-      const y = 10 + row * rowH;
+    slots.forEach((slot, i) => {
+      const col = i % GRID_COLS;
+      const row = Math.floor(i / GRID_COLS);
+      const x = GRID_PAD_X + col * (cellW + GRID_GAP);
+      const y = ROW_GAP_Y + row * rowH;
 
       const cell = new PIXI.Container();
       cell.position.set(x + cellW / 2, y);
 
+      const { innerSize } = this.mountCardBackground(cell, cellW);
+
       if (!slot.unlocked) {
-        const box = new PIXI.Graphics();
-        box.lineStyle(3, 0x8a7a6a, 1);
-        box.beginFill(0xc4b8a8);
-        box.drawRoundedRect(-iconTarget / 2, 0, iconTarget, iconTarget, 12);
-        box.endFill();
-        cell.addChild(box);
+        cell.alpha = 0.78;
         const q = new PIXI.Text('?', {
-          fontSize: Math.min(56, iconTarget * 0.48),
-          fill: 0x6a5a4a,
-          fontWeight: '800',
+          fontSize: Math.min(82, innerSize * 0.7),
+          fill: 0xb29074,
+          fontWeight: '900',
+          stroke: 0xfff4dc,
+          strokeThickness: 4,
         });
         q.anchor.set(0.5);
-        q.position.set(0, iconTarget / 2 - 4);
+        q.position.set(0, cardH / 2);
         cell.addChild(q);
-        const lb = new PIXI.Text('未解锁', {
-          fontSize: 20,
-          fill: 0x7a6a5a,
-          fontWeight: '700',
-        });
-        lb.anchor.set(0.5, 0);
-        lb.position.set(0, iconTarget + 8);
+
+        const lb = this.createCellLabel('未解锁', false);
+        lb.position.set(0, cardH + 8);
         cell.addChild(lb);
       } else {
-        const tex = this.getCatalogTexture(slot);
-        if (tex) {
-          const sp = new PIXI.Sprite(tex);
+        const fruitTex = this.getCatalogTexture(slot);
+        if (fruitTex) {
+          const sp = new PIXI.Sprite(fruitTex);
           sp.anchor.set(0.5);
-          const s = iconTarget / Math.max(sp.width, sp.height);
+          const s = innerSize / Math.max(sp.width, sp.height);
           sp.scale.set(s);
-          sp.position.set(0, iconTarget / 2 - 8);
+          sp.position.set(0, cardH / 2);
           cell.addChild(sp);
         } else {
           const ph = new PIXI.Graphics();
           ph.beginFill(0xc8b8a0);
-          ph.drawRoundedRect(-iconTarget / 2, 0, iconTarget, iconTarget, 12);
+          ph.drawCircle(0, cardH / 2, innerSize / 2);
           ph.endFill();
           cell.addChild(ph);
         }
 
-        const lb = new PIXI.Text(slot.label, {
-          fontSize: 20,
-          fill: 0x3d2818,
-          fontWeight: '700',
-        });
-        lb.anchor.set(0.5, 0);
-        lb.position.set(0, iconTarget + 8);
+        const lb = this.createCellLabel(slot.label, true);
+        lb.position.set(0, cardH + 8);
         cell.addChild(lb);
       }
 
       this.gridRoot.addChild(cell);
-      i += 1;
-    }
+    });
   }
 
   private getBadgeSlots(): BadgeCatalogSlot[] {
@@ -444,37 +553,46 @@ export class CatalogScene implements Scene {
     this.gridRoot.removeChildren();
 
     const W = Game.logicWidth;
-    const pad = 18;
-    const cols = 3;
-    const gap = 12;
-    const cellW = (W - pad * 2 - gap * (cols - 1)) / cols;
-    const iconTarget = Math.min(118, cellW - 16);
-    const rowH = iconTarget + 76;
-    const rowCount = Math.ceil(slots.length / cols);
-    this.maxScrollY = Math.max(0, rowCount * rowH + 20 - (Game.logicHeight - this.gridTop - 24));
+    const cellW = (W - GRID_PAD_X * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
+    const tex = TextureCache.get('catalog_item_card');
+    const aspect = tex && tex.height > 0 ? tex.height / tex.width : 1;
+    const cardH = cellW * aspect;
+    const labelH = 60;
+    const rowH = cardH + labelH + ROW_GAP_Y;
+
+    const rowCount = Math.ceil(slots.length / GRID_COLS);
+    this.maxScrollY = Math.max(
+      0,
+      rowCount * rowH + ROW_GAP_Y - (Game.logicHeight - this.gridTop - 24),
+    );
     this.setScrollY(Math.min(this.scrollY, this.maxScrollY));
 
     slots.forEach((slot, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = pad + col * (cellW + gap);
-      const y = 10 + row * rowH;
+      const col = i % GRID_COLS;
+      const row = Math.floor(i / GRID_COLS);
+      const x = GRID_PAD_X + col * (cellW + GRID_GAP);
+      const y = ROW_GAP_Y + row * rowH;
       const cell = new PIXI.Container();
       cell.position.set(x + cellW / 2, y);
 
-      const tex = TextureCache.get(slot.textureKey);
+      const { innerSize } = this.mountCardBackground(cell, cellW);
+      if (!slot.unlocked) {
+        cell.alpha = 0.82;
+      }
+
       const badgeMount = new PIXI.Container();
-      badgeMount.position.set(-iconTarget / 2, 0);
-      mountBowlBadgeIcon(badgeMount, slot.badge, tex, iconTarget, { locked: !slot.unlocked });
+      badgeMount.position.set(-innerSize / 2, cardH / 2 - innerSize / 2);
+      const badgeTex = TextureCache.get(slot.textureKey);
+      mountBowlBadgeIcon(badgeMount, slot.badge, badgeTex, innerSize, { locked: !slot.unlocked });
       cell.addChild(badgeMount);
 
       const levelLabel = new PIXI.Text(`第${slot.badge.levelNumber}关`, {
-        fontSize: 17,
+        fontSize: 18,
         fill: slot.unlocked ? 0x3d2818 : 0x7a6a5a,
         fontWeight: '800',
       });
       levelLabel.anchor.set(0.5, 0);
-      levelLabel.position.set(0, iconTarget + 4);
+      levelLabel.position.set(0, cardH + 6);
       cell.addChild(levelLabel);
 
       const title = new PIXI.Text(slot.unlocked ? slot.badge.title : '未获得', {
@@ -483,11 +601,21 @@ export class CatalogScene implements Scene {
         fontWeight: '700',
       });
       title.anchor.set(0.5, 0);
-      title.position.set(0, iconTarget + 30);
+      title.position.set(0, cardH + 32);
       cell.addChild(title);
 
       this.gridRoot.addChild(cell);
     });
+  }
+
+  private createCellLabel(text: string, unlocked: boolean): PIXI.Text {
+    const lb = new PIXI.Text(text, {
+      fontSize: 22,
+      fill: unlocked ? 0x3d2818 : 0x7a6a5a,
+      fontWeight: '800',
+    });
+    lb.anchor.set(0.5, 0);
+    return lb;
   }
 
   private catalogTextureKey(slot: CatalogSlot, index: number): string {

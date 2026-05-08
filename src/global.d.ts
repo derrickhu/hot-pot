@@ -61,6 +61,17 @@ declare const wx: {
     offError?: (handler: (err: { errMsg?: string; errCode?: number }) => void) => void;
     destroy?: () => void;
   };
+  createInterstitialAd?: (options: { adUnitId: string }) => {
+    load: () => Promise<void>;
+    show: () => Promise<void>;
+    onLoad?: (handler: () => void) => void;
+    offLoad?: (handler: () => void) => void;
+    onClose: (handler: () => void) => void;
+    offClose?: (handler: () => void) => void;
+    onError: (handler: (err: { errMsg?: string; errCode?: number }) => void) => void;
+    offError?: (handler: (err: { errMsg?: string; errCode?: number }) => void) => void;
+    destroy?: () => void;
+  };
   shareAppMessage?: (options: { title: string; imageUrl?: string; query?: string }) => void;
   showShareMenu?: (options?: {
     withShareTicket?: boolean;

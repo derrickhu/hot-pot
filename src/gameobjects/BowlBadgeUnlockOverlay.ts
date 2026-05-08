@@ -3,6 +3,11 @@ import { AudioManager } from '@/core/AudioManager';
 import type { BowlBadgeDef } from '@/config/bowlBadges';
 import { mountBowlBadgeIcon } from '@/gameobjects/BowlBadgeIcon';
 
+const BADGE_ICON_SIZE = 252;
+const BADGE_CENTER_X = 0;
+const BADGE_CENTER_Y = 58;
+const BADGE_ROOT_BASE_Y = BADGE_CENTER_Y - BADGE_ICON_SIZE / 2;
+
 export interface BowlBadgeUnlockOverlayOptions {
   badge: BowlBadgeDef;
   texture: PIXI.Texture | null;
@@ -72,7 +77,7 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
     this.titleRoot.addChild(this.titleSprite);
 
     this.auraRoot = new PIXI.Container();
-    this.auraRoot.position.set(0, 18);
+    this.auraRoot.position.set(BADGE_CENTER_X, BADGE_CENTER_Y);
     this.panelRoot.addChild(this.auraRoot);
 
     this.raySpinner = this.createRaySpinner(18, 68, 160, 0xfff0a2, 0.38);
@@ -87,7 +92,7 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
     this.mountSparkles();
 
     this.badgeRoot = new PIXI.Container();
-    this.badgeRoot.position.set(-108, -68);
+    this.badgeRoot.position.set(BADGE_CENTER_X - BADGE_ICON_SIZE / 2, BADGE_ROOT_BASE_Y);
     this.panelRoot.addChild(this.badgeRoot);
 
     this.badgeTitle = new PIXI.Text('', {
@@ -131,7 +136,7 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
     this.panelRoot.scale.set(0.92);
     this.panelRoot.alpha = 0.96;
     this.refreshTitleVisual();
-    mountBowlBadgeIcon(this.badgeRoot, options.badge, options.texture, 252);
+    mountBowlBadgeIcon(this.badgeRoot, options.badge, options.texture, BADGE_ICON_SIZE);
     this.badgeTitle.text = options.badge.title;
     this.visible = true;
     PIXI.Ticker.shared.remove(this.tick);
@@ -240,7 +245,9 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
     this.ringSpinner.rotation -= delta * 0.0045;
     this.auraRoot.scale.set(1 + Math.sin(t * 4.2) * 0.035);
     this.titleRoot.y = -188 + Math.sin(t * 4.6) * 2;
-    this.badgeRoot.y = -68 + Math.sin(t * 3.8) * 3;
+    const badgeBob = Math.sin(t * 3.8) * 3;
+    this.badgeRoot.y = BADGE_ROOT_BASE_Y + badgeBob;
+    this.auraRoot.y = BADGE_CENTER_Y + badgeBob;
 
     for (const sparkle of this.sparkles) {
       const pulse = (Math.sin(t * 5 + sparkle.phase) + 1) / 2;

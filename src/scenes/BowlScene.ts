@@ -413,6 +413,38 @@ export class BowlScene implements Scene {
   /** 底部三工具槽（预加载后可能换为雪碧条贴图） */
   private readonly toolSlots: PIXI.Container[] = [];
 
+  /**
+   * 暂存盘全满（占用 === bufferSize）时进入"紧迫态"：
+   *   - 每个菜碟槽单独红色圆角描边 + 外圈柔光，整排同步「呼吸」缩放提醒
+   *   - 底部"加菜牌 / 移除"按钮自身脉冲 + 救场气泡
+   *   - 警告音节奏重播
+   * 任意一格变空立即退出。`tutorialActive` 期间一律不触发，避免抢戏。
+   */
+  private bufferPanicActive = false;
+  private bufferPanicElapsedSec = 0;
+  private bufferPanicNextSfxAt = 0;
+  private bufferPanicSfxCount = 0;
+  private readonly bufferPanicFxLayer = new PIXI.Container();
+  /** 每槽一组：复制菜碟 sprite 并染红放在原盘后方，用贴图 alpha 轮廓生成真实盘形描边 */
+  private readonly bufferPanicSlotRings: Array<{
+    root: PIXI.Container;
+    glow: PIXI.Sprite;
+    edge: PIXI.Sprite;
+    plateSprite: PIXI.Sprite | null;
+    fruitAnchor: PIXI.Container | null;
+    baseScaleX: number;
+    baseScaleY: number;
+    anchorBaseScaleX: number;
+    anchorBaseScaleY: number;
+  }> = [];
+  /** 与 toolSlots 同长度；仅 0=加菜牌、1=移除 启用，2=打乱保持 null */
+  private readonly toolPanicHints: Array<{
+    halo: PIXI.Graphics;
+    bubble: PIXI.Container;
+    bubbleBaseY: number;
+    slotBaseScale: number;
+  } | null> = [null, null, null];
+
   /** 底栏三钮说明弹层（剪贴板式面板雪碧图） */
   private readonly toolHelpOverlay = new PIXI.Container();
   private readonly toolHelpPanelRoot = new PIXI.Container();
@@ -458,6 +490,7 @@ export class BowlScene implements Scene {
       onContinue: () => {
         this.hideToolHelpPanel();
         this.fruitLayer.eventMode = 'static';
+        this.evaluateBufferPanicState();
       },
     });
     this.buildScene();
@@ -610,6 +643,7 @@ export class BowlScene implements Scene {
     this.flyingFruitLayer.sortChildren();
 
     this.advanceFrozenBufferTimers(dt);
+    this.updateBufferPanicFrame(dt);
 
     if (this.tutorialActive) {
       this.refreshTutorialHighlight();
@@ -668,6 +702,7 @@ export class BowlScene implements Scene {
       }
       AudioManager.playButtonSound();
       this.hideToolHelpPanel();
+      this.exitBufferPanic();
       this.settingsOverlay.visible = true;
       this.fruitLayer.eventMode = 'none';
     });
@@ -877,6 +912,11 @@ export class BowlScene implements Scene {
     );
     this.fruitLayer.addChild(this.bowlContentMask);
     this.container.addChild(this.fruitLayer);
+
+    this.bufferPanicFxLayer.eventMode = 'none';
+    this.bufferPanicFxLayer.visible = false;
+    this.container.addChild(this.bufferPanicFxLayer);
+
     const toolY = TOOL_SLOT_Y();
     for (let i = 0; i < 3; i += 1) {
       const slot = new PIXI.Container();
@@ -1701,6 +1741,7 @@ export class BowlScene implements Scene {
     this.bufferSize += 1;
     this.applyBufferStripLayout();
     this.mountBufferStripTextures();
+    this.evaluateBufferPanicState();
     this.toast('已增加1个菜碟');
   }
 
@@ -1732,6 +1773,7 @@ export class BowlScene implements Scene {
       return;
     }
     this.bufferSlots[idx] = null;
+    this.evaluateBufferPanicState();
     const anchor = this.bufferSlotAnchors[idx]!;
     const worldStart = anchor.toGlobal(new PIXI.Point(fruit.x, fruit.y));
     anchor.removeChild(fruit);
@@ -1908,6 +1950,7 @@ export class BowlScene implements Scene {
     for (const anchor of this.bufferSlotAnchors) {
       anchor.removeChildren();
     }
+    this.exitBufferPanic();
 
     this.levelDef = getBowlLevelDef(getBowlLevelIndex());
     this.applySceneThemeForLevel();
@@ -2022,10 +2065,12 @@ export class BowlScene implements Scene {
       return;
     }
     this.fruitLayer.eventMode = 'none';
+    this.exitBufferPanic();
     this.mechanicIntroOverlay.show(content, () => {
       markMechanicIntroSeen(next);
       this.fruitLayer.eventMode = 'static';
       this.runNextMechanicIntroOrTutorial();
+      this.evaluateBufferPanicState();
     });
   }
 
@@ -2538,10 +2583,14 @@ export class BowlScene implements Scene {
       holder.removeChildren();
       const sub = new PIXI.Texture(sheet.baseTexture, slotRect);
       const sp = new PIXI.Sprite(sub);
-      sp.anchor.set(0, 0);
+      sp.anchor.set(0.5);
+      sp.position.set(lay.slotW / 2, lay.slotH / 2);
       sp.width = lay.slotW;
       sp.height = lay.slotH;
       holder.addChild(sp, anchor);
+    }
+    if (this.bufferPanicActive) {
+      this.rebuildBufferPanicSlotRings();
     }
   }
 
@@ -2551,6 +2600,7 @@ export class BowlScene implements Scene {
       return;
     }
     this.bufferSlots[bufIdx] = null;
+    this.evaluateBufferPanicState();
     const anchor = this.bufferSlotAnchors[bufIdx]!;
     const worldStart = anchor.toGlobal(new PIXI.Point(fruit.x, fruit.y));
     anchor.removeChild(fruit);
@@ -2588,6 +2638,7 @@ export class BowlScene implements Scene {
 
   private showLoseGiveUpOverlay(): void {
     this.hideToolHelpPanel();
+    this.exitBufferPanic();
     this.fruitLayer.eventMode = 'none';
     // 关卡失败打点：玩家主动放弃这一关，记下还剩多少订单未完成 + 本关耗时
     analytics.track(EVENT_NAMES.LEVEL_FAIL, {
@@ -2757,6 +2808,7 @@ export class BowlScene implements Scene {
     }
     this.hasShownClearForRound = true;
     this.hideToolHelpPanel();
+    this.exitBufferPanic();
     this.fruitLayer.eventMode = 'none';
     const idx = getBowlLevelIndex();
     // 关卡通关打点：在解锁徽章 / 切下一关之前先把成功事件上报
@@ -2815,6 +2867,7 @@ export class BowlScene implements Scene {
 
   private showLoseOverlay(): void {
     this.hideToolHelpPanel();
+    this.exitBufferPanic();
     this.fruitLayer.eventMode = 'none';
     this.reviveOverlay.show({
       totalOrders: this.totalOrdersForProgress,
@@ -2932,6 +2985,11 @@ export class BowlScene implements Scene {
           fruit.refreshFrostTimerLabel();
         }
         this.tryConsumeOrderFromBuffer();
+        /**
+         * tryConsumeOrderFromBuffer 命中即时清空槽位 + 自评 panic；
+         * 没命中时走这里兜底再评一次，保证"全占满 + 没匹配"必然进入危险态。
+         */
+        this.evaluateBufferPanicState();
       }
     };
 
@@ -2990,6 +3048,7 @@ export class BowlScene implements Scene {
 
     this.bufferFlightBusy = true;
     this.bufferSlots[bufIdx] = null;
+    this.evaluateBufferPanicState();
 
     const anchor = this.bufferSlotAnchors[bufIdx]!;
     const worldStart = anchor.toGlobal(new PIXI.Point(fruit.x, fruit.y));
@@ -3683,5 +3742,278 @@ export class BowlScene implements Scene {
     const cx = (tipX - 2 * halfW) / 3;
     g.pivot.set(cx, 0);
     return g;
+  }
+
+  // ===========================================================================
+  // 暂存盘紧迫态（Buffer Panic）
+  // ===========================================================================
+
+  /**
+   * 检查并切换 panic 态。占位 === bufferSize 即触发；任意一格变空即退出。
+   * 教学引导期间一律不触发，避免抢戏；本关 bufferSize <= 0 也跳过。
+   */
+  private evaluateBufferPanicState(): void {
+    if (this.tutorialActive || this.bufferSize <= 0) {
+      if (this.bufferPanicActive) {
+        this.exitBufferPanic();
+      }
+      return;
+    }
+    let occupied = 0;
+    for (let i = 0; i < this.bufferSize; i += 1) {
+      if (this.bufferSlots[i] || this.pendingBufferSlotIndexes.has(i)) {
+        occupied += 1;
+      }
+    }
+    const isFull = occupied >= this.bufferSize;
+    if (isFull && !this.bufferPanicActive) {
+      this.enterBufferPanic();
+    } else if (!isFull && this.bufferPanicActive) {
+      this.exitBufferPanic();
+    }
+  }
+
+  private enterBufferPanic(): void {
+    if (this.bufferPanicActive) {
+      return;
+    }
+    this.bufferPanicActive = true;
+    this.bufferPanicElapsedSec = 0;
+    this.bufferPanicNextSfxAt = 0;
+    this.bufferPanicSfxCount = 0;
+
+    this.rebuildBufferPanicSlotRings();
+    this.mountToolPanicHints();
+
+    this.bufferPanicFxLayer.visible = true;
+  }
+
+  private exitBufferPanic(): void {
+    if (!this.bufferPanicActive && this.bufferPanicSlotRings.length === 0 && !this.toolPanicHints.some((h) => h !== null)) {
+      this.bufferPanicFxLayer.visible = false;
+      return;
+    }
+    this.bufferPanicActive = false;
+    this.bufferPanicElapsedSec = 0;
+    this.bufferPanicNextSfxAt = 0;
+    this.bufferPanicSfxCount = 0;
+
+    for (const ring of this.bufferPanicSlotRings) {
+      if (ring.plateSprite) {
+        ring.plateSprite.scale.set(ring.baseScaleX, ring.baseScaleY);
+      }
+      if (ring.fruitAnchor) {
+        ring.fruitAnchor.scale.set(ring.anchorBaseScaleX, ring.anchorBaseScaleY);
+      }
+      ring.root.removeFromParent();
+      ring.root.destroy({ children: true });
+    }
+    this.bufferPanicSlotRings.length = 0;
+
+    this.unmountToolPanicHints();
+
+    this.bufferPanicFxLayer.visible = false;
+  }
+
+  /** 按当前 buffer 布局为每个菜碟复制一层红色贴图轮廓，红边严格跟随盘子 alpha 形状。 */
+  private rebuildBufferPanicSlotRings(): void {
+    for (const ring of this.bufferPanicSlotRings) {
+      if (ring.plateSprite) {
+        ring.plateSprite.scale.set(ring.baseScaleX, ring.baseScaleY);
+      }
+      if (ring.fruitAnchor) {
+        ring.fruitAnchor.scale.set(ring.anchorBaseScaleX, ring.anchorBaseScaleY);
+      }
+      ring.root.removeFromParent();
+      ring.root.destroy({ children: true });
+    }
+    this.bufferPanicSlotRings.length = 0;
+    if (this.bufferSize <= 0) {
+      return;
+    }
+    const lay = computeBufferStripLayout(this.bufferSize, Game.logicWidth);
+    for (let i = 0; i < this.bufferSize; i += 1) {
+      const holder = this.slotStripHolders[i];
+      if (!holder || !holder.visible) {
+        continue;
+      }
+      const plateSprite = holder.children.find((child): child is PIXI.Sprite => child instanceof PIXI.Sprite) ?? null;
+      if (!plateSprite) {
+        continue;
+      }
+      const root = new PIXI.Container();
+      root.position.set(lay.slotW / 2, lay.slotH / 2);
+      root.eventMode = 'none';
+
+      const glow = new PIXI.Sprite(plateSprite.texture);
+      glow.anchor.set(0.5);
+      glow.width = lay.slotW * 1.12;
+      glow.height = lay.slotH * 1.12;
+      glow.tint = 0xff3a26;
+      glow.alpha = 0.42;
+      glow.eventMode = 'none';
+
+      const edge = new PIXI.Sprite(plateSprite.texture);
+      edge.anchor.set(0.5);
+      edge.width = lay.slotW * 1.055;
+      edge.height = lay.slotH * 1.055;
+      edge.tint = 0xff210c;
+      edge.alpha = 0.9;
+      edge.eventMode = 'none';
+
+      root.addChild(glow, edge);
+      this.bufferPanicSlotRings.push({
+        root,
+        glow,
+        edge,
+        plateSprite,
+        fruitAnchor: this.bufferSlotAnchors[i] ?? null,
+        baseScaleX: plateSprite?.scale.x ?? 1,
+        baseScaleY: plateSprite?.scale.y ?? 1,
+        anchorBaseScaleX: this.bufferSlotAnchors[i]?.scale.x ?? 1,
+        anchorBaseScaleY: this.bufferSlotAnchors[i]?.scale.y ?? 1,
+      });
+      const plateIndex = holder.getChildIndex(plateSprite);
+      holder.addChildAt(root, Math.max(0, plateIndex));
+    }
+  }
+
+  /** 在底部加菜牌 / 移除按钮上挂"用我救场"高亮气泡，遵循本关 allowAddDish/allowRemove */
+  private mountToolPanicHints(): void {
+    const labels: Record<number, string> = { 0: '加菜牌！', 1: '点这里救场！' };
+    const allows: Record<number, boolean> = {
+      0: !!this.levelDef?.allowAddDish && this.bufferSize < BUFFER_SLOTS_MAX,
+      1: !!this.levelDef?.allowRemove,
+    };
+    for (const idx of [0, 1] as const) {
+      if (!allows[idx]) {
+        continue;
+      }
+      const slot = this.toolSlots[idx];
+      if (!slot || !slot.visible) {
+        continue;
+      }
+      const haloRadius = toolButtonDisplayTarget() * 0.56;
+      const halo = new PIXI.Graphics();
+      halo.beginFill(0xfff1a0, 0.55);
+      halo.drawCircle(0, 0, haloRadius);
+      halo.endFill();
+      halo.lineStyle(3, 0xff8c1a, 0.85);
+      halo.drawCircle(0, 0, haloRadius);
+      halo.eventMode = 'none';
+      slot.addChildAt(halo, 0);
+
+      const bubble = new PIXI.Container();
+      const text = new PIXI.Text(labels[idx]!, {
+        fontSize: 20,
+        fill: 0xa64a17,
+        fontWeight: '900',
+        stroke: 0xfff7d6,
+        strokeThickness: 3,
+      });
+      text.anchor.set(0.5);
+      const padX = 14;
+      const padY = 8;
+      const bgW = Math.ceil(text.width) + padX * 2;
+      const bgH = Math.ceil(text.height) + padY * 2;
+      const bg = new PIXI.Graphics();
+      bg.lineStyle(2, 0xb55b1e, 1);
+      bg.beginFill(0xfff1c7, 1);
+      bg.drawRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, 14);
+      bg.endFill();
+      bg.beginFill(0xfff1c7, 1);
+      bg.lineStyle(2, 0xb55b1e, 1);
+      bg.moveTo(-9, bgH / 2);
+      bg.lineTo(9, bgH / 2);
+      bg.lineTo(0, bgH / 2 + 10);
+      bg.lineTo(-9, bgH / 2);
+      bg.endFill();
+      bubble.addChild(bg, text);
+      const bubbleBaseY = -toolButtonDisplayTarget() * 0.52 - bgH / 2 - 4;
+      bubble.position.set(0, bubbleBaseY);
+      bubble.eventMode = 'none';
+      slot.addChild(bubble);
+
+      this.toolPanicHints[idx] = {
+        halo,
+        bubble,
+        bubbleBaseY,
+        slotBaseScale: slot.scale.x,
+      };
+    }
+  }
+
+  private unmountToolPanicHints(): void {
+    for (let i = 0; i < this.toolPanicHints.length; i += 1) {
+      const hint = this.toolPanicHints[i];
+      if (!hint) {
+        continue;
+      }
+      const slot = this.toolSlots[i];
+      if (slot) {
+        slot.scale.set(hint.slotBaseScale);
+      }
+      hint.halo.removeFromParent();
+      hint.halo.destroy();
+      hint.bubble.removeFromParent();
+      hint.bubble.destroy({ children: true });
+      this.toolPanicHints[i] = null;
+    }
+  }
+
+  /** 由 update(dt) 每帧驱动：菜碟贴图和红色盘形描边一起呼吸 + 工具钮提示 + 警告音 */
+  private updateBufferPanicFrame(dt: number): void {
+    if (!this.bufferPanicActive) {
+      return;
+    }
+    this.bufferPanicElapsedSec += dt;
+
+    const period = 1.15;
+    const breath = Math.sin((this.bufferPanicElapsedSec * Math.PI * 2) / period) * 0.5 + 0.5;
+    const scale = 0.965 + breath * 0.07;
+
+    for (const {
+      root,
+      glow,
+      edge,
+      plateSprite,
+      fruitAnchor,
+      baseScaleX,
+      baseScaleY,
+      anchorBaseScaleX,
+      anchorBaseScaleY,
+    } of this.bufferPanicSlotRings) {
+      root.scale.set(scale);
+      if (plateSprite) {
+        plateSprite.scale.set(baseScaleX * scale, baseScaleY * scale);
+      }
+      if (fruitAnchor) {
+        fruitAnchor.scale.set(anchorBaseScaleX * scale, anchorBaseScaleY * scale);
+      }
+      edge.alpha = 0.68 + breath * 0.32;
+      glow.alpha = 0.42 + breath * 0.38;
+    }
+
+    const heartbeat = breath;
+    for (let i = 0; i < this.toolPanicHints.length; i += 1) {
+      const hint = this.toolPanicHints[i];
+      if (!hint) {
+        continue;
+      }
+      const slot = this.toolSlots[i];
+      if (slot) {
+        slot.scale.set(hint.slotBaseScale * (1 + heartbeat * 0.06));
+      }
+      hint.halo.scale.set(1 + heartbeat * 0.18);
+      hint.halo.alpha = 0.32 + heartbeat * 0.5;
+      hint.bubble.position.y = hint.bubbleBaseY + Math.sin((this.bufferPanicElapsedSec * Math.PI * 2) / period) * 3;
+      hint.bubble.alpha = 0.85 + heartbeat * 0.15;
+    }
+
+    if (this.bufferPanicSfxCount < 3 && this.bufferPanicElapsedSec >= this.bufferPanicNextSfxAt) {
+      AudioManager.playBufferPanicSound();
+      this.bufferPanicSfxCount += 1;
+      this.bufferPanicNextSfxAt = this.bufferPanicElapsedSec + 0.72;
+    }
   }
 }

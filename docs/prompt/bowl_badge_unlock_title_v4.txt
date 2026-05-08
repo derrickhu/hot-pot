@@ -1,0 +1,35 @@
+Cute rounded two-line Chinese reward title for a casual fruit dessert / hot-pot mobile game.
+
+Goal:
+- Redesign the existing "恭喜通关 / 新徽章!" title so it feels much more round, soft, cute, lively, and hand-drawn.
+- Avoid rigid block lettering. Avoid straight stiff banner. Make the shapes bouncy and friendly.
+
+Composition:
+- One centered title group on a pure flat white background.
+- Top element: a soft wavy red-coral prize ribbon, like a cute candy ribbon, with rounded folded swallow-tail ends.
+- Ribbon is gently curved upward in the middle, not a stiff straight rectangle.
+- Ribbon has crisp dark chocolate outline and simple flat red shading. No blur, no glow, no airbrush.
+- On the ribbon, exactly four Chinese characters: 恭喜通关
+- Bottom element: much larger main text exactly: 新徽章!
+- Main text overlaps slightly under the ribbon, like a cheerful sticker title.
+
+Typography:
+- Very chubby rounded Chinese POP letters, like soft gummies or mochi candy.
+- Bouncy uneven baseline, slightly different character sizes and rotations, but still easy to read.
+- Golden yellow fill with warm orange lower gradient.
+- Thick red-orange inner outline, thick dark chocolate outer outline.
+- Small clean white glossy highlights inside the strokes only, with hard crisp edges.
+- Add only a few tiny flat star stickers around the title. Stars have sharp vector edges and no glow.
+
+Easy cutout constraints:
+- Background must be pure white #FFFFFF only.
+- No checkerboard pattern.
+- No transparency preview pattern.
+- No shadow under the title.
+- No outer glow, no halo, no bloom, no soft haze, no feathered light.
+- All silhouettes must have clean crisp edges suitable for rembg background removal.
+
+Text constraints:
+- The only text allowed: 恭喜通关 and 新徽章!
+- No extra text, no English, no numbers, no logo, no watermark, no QR code.
+- Every Chinese character must be complete, correct, and clearly readable.
