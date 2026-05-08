@@ -25,17 +25,40 @@ const SHARE_IMAGE_URLS = [
   'assets/images/share_rand_collection.jpg',
 ] as const;
 
-function pickRandomFrom<const T extends readonly string[]>(arr: T): T[number] {
-  const i = Math.floor(Math.random() * arr.length);
-  return arr[i]!;
+/** 分享抽取序号：避免仅依赖 Math.random() 时出现连续相同；与 Date 混合打散。 */
+let sharePickSeq = 0;
+/** 上一次分享图下标，连续两次尽量不重复（池子大于 1 时）。 */
+let lastShareImageIndex = -1;
+
+function pickIndexMixed(len: number): number {
+  sharePickSeq = (sharePickSeq + 1) | 0;
+  const t = typeof Date !== 'undefined' ? Date.now() : 0;
+  // 与序号相乘再取模，连续调用也会有不同偏移
+  let i = ((sharePickSeq * 1103515245 + t) >>> 0) % len;
+  return i;
 }
 
 function pickRandomShareTitle(): string {
-  return pickRandomFrom(SHARE_TITLES);
+  const arr = SHARE_TITLES;
+  return arr[pickIndexMixed(arr.length)]!;
 }
 
 function pickRandomShareImageUrl(): string {
-  return pickRandomFrom(SHARE_IMAGE_URLS);
+  const arr = SHARE_IMAGE_URLS;
+  const n = arr.length;
+  if (n <= 0) {
+    return '';
+  }
+  let idx = pickIndexMixed(n);
+  if (n > 1) {
+    let guard = 0;
+    while (idx === lastShareImageIndex && guard < n + 2) {
+      idx = (idx + 1) % n;
+      guard += 1;
+    }
+  }
+  lastShareImageIndex = idx;
+  return arr[idx]!;
 }
 
 interface WechatSharePayload {
