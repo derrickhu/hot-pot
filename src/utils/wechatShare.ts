@@ -25,6 +25,7 @@ const SHARE_IMAGE_URLS = [
   'assets/images/share_rand_table_warm.jpg',
   'assets/images/share_rand_combo.jpg',
   'assets/images/share_rand_collection.jpg',
+  'assets/images/share_card.jpg',
 ] as const;
 
 /** 分享抽取序号：避免仅依赖 Math.random() 时出现连续相同；与 Date 混合打散。 */
