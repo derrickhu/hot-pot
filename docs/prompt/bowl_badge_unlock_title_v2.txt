@@ -1,0 +1,35 @@
+Create a clean two-line Chinese reward popup title image for a cute casual fruit dessert mini game.
+
+Canvas / layout:
+- 1:1 square image.
+- Centered title group only, no panel, no character, no badge icon.
+- Top line: exactly four Chinese characters: 恭喜通关
+- Bottom line: exactly three Chinese characters: 新徽章
+- Top line is smaller, arched slightly upward, placed above the main title.
+- Bottom line is the main focus, much larger, playful and bold.
+- Leave generous empty margin around the whole title group.
+
+Letter style:
+- Cute hand-painted Chinese POP game UI lettering.
+- Warm golden-yellow fill with orange gradient.
+- Thick red-orange outline.
+- Dark chocolate-brown outer outline.
+- Subtle glossy highlights that stay INSIDE the letters.
+- High contrast and readable at small mobile-game popup size.
+- Add small celebration sparkles, confetti dots, and warm glow around the text.
+- Festive celebration feeling, like a reward unlocked after clearing a level.
+
+Background for cutout:
+- Use a simple solid pure light background, preferably plain white or very pale cream.
+- Do NOT use checkerboard transparency pattern.
+- Do NOT use textured background.
+- Keep the text, outline, sparkles, and glow clearly separated from the background.
+
+Strict text constraints:
+- The ONLY text allowed is: 恭喜通关 新徽章
+- No English letters.
+- No numbers.
+- No extra Chinese characters.
+- No fake glyphs.
+- No watermark, no logo, no QR code.
+- Each Chinese character must be complete, correct, and clearly readable.

@@ -83,6 +83,8 @@ const BOWL_TOOL_SHEET_TEXTURE = `${BOWL_IMAGES_ROOT}/bowl_tool_buttons.png`;
 const BOWL_TOOL_PANELS_TEXTURE = `${BOWL_IMAGES_ROOT}/bowl_tool_panels.png`;
 const UI_PANEL_FREE_BTN_TEXTURE = `${BOWL_IMAGES_ROOT}/ui_panel_free_btn.png`;
 const BOWL_PLATES_TEXTURE = `${BOWL_IMAGES_ROOT}/bowl_plates.png`;
+const BOWL_BADGE_UNLOCK_TITLE_TEXTURE_KEY = 'bowl_badge_unlock_title';
+const BOWL_BADGE_UNLOCK_TITLE_ASSET = `${BOWL_IMAGES_ROOT}/bowl_badge_unlock_title.png`;
 const ICE_CUBE_ID: FruitId = 'ice_cube';
 const NON_ORDER_FRUIT_IDS = new Set<FruitId>([ICE_CUBE_ID, 'crystal_jelly']);
 
@@ -744,7 +746,7 @@ export class BowlScene implements Scene {
     const lockText1 = this.createCenterText('解锁', 38, 0xf7edcc);
     lockText1.position.set(0, 0);
     this.thirdPlateLockDecor.addChild(lockText1);
-    const lockPlay1 = this.createCenterText('▶', 22, 0xf7edcc);
+    const lockPlay1 = this.createLockPlayTriangle(0xf7edcc);
     lockPlay1.position.set(-40, 0);
     this.thirdPlateLockDecor.addChild(lockPlay1);
     this.container.addChild(this.thirdPlateLockDecor);
@@ -754,7 +756,7 @@ export class BowlScene implements Scene {
     this.fourthPlateLockDecor.position.set(pc[3]!, orderPlateY);
     lockText2.position.set(0, 0);
     this.fourthPlateLockDecor.addChild(lockText2);
-    const lockPlay2 = this.createCenterText('▶', 22, 0xf7edcc);
+    const lockPlay2 = this.createLockPlayTriangle(0xf7edcc);
     lockPlay2.position.set(-40, 0);
     this.fourthPlateLockDecor.addChild(lockPlay2);
     this.container.addChild(this.fourthPlateLockDecor);
@@ -1078,6 +1080,7 @@ export class BowlScene implements Scene {
     jobs.push(TextureCache.load('bowl_tool_panels', BOWL_TOOL_PANELS_TEXTURE));
     jobs.push(TextureCache.load('ui_panel_free_btn', UI_PANEL_FREE_BTN_TEXTURE));
     jobs.push(TextureCache.load('bowl_plates', BOWL_PLATES_TEXTURE));
+    jobs.push(TextureCache.load(BOWL_BADGE_UNLOCK_TITLE_TEXTURE_KEY, BOWL_BADGE_UNLOCK_TITLE_ASSET));
     jobs.push(TextureCache.load(LEVEL_CLEAR_ACTION_ICONS_TEXTURE_KEY, LEVEL_CLEAR_ACTION_ICONS_ASSET));
     jobs.push(TextureCache.load(BOWL_UNLOCK_PANEL_TEXTURE_KEY, BOWL_UNLOCK_PANEL_ASSET));
     jobs.push(TextureCache.load(BOWL_NEXT_LEVEL_BUTTON_TEXTURE_KEY, BOWL_NEXT_LEVEL_BUTTON_ASSET));
@@ -1093,6 +1096,7 @@ export class BowlScene implements Scene {
     this.applyBowlArtTextures();
     this.mountToolButtons();
     this.mountBoardPlateArt();
+    this.badgeUnlockOverlay.setTitleTexture(TextureCache.get(BOWL_BADGE_UNLOCK_TITLE_TEXTURE_KEY));
     this.tutorialOverlay.setHandTexture(TextureCache.get(BOWL_TUTORIAL_HAND_TEXTURE_KEY));
     this.levelClearOverlay.setSkinTextures(
       TextureCache.get(BOWL_UNLOCK_PANEL_TEXTURE_KEY),
@@ -2813,6 +2817,8 @@ export class BowlScene implements Scene {
     this.hideToolHelpPanel();
     this.fruitLayer.eventMode = 'none';
     this.reviveOverlay.show({
+      totalOrders: this.totalOrdersForProgress,
+      ordersRemaining: this.ordersRemaining,
       onRevive: () => {
         void this.runRewardedGameplayAction('level_fail_revive', () => {
           this.performRevive();
@@ -3660,5 +3666,22 @@ export class BowlScene implements Scene {
     });
     node.anchor.set(0.5);
     return node;
+  }
+
+  /**
+   * 解锁按钮左侧小三角。勿用 Unicode「▶」(U+25B6)：真机系统字体会把它画成彩色 emoji，
+   * 与模拟器上的几何字形不一致。
+   */
+  private createLockPlayTriangle(fill: number): PIXI.Graphics {
+    const g = new PIXI.Graphics();
+    const halfH = 8;
+    const halfW = 6;
+    const tipX = 10;
+    g.beginFill(fill);
+    g.drawPolygon(-halfW, -halfH, tipX, 0, -halfW, halfH);
+    g.endFill();
+    const cx = (tipX - 2 * halfW) / 3;
+    g.pivot.set(cx, 0);
+    return g;
   }
 }

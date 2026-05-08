@@ -1,0 +1,26 @@
+Single centered UI title graphic for a cute casual fruit / hot-pot mobile mini game. NOT photoreal.
+
+Layout (top to bottom, one vertical stack, generous margin):
+
+1) CELEBRATION RIBBON (reference: horizontal swallow-tail banner like a prize ribbon):
+   - Warm festive red-coral ribbon with shallow folds, slightly hand-painted cartoon look.
+   - Both ends are forked swallow tails, symmetrical.
+   - Thin DARK brown stroke around the ribbon silhouette (crisp, no feathering).
+   - On the ribbon, EXACTLY four Chinese characters: 恭喜通关
+   - Letters: bold rounded POP style, bright cream-yellow fill, thick dark brown outline, NO inner soft glow, NO outer bloom.
+
+2) MAIN TITLE (larger, below the ribbon with small gap):
+   - EXACTLY four characters including punctuation: 新徽章!
+   - Same family as the game’s “reward title” look: thick bubbly 3D POP letters, golden yellow to warm orange vertical gradient, thick red-orange inner outline, dark chocolate outer outline.
+   - Small clean white specular highlights ONLY as sharp shapes on upper edges (no blurred highlights).
+   - Optional: 3–5 tiny four-point stars near the text, but stars must be FLAT vector shapes with hard edges — absolutely NO glow, NO halo, NO soft airbrush around stars or letters.
+
+Strict “easy matting” rules for background removal:
+- Background must be a single FLAT solid color: pure white #FFFFFF everywhere. No gradient, no vignette, no texture, no paper grain.
+- NO drop shadow on the ground, NO ambient occlusion haze, NO light bloom, NO lens flare, NO smoky mist, NO outer glow around any element.
+- All edges must be sharp and clean; anti-aliasing only as normal pixel edge, not fuzzy halos.
+
+Text constraints:
+- The ONLY Chinese text allowed in the image is exactly: 恭喜通关  and  新徽章!
+- NO English, NO extra Chinese, NO numbers, NO watermark, NO logo, NO QR.
+- Every stroke complete and readable; no fake glyphs.

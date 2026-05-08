@@ -1,0 +1,21 @@
+Create a single transparent-title style game UI text asset for a cute casual fruit hot-pot mini game.
+
+Canvas / composition:
+- Square 1:1 image, centered title only.
+- The only text in the image must be EXACTLY three Chinese characters plus punctuation: 新徽章!
+- Big bold playful Chinese POP lettering, rounded thick strokes, slightly bouncy baseline.
+- Bright golden yellow fill, warm orange inner gradient, red-orange outline, dark chocolate-brown outer outline.
+- Soft cream highlight on the upper-left of each stroke, subtle glossy candy shine.
+- Add tiny sparkle stars and warm glow around the text, but keep the text itself fully readable.
+- Leave generous transparent/clean margin around the title so it can be cropped into a UI sprite.
+
+Style:
+- Cute hand-painted mobile game UI, matching a warm fruit dessert game.
+- High contrast, readable at small size, polished reward-popup title.
+- Not photorealistic, not hard 3D, no metallic realism.
+
+Strict constraints:
+- Generate ONLY the text string: 新徽章!
+- NO English letters, NO extra Chinese characters, NO random symbols, NO logo, NO watermark, NO QR code.
+- Each Chinese character must be complete, correct, and clearly readable.
+- Background should be plain very light/near-white or transparent-looking; the title must be easy to remove from the background into a transparent PNG.
