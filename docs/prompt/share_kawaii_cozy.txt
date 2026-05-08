@@ -1,0 +1,19 @@
+4:3 horizontal promotional share-card illustration for a casual fruit-matching mini game called "水果捞" / "Fruit Bowl". Output 1K, intended to be later center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+VIBE: SUPER KAWAII / cute / cozy / dessert café aesthetic. Pastel pinks and creams, marshmallow softness, plush-toy chibi proportions. Like a Sanrio-adjacent dessert ad: makes you want to "hug the bowl".
+
+CORE COMPOSITION:
+- Center foreground: a big round CERAMIC bowl with a soft pink and cream gradient body, a tiny pastel ribbon bow tied on its rim, sitting on a fluffy doily / lace mat. The bowl has subtle sparkle highlights, with whipped-cream-style soft swirls around its base.
+- Inside the bowl: a pile of CHIBI fruits with rosy cheeks and tiny ":3" / closed-eye smile expressions — strawberry, peach (with leaf hair), blueberry (round and tiny), watermelon slice, pineapple cube with leaf, kiwi, lemon. Several fruits are HUGGING each other or stacked sleepily, one tiny strawberry napping on top of the pile.
+- Floating around the bowl: dreamy sparkles, tiny pastel hearts (drawn shapes only, no letters), small pastel stars, a single pastel rainbow arc drifting in the upper background, soft cotton-cloud puffs.
+- Background: gentle pastel pink to cream radial gradient, soft polkadots in milky white, a few floating cream / strawberry swirls, faint vertical "soft light" rays.
+- One or two empty pale plates floating to the upper right with tiny ribbon decoration to hint at the "serving order" gameplay, but kept very gentle and dreamy.
+- Bottom area: a soft cream-colored band with subtle horizontal stripe pattern, kept text-free, ready for a Chinese title sticker added later.
+
+LIGHTING & STYLE:
+- Palette: milky cream, soft baby pink, peach, mint accent, strawberry red as the brightest pop, with gentle cream-yellow rim light.
+- Soft 2.5D plush-toy volume, very rounded forms, gentle shadows, glossy candy highlights, no harsh contrast. Sticker / Sanrio café flat-volume style.
+- All fruits have CONSISTENT cute style (all chibi with face), readable as fruit at thumbnail size.
+
+HARD BANS:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border, NO photoreal style.

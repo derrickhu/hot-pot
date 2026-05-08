@@ -1,0 +1,18 @@
+4:3 horizontal promotional share-card illustration for a casual fruit-matching mini game called "水果捞" / "Fruit Bowl". Output 1K, intended to be later center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+VIBE: cartoon "internet meme" energy, funny, exaggerated, slightly chaotic but fully readable at thumbnail size. Saturated warm colors, sticker / chibi style. Comedic group portrait of fruits literally fighting to be picked.
+
+CORE COMPOSITION:
+- Center foreground: a HUGE round wooden bowl, rim view, slightly tilted toward the camera, brimming with cartoon fruits with big shiny eyes (strawberry, watermelon slice, blueberry, peach, pineapple slice, lemon slice, kiwi cross-section). Each fruit has BIG anime eyes, eyebrows, and exaggerated facial expressions: shocked O-mouth, wide grin, sweat drop, sparkle eyes, "pick me!" tongue stuck out.
+- The fruits are visibly PUSHING and ELBOWING each other, some standing on shoulders of others, some waving tiny stick-arms, a few flying out of the bowl, all reaching desperately upward toward 3 round empty white-rim plates floating above the bowl with question marks (NO English, just abstract sparkle / question shapes).
+- Tiny visual gag stickers floating around: small "GO!" arrows (drawn arrows only, no letters), star bursts, sweat droplets, motion-line streaks.
+- Background: warm cream/orange diagonal manga speed lines radiating outward, plus a soft polkadot dot pattern in soft yellow, giving comic-book energy.
+
+LIGHTING & STYLE:
+- Saturated warm palette: cream, peach, sunny yellow, strawberry red, leaf green.
+- Soft 2.5D volume, glossy fruit highlights, thick clean cartoon outlines, slight rim light, bouncy / squishy proportions, dynamic tilted angle.
+- Strong silhouette, fruits clearly recognizable individually even at thumbnail size.
+- Bottom 18% area kept calmer (slightly darker warm-orange band with subtle dotted pattern) so a Chinese headline sticker can be added later — but DO NOT draw any text yourself.
+
+HARD BANS:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers (zero digits anywhere, including on plates / on bowl / in background), NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble with text, NO UI screenshot, NO buttons, NO black border, NO white border, NO realistic photo style.

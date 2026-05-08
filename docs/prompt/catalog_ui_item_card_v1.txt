@@ -1,0 +1,17 @@
+Single mobile game UI ELEMENT — one EMPTY collection / catalog ITEM CARD frame, centered on a clean PURE WHITE background, square 1:1 canvas, lots of empty white margin around the asset.
+
+Reference image is the catalog screen prototype; copy the EXACT visual language of its grid cards:
+
+- Roughly square card with chunky rounded corners (slight pillow / cushion feel).
+- OUTER FRAME: warm light wood / honey-bamboo color band around the edge, with subtle wood grain, soft chunky inner highlight on top edge and a soft inner shadow on bottom edge to give a 3D "wooden frame" feel.
+- INNER PANEL: soft cream / off-white paper area in the middle, slightly recessed, with very faint paper / linen texture; perfectly EMPTY — no contents.
+- Soft warm drop shadow underneath the card on the white background.
+- Style: 2D illustrated casual mobile game UI, NOT photoreal, NOT hard 3D, matches a cozy hot-pot + fruit puzzle game aesthetic.
+
+ABSOLUTELY DO NOT draw:
+- NO fruit, NO food, NO icons, NO mascot, NO characters inside the card.
+- NO TEXT anywhere (no 苹果 / 香蕉 / 未解锁 / English / numbers / question marks / "?" / wax seal stamps with letters).
+- NO label strip below the card, NO ribbon, NO badge.
+- NO multiple cards, NO grid, NO background scene; just one isolated empty card on white.
+
+Output is a single isolated UI asset only — the empty catalog card frame, ready to be exported and have a fruit / badge sprite + Chinese label rendered on top in code.

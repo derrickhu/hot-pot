@@ -1,0 +1,19 @@
+4:3 horizontal share-card illustration for a casual fruit-matching mini game. Output 1K, will later be center-cropped to 5:4 (1000x800).
+
+This image MUST keep the EXACT same art style and color palette as the reference image: cool mint-green + cream + soft pastel-purple palette, refreshing icy summer mood, glossy 2.5D casual mobile game ad-art, soft drop shadows, NOT photoreal.
+
+Recompose the reference (portrait 9:16) into a 4:3 HORIZONTAL "HERO close-up" layout — DO NOT crop, REDRAW. NO outer poster frame this time, full-bleed cinematic style.
+
+Composition:
+- Center HERO: ONE large pastel-purple ceramic bowl with a thin mint rim, slightly tilted toward camera, OVERFLOWING with frosty fruits as in the reference — translucent ice cubes (some with cute fruit silhouettes inside: strawberry-inside-cube, grape-inside-cube), lemon slices, orange slices, kiwi cross-section, blueberries, golden mango cubes, banana slices, strawberries, grape clusters, peach, with snowflake sparkles and tiny frost mist puffs drifting up. The bowl takes ~55% of the frame.
+- Around the bowl: floating ice cubes with cute fruit silhouettes inside, snowflake sparkles, small fruit decorations (lemon slice, strawberry, kiwi cross-section, orange wedge) as accent stickers in the corners.
+- Top-left: a couple of additional large ice cubes with fruits inside, drifting in cool air with shine highlights.
+- Top-right: a few drifting snowflakes and one orange slice with a faint cool ribbon trail.
+- Background: cool mint to cream radial gradient, soft cool sunburst rays in pale mint, scattered snowflake sparkle dots.
+- Bottom 18%: keep calmer (a darker mint band), suitable for an external Chinese title sticker added later — DO NOT draw any text yourself.
+
+Keep:
+- Identical art style to the reference (bouncy POP casual game illustration), same cool mint+cream+purple palette, same glossy / slightly cartoony rendering, same "icy refreshing" mood.
+
+Hard bans:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble, NO UI screenshot, NO buttons, NO captions, NO outer poster frame this time, NO black border, NO white border, NO photoreal style.

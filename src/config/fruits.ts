@@ -135,7 +135,7 @@ export const FRUIT_CONFIGS: FruitConfig[] = [
   { id: 'lime', label: '青柠', color: 0x43a047, asset: bowl('lime', 1), bowlAsset2: bowl('lime', 2) },
   { id: 'lily_bulb', label: '百合', color: 0x8d6e63, asset: bowl('lily_bulb', 1), bowlAsset2: bowl('lily_bulb', 2) },
   { id: 'longan', label: '桂圆', color: 0x8d6e63, asset: bowl('longan', 1), bowlAsset2: bowl('longan', 2) },
-  { id: 'lotus_root', label: '莲藕丁', color: 0x80cbc4, asset: bowl('lotus_root', 1), bowlAsset2: bowl('lotus_root', 2) },
+  { id: 'lotus_root', label: '藕片', color: 0x80cbc4, asset: bowl('lotus_root', 1), bowlAsset2: bowl('lotus_root', 2) },
   { id: 'lotus_seed', label: '莲子', color: 0x8d6e63, asset: bowl('lotus_seed', 1), bowlAsset2: bowl('lotus_seed', 2) },
   { id: 'lychee', label: '荔枝', color: 0xd32f2f, asset: bowl('lychee', 1), bowlAsset2: bowl('lychee', 2) },
   { id: 'mandarin', label: '砂糖橘', color: 0xfb8c00, asset: bowl('mandarin', 1), bowlAsset2: bowl('mandarin', 2) },

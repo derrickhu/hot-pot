@@ -1,0 +1,27 @@
+9:16 vertical promotional key art for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). 1080x1920 portrait poster, premium 2.5D casual mobile-game advertisement style, saturated warm colors, soft volumetric light, glossy highlights, layered depth, crisp silhouettes, readable at thumbnail size. Hand-painted cute cartoon, NOT photoreal, NOT hard 3D render.
+
+Composition (top to bottom):
+
+1. OUTER FRAME: a thick rounded poster frame in warm honey-yellow / cream color with a soft brown outer outline, like a cute storybook border. Around the frame edges, sprinkle small decorative stickers: a strawberry, a lemon slice, an orange slice, a few purple grapes, a kiwi slice, sparkle stars, and small gold coins. Decorations must NOT cover the central artwork or the title.
+
+2. INNER ARTWORK (top 2/3 of the frame): a stylized in-game vignette.
+   - Across the upper portion: a row of three rounded cream-colored "collection trays" (small plates), each tray containing three identical fruit pieces snapping together with a bright golden glow flash and confetti sparkles, suggesting a 3-match merge.
+   - In the center: a big front-facing wide bowl filled to the brim with colorful sliced fruits — strawberry chunks, orange slices, lemon slices, banana coins, purple grape clusters, kiwi slices, mango cubes, blueberries — all in cute 2D hand-painted style.
+   - Above the bowl, three identical fruit slices fly upward into one of the trays, connected by a glowing yellow trail and golden sparkles.
+   - Background inside the frame is a warm cream / pale peach gradient with soft sunshine rays.
+
+3. BOTTOM TITLE BANNER (bottom 1/3 of the frame): a wide white scroll / ribbon with curled ends crossing horizontally over the lower part of the frame.
+   - Big bold Chinese title text on the scroll, EXACTLY four characters: 鲜果三连
+     - Style: chunky playful POP-style Chinese game title, thick strokes, bright YELLOW fill, RED-ORANGE outline, dark brown outermost outline, soft drop shadow. Each character is large, well separated, instantly readable. Slightly bouncy baseline for fun feel.
+   - Below the main title, a smaller second line, EXACTLY five characters: 越捞越上头
+     - Style: smaller bold cream/white fill with red outline, sits on a small darker red ribbon strip or directly under the scroll. Clearly legible.
+   - No other text anywhere in the image.
+
+Color palette: cream, honey yellow, strawberry red, citrus orange, mint green accents, soft brown outlines, with bright golden sparkles.
+
+Strict constraints:
+- Generate ONLY the two Chinese text strings exactly: 鲜果三连 and 越捞越上头.
+- Each Chinese character must be COMPLETE, CORRECT and CLEARLY readable, no fake glyphs, no missing strokes, no extra characters, no English letters, no numbers.
+- No app store badges, no UI buttons with words, no speech bubbles, no watermark, no logo, no QR code, no phone frame outline.
+- No black border, no white border outside the poster frame; the poster frame itself IS the border.
+- Single coherent illustration, not a collage of separate panels.

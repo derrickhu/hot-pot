@@ -1,0 +1,16 @@
+Single mobile game UI ELEMENT — one INACTIVE / UNSELECTED tab pill button, centered on a clean PURE WHITE background, square 1:1 canvas, lots of empty white margin around the asset.
+
+Reference image is the catalog screen prototype; copy the EXACT visual language of its right "徽章图鉴" pill (the un-highlighted one):
+
+- Horizontal rounded pill shape, same proportions as the active pill (roughly 5:2 wide), chunky rounded corners.
+- Fill: muted warm cream / pale beige with a very faint inner highlight; clearly LESS saturated and LESS bright than the active honey-amber pill — it should read as "off / not selected".
+- Outline: thick warm brown / dark cocoa stroke around the entire pill, same stroke weight as the active pill so they look like a matched pair.
+- Very subtle soft drop shadow under the pill on the white background.
+
+ABSOLUTELY DO NOT draw:
+- NO TEXT of any kind inside or outside the pill (no 徽章图鉴, no English, no numbers, no symbols).
+- NO icons, NO badges, NO fruits, NO labels.
+- NO active pill next to it, NO tab row, NO header bar, NO background scene.
+- NO checker pattern, NO transparent grid; just clean white background.
+
+Output is a single isolated UI asset only — the inactive pill button shape and its surface treatment, ready to be exported and have text rendered on top in code.

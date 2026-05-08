@@ -440,12 +440,16 @@ export class CatalogScene implements Scene {
     }
   }
 
-  /** 通用：用卡片贴图作为格子底板，返回 (cardWidth, cardHeight, innerSize) */
+  /** 通用：用卡片贴图作为格子底板，并返回内部纸面区的几何信息 */
   private mountCardBackground(cell: PIXI.Container, cellW: number): {
     cardW: number;
     cardH: number;
-    innerSize: number;
-    locked?: boolean;
+    /** 内部奶油纸面顶部 Y（相对 cell 原点） */
+    innerTop: number;
+    /** 内部奶油纸面高度 */
+    innerH: number;
+    /** 内部奶油纸面宽度 */
+    innerW: number;
   } {
     const tex = TextureCache.get('catalog_item_card');
     const cardW = cellW;
@@ -465,8 +469,11 @@ export class CatalogScene implements Scene {
       ph.endFill();
       cell.addChild(ph);
     }
-    // 卡片中央的纸面区大约占 75% 宽度
-    return { cardW, cardH, innerSize: cardW * 0.7 };
+    // 卡片画面里"木框"内边距大约占总尺寸 13%，纸面占中间 ~74%（横向） / ~72%（纵向）
+    const innerTop = cardH * 0.13;
+    const innerH = cardH * 0.74;
+    const innerW = cardW * 0.74;
+    return { cardW, cardH, innerTop, innerH, innerW };
   }
 
   private buildFruitGrid(slots: CatalogSlot[]): void {
@@ -477,8 +484,7 @@ export class CatalogScene implements Scene {
     const tex = TextureCache.get('catalog_item_card');
     const aspect = tex && tex.height > 0 ? tex.height / tex.width : 1;
     const cardH = cellW * aspect;
-    const labelH = 38;
-    const rowH = cardH + labelH + ROW_GAP_Y;
+    const rowH = cardH + ROW_GAP_Y;
 
     const rowCount = Math.ceil(slots.length / GRID_COLS);
     this.maxScrollY = Math.max(
@@ -496,43 +502,48 @@ export class CatalogScene implements Scene {
       const cell = new PIXI.Container();
       cell.position.set(x + cellW / 2, y);
 
-      const { innerSize } = this.mountCardBackground(cell, cellW);
+      const { innerTop, innerH, innerW } = this.mountCardBackground(cell, cellW);
+      // 上 65% 放图、下 30% 放名字，留 5% 间距
+      const iconAreaH = innerH * 0.62;
+      const labelAreaTop = innerTop + innerH * 0.68;
+      const iconCenterY = innerTop + iconAreaH / 2;
+      // 缩小水果，留出留白与卡片内框留间距
+      const iconMaxSide = Math.min(innerW * 0.78, iconAreaH * 0.92);
+      const labelFont = Math.max(18, Math.round(innerH * 0.18));
 
       if (!slot.unlocked) {
         cell.alpha = 0.78;
         const q = new PIXI.Text('?', {
-          fontSize: Math.min(82, innerSize * 0.7),
+          fontSize: Math.round(iconAreaH * 0.6),
           fill: 0xb29074,
           fontWeight: '900',
-          stroke: 0xfff4dc,
-          strokeThickness: 4,
         });
         q.anchor.set(0.5);
-        q.position.set(0, cardH / 2);
+        q.position.set(0, iconCenterY);
         cell.addChild(q);
 
-        const lb = this.createCellLabel('未解锁', false);
-        lb.position.set(0, cardH + 8);
+        const lb = this.createCellLabel('未解锁', false, labelFont);
+        lb.position.set(0, labelAreaTop);
         cell.addChild(lb);
       } else {
         const fruitTex = this.getCatalogTexture(slot);
         if (fruitTex) {
           const sp = new PIXI.Sprite(fruitTex);
           sp.anchor.set(0.5);
-          const s = innerSize / Math.max(sp.width, sp.height);
+          const s = iconMaxSide / Math.max(sp.width, sp.height);
           sp.scale.set(s);
-          sp.position.set(0, cardH / 2);
+          sp.position.set(0, iconCenterY);
           cell.addChild(sp);
         } else {
           const ph = new PIXI.Graphics();
           ph.beginFill(0xc8b8a0);
-          ph.drawCircle(0, cardH / 2, innerSize / 2);
+          ph.drawCircle(0, iconCenterY, iconMaxSide / 2);
           ph.endFill();
           cell.addChild(ph);
         }
 
-        const lb = this.createCellLabel(slot.label, true);
-        lb.position.set(0, cardH + 8);
+        const lb = this.createCellLabel(slot.label, true, labelFont);
+        lb.position.set(0, labelAreaTop);
         cell.addChild(lb);
       }
 
@@ -554,11 +565,11 @@ export class CatalogScene implements Scene {
 
     const W = Game.logicWidth;
     const cellW = (W - GRID_PAD_X * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
-    const tex = TextureCache.get('catalog_item_card');
-    const aspect = tex && tex.height > 0 ? tex.height / tex.width : 1;
-    const cardH = cellW * aspect;
-    const labelH = 60;
-    const rowH = cardH + labelH + ROW_GAP_Y;
+    // 徽章 Tab：徽章充满整张卡片，关卡/名称两行写在卡片"下方"（框外）
+    const cardH = cellW;
+    const labelLineH = 26;
+    const labelBlockH = labelLineH * 2 + 12;
+    const rowH = cardH + labelBlockH + ROW_GAP_Y;
 
     const rowCount = Math.ceil(slots.length / GRID_COLS);
     this.maxScrollY = Math.max(
@@ -575,15 +586,10 @@ export class CatalogScene implements Scene {
       const cell = new PIXI.Container();
       cell.position.set(x + cellW / 2, y);
 
-      const { innerSize } = this.mountCardBackground(cell, cellW);
-      if (!slot.unlocked) {
-        cell.alpha = 0.82;
-      }
-
       const badgeMount = new PIXI.Container();
-      badgeMount.position.set(-innerSize / 2, cardH / 2 - innerSize / 2);
+      badgeMount.position.set(-cellW / 2, 0);
       const badgeTex = TextureCache.get(slot.textureKey);
-      mountBowlBadgeIcon(badgeMount, slot.badge, badgeTex, innerSize, { locked: !slot.unlocked });
+      mountBowlBadgeIcon(badgeMount, slot.badge, badgeTex, cellW, { locked: !slot.unlocked });
       cell.addChild(badgeMount);
 
       const levelLabel = new PIXI.Text(`第${slot.badge.levelNumber}关`, {
@@ -601,16 +607,16 @@ export class CatalogScene implements Scene {
         fontWeight: '700',
       });
       title.anchor.set(0.5, 0);
-      title.position.set(0, cardH + 32);
+      title.position.set(0, cardH + 6 + labelLineH);
       cell.addChild(title);
 
       this.gridRoot.addChild(cell);
     });
   }
 
-  private createCellLabel(text: string, unlocked: boolean): PIXI.Text {
+  private createCellLabel(text: string, unlocked: boolean, fontSize = 22): PIXI.Text {
     const lb = new PIXI.Text(text, {
-      fontSize: 22,
+      fontSize,
       fill: unlocked ? 0x3d2818 : 0x7a6a5a,
       fontWeight: '800',
     });

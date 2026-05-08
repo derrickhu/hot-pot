@@ -1,0 +1,18 @@
+4:3 horizontal promotional share-card illustration for a casual fruit-matching mini game called "水果捞" / "Fruit Bowl". Output 1K, intended to be later center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+VIBE: festive carnival celebration, "通关大爆发" energy. Confetti rain, party poppers, fireworks. Reads like an event-launch banner: a "the chefs WON the dinner rush" celebration shot.
+
+CORE COMPOSITION:
+- Center foreground: a big round cartoon bowl tilted slightly toward the camera, EXPLODING with happy fruits jumping into the air, big grin expressions, tiny arms raised in triumph. Around the bowl, multiple round order plates already filled with stacked fruits (3 fruits per plate) glow with soft gold halos — clearly "all orders complete!".
+- A pair of cartoon party poppers / 拉炮 angled down from the upper corners, blasting streams of pastel + bright confetti, paper streamers, ribbon swirls, and bright cartoon firework bursts in mid-air.
+- Floating abstract symbols (no letters): exclamation-stylized starbursts, tiny sparkles, hearts, abstract trophy-like icon (ribbon shape only, no text on it).
+- Background: warm sunset gradient — peach to pink to gold — with cartoon fireworks bursts in the upper area, a soft starry shimmer, and party lantern strings hanging across the very top edge in stylized form.
+- Bottom area: a slightly darker warm band at the very bottom, kept clean (no text), ready for an external Chinese headline overlay later.
+
+LIGHTING & STYLE:
+- Palette: peach pink, sunny gold, strawberry red, leaf green, cream, plus pops of bright cyan and magenta from the confetti/fireworks for "celebration" feel.
+- Glossy 2.5D casual mobile game ad-art, strong rim lighting, soft cast shadows, bouncy proportions, dynamic upward motion energy. Confetti and streamers should have clear physical depth (foreground vs midground vs background).
+- Bowl + plates instantly readable as gameplay; fruits keep recognizable real-fruit shapes despite cartoon style.
+
+HARD BANS:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble with text, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border, NO photoreal style.

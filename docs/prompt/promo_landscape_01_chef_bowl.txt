@@ -1,0 +1,19 @@
+16:9 ultra-wide horizontal cinematic key visual / banner art for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). 1920x1080 widescreen advertisement key art, premium polished 2.5D casual mobile-game style, saturated warm colors, soft volumetric light, glossy highlights, layered foreground / midground / background depth, crisp silhouettes, readable at thumbnail size. Hand-painted cute cartoon, NOT photoreal, NOT hard 3D render. NO frame border, NO poster border, full-bleed cinematic composition.
+
+Composition (left to right, layered depth):
+
+LEFT 45%, FOREGROUND: a cute cartoon Chinese girl mascot, round friendly face, big sparkling eyes, soft brown short bob hair with a few playful side tufts, gentle pink blush on cheeks. She wears a small white CHEF HAT with a tiny strawberry sticker, plus a cream-and-pink apron over a soft mint short-sleeve shirt. She holds with BOTH hands a HUGE colorful FRUIT BOWL, almost as big as her chest, brimming over with sliced fresh fruits — strawberry chunks, orange slices, lemon slices, banana coins, purple grape clusters, green kiwi slices, golden mango cubes, dark blueberries — all in cute hand-painted 2D style, with a glossy soft cream / yogurt base peeking from underneath. She smiles warmly, looking slightly toward the camera. Soft golden rim light on her hair and the bowl edge.
+
+CENTER, MIDGROUND: a few fresh fruits floating in mid-air around the girl, drifting slightly with sparkle stars and tiny golden particles, like a happy "fruit aura". A couple of cute soft mint leaves and a few cream-pink flower petals drift across the scene.
+
+RIGHT 45%, MIDGROUND TO BACKGROUND: a cute cartoon SUMMER FRUIT STAND / BAMBOO SHOP — a small wooden hut with a slatted bamboo roof, a hanging wooden signboard (BLANK, no text), an open-front counter with shelves of pastel-colored fruit jars and small fresh fruit baskets (peach, lemon, watermelon slice, pineapple chunk). Beside the shop, a small orange tabby cat with a cheerful face, a couple of potted green plants, a tiny stack of wooden bowls, gentle sunshine spilling through palm-leaf shadows. The scene fades softly into a hazy depth-of-field blur.
+
+BACKGROUND, FAR: smooth horizontal gradient from CREAM YELLOW on the left through SOFT PEACH in the middle to MINT TEAL on the right, with subtle sun-ray light shafts from upper right and tiny floating fruit confetti, sparkles and a few cherry-blossom-style soft petals drifting across the wide canvas.
+
+Color palette: cream, honey yellow, strawberry red, citrus orange, mint green, soft mint teal, soft peach pink, golden sparkles. Warm, sunny, cozy, "healing summer fruit shop" atmosphere.
+
+Strict constraints:
+- This is a WIDE 16:9 banner. NO outer frame, NO poster border, NO white margin, NO black bars. Full bleed edge to edge.
+- NO text of any language anywhere in the image. NO Chinese characters, NO English letters, NO numbers, NO logos, NO watermark, NO QR code, NO UI elements, NO app store badges, NO speech bubbles, NO buttons, NO captions.
+- NO scroll banner, NO ribbon with title, NO sticker frame around the artwork (the previous portrait posters had those — this banner must NOT).
+- Single coherent illustration, not a collage, not split panels.

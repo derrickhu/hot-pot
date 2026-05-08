@@ -1,0 +1,20 @@
+4:3 horizontal share-card illustration for a casual fruit-matching mini game. Output 1K, will later be center-cropped to 5:4 (1000x800).
+
+This image MUST keep the same art style, color palette, and overall vibe as the reference image: cozy pastel "treats café" 2.5D illustration, soft warm sunlight, mint / cream / peach / honey palette, glossy soft shading, NOT photoreal.
+
+Recompose the reference into a 4:3 horizontal "HERO close-up" layout (NOT a crop — redraw):
+- ONE big central frosty fruit bowl, glass-like, packed with cute ice cubes, orange slices, lemon slices, kiwi cross-section, purple grape clusters, a mint leaf, with snowflake sparkles drifting up. The bowl takes ~55% of the frame, slightly tilted toward the camera, occupying the center, sitting on a light wood table with a mint-green table runner across the back.
+- Around the central bowl, place a few visual hooks from the reference style:
+  - top-left: floating cartoon orange wedge + sakura petals drifting in
+  - top-right: a wooden tray edge with a tiny pastel-purple yogurt + strawberry bowl peeking in (just a corner)
+  - bottom-left: a wooden spoon and a couple of fruit chips (orange slice, lemon slice)
+  - bottom-right: a pastel rattan plate edge with a mango slice and watermelon wedge peeking in
+- Background: blurry warm wood + bamboo wall, soft golden sunbeams, sparkle particles, gentle out-of-focus depth so the central bowl pops.
+- Bottom area kept slightly quieter for an external Chinese headline overlay later.
+
+Keep:
+- The reference image's exact pastel color palette, soft 2.5D shading, glossy fruit highlights, sakura sparkle decorations.
+- "Cozy treats café" mood, gentle sunlit feeling.
+
+Hard bans:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border, NO photoreal style.

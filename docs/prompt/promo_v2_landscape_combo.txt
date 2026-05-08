@@ -1,0 +1,31 @@
+16:9 ultra-wide horizontal cinematic key visual / banner art for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). 1920x1080 widescreen advertisement key art, premium polished casual mobile match-3 ad style (in the style of 开心消消乐 / Toon Blast / Royal Match / 梦幻花园 banners). Bold, saturated, energetic, gender-neutral; NOT cute girly pastel, NOT photoreal, NOT hard 3D render. Strong sense of CHALLENGE, LEVELS, and SATISFYING CLEAR. NO frame border, NO poster border, full-bleed cinematic composition.
+
+Composition (left to right, dynamic action sweep):
+
+LEFT 50%, FOREGROUND: a HUGE DRAMATIC FRUIT BOWL SCENE in slight 3/4 perspective.
+- The bowl rim is GLOSSY DARK PURPLE with a gold trim, the inside is a deep purple-to-magenta gradient yogurt base.
+- The bowl is brimming with COLORFUL SLICED FRUITS — strawberry, orange, lemon, banana coins, purple grapes, kiwi, mango, blueberry, watermelon — and many SEMI-TRANSPARENT BLUE-WHITE ICE CUBES (hexagonal and cubic) layered on top, half-shattered.
+- Right above the bowl, THREE IDENTICAL fruits (e.g., three strawberries OR three orange slices) collide mid-air, connected by a thick glowing yellow-gold S-shaped COMBO STREAK with strong motion lines, surrounded by a giant burst of golden light radiating outward, RED-ORANGE EXPLOSION RAYS, sharp lightning sparks, scattered gold stars, ice splinters, and droplets of cream and yogurt flying outward.
+- Floating "+10 / +100 / +999" chunky red-and-yellow combo number tags scatter through the burst (treat numbers as stylized graphic glyphs only).
+
+RIGHT 50%, MIDGROUND: a HORIZONTAL LEVEL TIMELINE / PROGRESSION ROW.
+- A row of GLOSSY ROUND LEVEL BADGES marching to the right, growing slightly larger as they approach the camera.
+- The leftmost badges are smaller, dim sapphire-bronze, suggesting earlier cleared levels with one or two small gold stars on top.
+- The middle badges are gold-bronze with two stars.
+- The rightmost / largest badge glows brightly: a big GOLDEN MEDAL with three filled stars on top, a stylized "LV.99" graphic in the center (treat LV. and 99 as graphic glyphs, very chunky POP style), and a flaming red-orange aura around it. Confetti and gold sparkles burst out of this badge.
+- Above the timeline, a flying GOLDEN TROPHY with a small CROWN on top, a couple of light beams shining onto it from above.
+- Optional small chibi-style trophy / chest icons scattered between the badges.
+
+BACKGROUND: a dramatic radial gradient — a hot golden-orange bloom centered behind the bowl that bleeds rightward into deep sapphire blue and dark plum at the far edges. Cinematic radial sun-ray streaks emanate from the central combo burst. Sparse floating particles: gold sparkles, red embers, ice splinters, scattered fruit confetti, a few drifting electric energy lines, faint star-burst glints.
+
+Color palette: sapphire blue, deep navy, royal purple, golden yellow, red-orange, ruby red, ice blue-white, accent mint green and citrus orange. Saturated and high-contrast, energetic and "epic clear" feeling.
+
+Strict constraints:
+- This is a WIDE 16:9 banner. NO outer frame, NO poster border, NO white margin, NO black bars. Full bleed edge to edge.
+- NO Chinese characters anywhere. NO English sentences. The only allowed glyphs are stylized graphic numeric tags (LV.99 on the badge, +10 / +100 / +999 in the combo burst). Do NOT add other text, NO captions, NO product info, NO dates, NO logos, NO watermark, NO QR code, NO speech bubbles, NO buttons with words, NO app store badges.
+- NO female mascot, NO chef girl, NO chef hat, NO human character of any kind, NO hands, NO faces.
+- NO cream / pastel / soft pink palette; the dominant palette is sapphire / gold / red.
+- NO cherry-blossom petals, NO bamboo shop, NO cottage, NO pastoral sunshine background.
+- NO scroll banner with title, NO ribbon with text, NO sticker frame around the artwork.
+- NO direct gameplay screenshot look, NO phone frame.
+- Single coherent illustration, not a collage of separate panels.

@@ -1,0 +1,33 @@
+9:16 vertical promotional poster for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). 1080x1920 portrait, premium polished 2.5D casual mobile-game advertisement style. Hand-painted cute cartoon, NOT photoreal, NOT hard 3D render.
+
+The provided reference image shows the ACTUAL in-game screen of Level 23 "滋补雅集": top section has 4 collection trays each with x3 fruit goal indicators (orange, cherry, ice-cube, peach), a horizontal slice strip with a yellow lemon and a yellow starfruit, then a large round purple-bowl in the middle filled with sliced fruits AND semi-transparent hexagonal/cubic ice cubes covering most of them, then a bottom action bar with three round wooden buttons (加菜牌 / 移除 / 打乱) on a brown stone strip. Background is a bamboo wall with palm-leaf decorations on the sides. Reproduce this real game scene FAITHFULLY but artistically polish and enlarge it as a poster.
+
+Composition (top to bottom):
+
+1. OUTER FRAME: a thick rounded poster frame in warm honey-yellow / cream color with a soft brown outer outline, identical visual family to the previous portrait posters in the series. Around the frame edges, sprinkle small decorative stickers — strawberry, lemon slice, orange slice, purple grapes, kiwi slice, sparkle stars and small gold coins. Decorations must NOT cover the central artwork or the title.
+
+2. INNER ARTWORK (top ~70% of the frame): a stylized polished VERSION of the real Level 23 screen, like a cute oversized phone screen mockup but WITHOUT the phone hardware outline.
+   - TOP: a warm bamboo-wall band as the in-game header with a tropical leaf at the upper-left corner. On it sits a stylized rounded "level title plate" reading EXACTLY 4 Chinese characters: 滋补雅集 (legible bold playful style, dark brown outline). Small icon "第23关" can also be shown.
+   - UPPER MIDDLE: 4 rounded cream collection trays in a row, each tray showing one fruit type and a ×3 chip — left to right: orange slice ×3, cherry ×3, an ice-cube ×3, peach slice ×3. Each tray has soft drop shadow and a glossy plate edge.
+   - JUST BELOW: a wide horizontal "slice strip" — a soft cream rounded bar with about 5 small slots; the leftmost slot holds a glossy yellow lemon slice, the second a yellow star-fruit slice, the rest are empty soft slots.
+   - CENTER: a HUGE round bowl with PURPLE-TO-CREAM gradient yogurt base, oversized and glossy, brimming with a colorful pile of sliced fruits — strawberry, peach, orange, lemon, lime, kiwi, melon, blueberry, cherry, grape — and many semi-transparent BLUE-WHITE ICE CUBES (a mix of hexagonal and cubic) layered on top. Three matching ice cubes in the center share a glowing GOLDEN CONNECTOR LINE and a bright burst of sparkles, suggesting a 3-match merge moment. A cute chubby cartoon FINGER tap indicator hovers just over the highlighted center ice cube, drawn in the same playful sticker style.
+   - LOWER MIDDLE: subtle floating effect of three cherries leaving the bowl and arcing toward the cherry-tray with a soft golden trail.
+   - BOTTOM IN-GAME BAR: a warm brown stone strip with three round wooden tool buttons in a row, each with a small icon — left "+ veggies card" (small fruit stack with plus), middle "+ broom" (cute broom icon with plus), right "+ shuffle" (curled arrow with cooking spoon, plus badge). NO Chinese text on these buttons (avoid hard-to-read tiny Chinese on buttons).
+   - SIDES of the inner artwork: faint tropical leaves, fresh strawberries, lemons in the corners as if the game scene's natural decor.
+   - Soft warm cream background haze, gentle sun rays from upper-right.
+
+3. BOTTOM TITLE BANNER (bottom ~30% of the frame): a wide white scroll / ribbon with curled ends crossing horizontally over the lower part of the frame.
+   - Big bold Chinese title text on the scroll, EXACTLY four characters: 关关上头
+     - Style: chunky playful POP-style Chinese game title, thick strokes, bright YELLOW fill, RED-ORANGE outline, dark brown outermost outline, soft drop shadow. Each character large, well separated, instantly readable. Slightly bouncy baseline for fun feel.
+   - Below the main title, a smaller second line, EXACTLY five characters: 水果消消乐
+     - Style: smaller bold cream/white fill with red outline, sits on a small darker red ribbon strip directly under the scroll. Clearly legible.
+   - No other text anywhere in the image.
+
+Color palette: cream, honey yellow, bamboo brown, strawberry red, citrus orange, cool ice blue, soft purple yogurt, mint green tropical leaves, soft brown outlines, golden sparkles.
+
+Strict constraints:
+- Generate ONLY these Chinese text strings exactly: the title scroll has 关关上头 + 水果消消乐, and the level title plate inside the artwork has 滋补雅集 (and optionally 第23关 above it). Each Chinese character must be COMPLETE, CORRECT, CLEARLY readable, no fake glyphs, no missing or extra strokes, no extra characters, no English letters, no random numbers other than the ×3 chips and the optional 23 in 第23关.
+- NO app store badges, NO ad badges, NO speech bubbles, NO watermark, NO logo, NO QR code.
+- Inside the inner artwork, do NOT draw the phone hardware outline (no rounded rectangle device frame). The artwork is a clean polished poster scene that just looks gameplay-accurate.
+- The poster frame itself IS the outer border; do NOT add a second black or white border outside it.
+- Single coherent illustration, not a collage of separate panels.

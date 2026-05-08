@@ -1,0 +1,27 @@
+9:16 vertical promotional key art for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). 1080x1920 portrait poster, premium 2.5D casual mobile-game advertisement style, saturated colors, soft volumetric light, glossy highlights, layered depth, crisp silhouettes, readable at thumbnail size. Hand-painted cute cartoon, NOT photoreal, NOT hard 3D render.
+
+Composition (top to bottom):
+
+1. OUTER FRAME: a thick rounded poster frame in cool mint-blue / soft teal color with a soft brown outer outline, like a cute storybook border, contrasting against the warm fruits inside. Around the frame edges, sprinkle small decorative stickers: a strawberry, a lemon slice, an orange slice, purple grapes, a kiwi slice, semi-translucent ice cubes, sparkle snowflakes and small gold coins. Decorations must NOT cover the central artwork or the title.
+
+2. INNER ARTWORK (top 2/3 of the frame): a stylized in-game "ice cool fruit bowl" vignette.
+   - Center: a HUGE round soft-purple / cream gradient yogurt bowl shown in slight 3/4 top-down perspective, filled to the brim with colorful sliced fruits and SEMI-TRANSPARENT BLUE-WHITE ICE CUBES (some hexagonal, some cubic). Fruits include strawberry slices, orange slices, lemon slices, banana coins, purple grapes, kiwi slices, mango cubes, blueberries, peach chunks, scattered evenly under and between the ice cubes.
+   - In the middle of the bowl, three identical ice cubes / fruits collide and burst with bright golden light, water droplets, sparkles and a confetti puff, suggesting a satisfying 3-match clear.
+   - Floating around the bowl: small playful tool icons (a tiny broom, a small stack of menu cards, a curled "shuffle" arrow) drawn as cute icon stickers, suggesting gameplay tools but with NO words.
+   - Soft mint / cream gradient background inside the frame with gentle cool sunshine rays and tiny snowflakes.
+
+3. BOTTOM TITLE BANNER (bottom 1/3 of the frame): a wide white scroll / ribbon with curled ends crossing horizontally over the lower part of the frame.
+   - Big bold Chinese title text on the scroll, EXACTLY five characters: 冰爽水果碗
+     - Style: chunky playful POP-style Chinese game title, thick strokes, bright YELLOW fill, RED-ORANGE outline, dark brown outermost outline, soft drop shadow. Each character large, well separated, instantly readable. Slightly bouncy baseline for fun feel.
+   - Below the main title, a smaller second line, EXACTLY five characters: 一捞一爆款
+     - Style: smaller bold cream/white fill with red outline on a small darker red ribbon strip, clearly legible.
+   - No other text anywhere in the image.
+
+Color palette: cool mint, soft teal, ice blue, cream, strawberry red, citrus orange, mint green accents, soft brown outlines, golden sparkles.
+
+Strict constraints:
+- Generate ONLY the two Chinese text strings exactly: 冰爽水果碗 and 一捞一爆款.
+- Each Chinese character must be COMPLETE, CORRECT and CLEARLY readable, no fake glyphs, no missing strokes, no extra characters, no English letters, no numbers.
+- No app store badges, no UI buttons with words, no speech bubbles, no watermark, no logo, no QR code, no phone frame outline.
+- No black border, no white border outside the poster frame; the poster frame itself IS the border.
+- Single coherent illustration, not a collage of separate panels.

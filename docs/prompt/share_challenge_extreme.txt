@@ -1,0 +1,19 @@
+4:3 horizontal promotional share-card illustration for a casual fruit-matching mini game called "水果捞" / "Fruit Bowl". Output 1K, intended to be later center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+VIBE: HIGH-INTENSITY CHALLENGE / hardcore arcade ad, "boss fight" energy, fiery and dramatic, but still cute and stylized. Like the cover of a "Master Chef Showdown" tournament ad. Should make the viewer feel "this looks HARD but I want to try it".
+
+CORE COMPOSITION:
+- Center foreground: ONE giant black-cast-iron bowl with a dramatic gold rim, slightly tilted, packed full of cartoon fruits with determined / intense expressions (furrowed brows, focused eyes, gritted teeth smiles), some fruits glowing faintly red-orange.
+- Above the bowl: 4 round order plates floating in a horizontal arc, each plate radiating a gold halo. Plates show a few stacked fruit silhouettes (cute icon style, no real labels). The middle plate is GLOWING with a particularly bright gold flare and a flame ring.
+- Surrounding the bowl: REAL FLAMES licking up from below, sparks, ember dust, dramatic motion lines pointing inward toward the bowl.
+- Behind the bowl: a dark moody backdrop — deep maroon to black radial gradient, golden ray streaks, faint hexagonal arena pattern, a few cracked-glass shatter shapes for impact.
+- A few fruits zooming through the air toward the plates with golden trail streaks (motion blur ribbons), like meteors.
+- Bottom area: kept slightly darker, with a clean horizontal dark band (no text), suitable for an external Chinese title overlay later.
+
+LIGHTING & STYLE:
+- Palette: deep black, blood red, fiery orange, pure gold, hot yellow, with the fruits keeping their natural saturated colors so they read as "edible cuteness vs danger" contrast.
+- Strong rim lighting with hot orange/yellow on fruits, gold metallic highlights on plates and bowl rim, dark cinematic shadows in background. Glossy 2.5D casual mobile game ad-art quality.
+- Crisp silhouettes, all key elements (bowl + plates + fruits) instantly readable at thumbnail size.
+
+HARD BANS:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border.

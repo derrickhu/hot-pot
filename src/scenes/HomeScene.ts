@@ -277,7 +277,7 @@ export class HomeScene implements Scene {
     fruitSlot.on('pointertap', () => {
       AudioManager.playButtonSound();
       const api = typeof wx !== 'undefined' ? wx : null;
-      api?.showToast?.({ title: '暂未开放', icon: 'none' });
+      api?.showToast?.({ title: '敬请期待', icon: 'none' });
     });
 
     this.homeFooterSlots.push(bookSlot, fruitSlot);

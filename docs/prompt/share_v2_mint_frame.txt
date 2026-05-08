@@ -1,0 +1,25 @@
+4:3 horizontal share-card illustration for a casual fruit-matching mini game. Output 1K, will later be center-cropped to 5:4 (1000x800).
+
+This image MUST keep the EXACT same art style, color palette, frame design, and Chinese title style as the reference image: cool mint-green + cream rounded poster frame with rounded thick mint border decorated with small fruit stickers (strawberry, lemon slice, orange wedge, kiwi cross-section), ice-cube stickers, snowflake sparkles and gold coins along the edges; cool radial sunburst inside the frame; a cute "huahua POP" Chinese title scroll at the bottom; bouncy 2.5D casual mobile game ad-art style, NOT photoreal.
+
+Recompose the reference (portrait 9:16) into a 4:3 HORIZONTAL layout — DO NOT crop the reference, REDRAW it horizontally:
+
+Composition (horizontal, left to right):
+- The whole image is wrapped in the same mint-green poster frame as the reference, adapted to a 4:3 horizontal aspect (rounded thick mint frame on all 4 sides, with fruit / ice-cube / snowflake / coin decorations along the border, small game-icon style stickers on the corners — broom icon, scroll-clipboard icon, gold coin, undo arrow, similar to the reference).
+- Left half (inside the frame): a few floating "ice cube" cubes stacked, each with cute fruit silhouettes inside (strawberry inside one cube, grape inside another, lemon inside another), with snowflake sparkles drifting around them, small frost mist puffs.
+- Right half (inside the frame): the central pastel-purple ceramic bowl as the HERO, slightly tilted toward camera, brimming with frosty fruits — translucent ice cubes, lemon slices, orange slices, kiwi cross-section, blueberries, mango cube, banana slices, strawberries, grape cluster, peach. Cool snowflake sparkles drifting upward.
+- Bottom-center: the SAME white scroll banner ribbon as the reference, holding the SAME big bold Chinese title.
+
+CRITICAL — text on the scroll:
+- Title (large): EXACTLY five Chinese characters "冰爽水果碗"
+- Subtitle (smaller, on a small dark-red ribbon strip below): EXACTLY four Chinese characters "一捞一爆款"
+- Title style: thick strokes, BRIGHT YELLOW fill, RED-ORANGE outline, dark-brown outermost outline, soft drop shadow, slightly bouncy baseline.
+- Subtitle style: cream / off-white fill, red outline, on a small darker red ribbon strip.
+- Each character must be COMPLETE, CORRECT, CLEARLY readable, no fake glyphs, no missing strokes, no extra characters.
+- Generate ONLY these Chinese strings exactly: 冰爽水果碗 / 一捞一爆款. Do NOT add any other Chinese characters anywhere in the image.
+
+Keep:
+- IDENTICAL frame style, ice/fruit/coin/snowflake/icon decorations, mint+cream palette and shading as the reference.
+
+Hard bans:
+NO English letters, NO numbers, NO additional Chinese characters beyond the two strings above, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble, NO UI screenshot, NO buttons, NO captions, NO black border outside the mint frame, NO photoreal style.

@@ -1,0 +1,73 @@
+Create one large 1:1 square sprite sheet of 36 cute mobile game achievement badge icons for a Chinese fruit dessert puzzle game called 别捞水果 (Fruit Bowl Match). Final use: a 1:1 promotional collage that will later be split into a 3x3 = 9 grid for a WeChat moments / 小红书 nine-square post.
+
+CRITICAL LAYOUT:
+- Exactly 6 columns x 6 rows of equal-size cells, total 36 separate badges.
+- Each cell contains EXACTLY ONE complete badge icon, centered with generous margin (each icon takes about 75% of the cell height).
+- IMPORTANT: when the whole image is later cut into thirds (at 1/3 and 2/3 horizontally and vertically), the cut lines MUST fall in the empty gutter between cells, NEVER through any badge. Make the gutters between rows/columns clearly visible and constant.
+- Outer ~3% safe margin around the entire 6x6 grid (so the four outermost cells are not cropped).
+- NO TEXT anywhere, no numbers, no labels, no captions, no writing, no logo, no watermark, no QR code, no UI panels, no human hands, no cropped icons, no duplicate icon in any single cell.
+
+BACKGROUND:
+- Soft warm cream / pale honey gradient with very subtle dotted halftone or tiny scattered fruit-confetti accents (so it does NOT feel like pure white). Background must be uniform enough that gutter cuts will look clean. No big decorative subjects in the background.
+
+OVERALL STYLE (consistent across all 36 badges):
+- Premium Q-style hand-painted casual mobile game icon art, glossy and juicy.
+- Thick clean WHITE outline around each badge silhouette and around the central drink/dessert subject.
+- Every badge is a different chilled fruit-themed dessert or drink: glass cups, low ceramic bowls, coconut shell bowls, tall ice cups, milk-tea cups, rounded shaved-ice mountains, sundae cups, etc.
+- Refreshing summer feel: visible ice cubes, frosty highlights, water droplets, sparkling bubbles, mint leaves, whipped cream, tapioca pearls, jelly cubes, fresh fruit slices.
+- Vivid summer palette across the sheet: aqua blue, lemon yellow, strawberry pink, mango orange, mint green, grape purple, peach, coconut white, matcha green, butterfly-pea blue, dragon-fruit magenta.
+- Consistent cute front 3/4 view, all badges read clearly at small thumbnail size.
+- Each badge has a soft rounded badge backplate (subtle pastel halo) so they look like collectible stickers.
+
+THE 36 BADGES (left-to-right, top-to-bottom — keep readable variety, each cell distinct):
+
+Row 1 (cells 1-6):
+1. Yogurt strawberry-blueberry cup, mint, lemon wheel, aqua rim.
+2. Lemon blueberry iced tea, lemon wheels, blueberries, ice cubes, mint.
+3. Mango shaved-ice bowl with mango cubes, dragonfruit cubes, pineapple wedge.
+4. Watermelon starfruit fruit-sago bowl, watermelon chunks, starfruit slices, mint.
+5. Berry grapefruit sparkling tea cup, raspberry, blackberry, pink fizz.
+6. Peach milk drink with whipped snow cap, peach wedges, almond and walnut bits.
+
+Row 2 (cells 7-12):
+7. Coconut longan-lychee dessert bowl, coconut cubes, gold syrup.
+8. Caramel boba milk tea with pearls, pink jelly, yellow pudding, taro balls, striped straw.
+9. Magenta berry smoothie bowl with cookie crumbs, cranberry, blackberry.
+10. Two-tone orange grapefruit iced tea cup, orange and kumquat slices.
+11. Overflowing twelve-fruit ice bowl with strawberry, blueberry, kiwi, pineapple, grape, mint sprig.
+12. Pale-pink lychee fruit tea, lychee fruit, cherry, white jelly, peach slice.
+
+Row 3 (cells 13-18):
+13. Purple sour-plum iced tea, plum fruit, osmanthus sparkles, mint.
+14. Snow pear shaved-ice bowl with pear slices, lime, cucumber ribbon, honey drops.
+15. Honeydew peach iced cup, melon balls, peach wedges, cantaloupe cubes.
+16. Big berry shaved-ice mountain bowl with raspberry, mulberry, blueberry, cream peak.
+17. Coconut iced tea cup with blue ice, coconut jelly, lime leaf, mini pineapple star.
+18. Mixed fruit dessert soup bowl with orange, berry, grape, kiwi, sago pearls.
+
+Row 4 (cells 19-24):
+19. Thin-ice lime cup with crushed ice, lime wheels, mint sprig.
+20. Lotus root and snow-fungus cream dessert bowl with peach gum, golden syrup.
+21. Red berry smoothie cup with strawberry, cranberry, blueberry on top.
+22. Green lime snow bowl with lime, lemon, honeydew, basil seeds.
+23. Warm cream chilled dessert bowl with snow fungus, red date, lotus seed, foxnut.
+24. Topping boba milk tea with black pearls, taro balls, coconut jelly, pudding cube, bright striped straw.
+
+Row 5 (cells 25-30):
+25. Chocolate cookie ice cup with chocolate chips, marshmallow, whipped cream.
+26. Mango coconut shaved-ice bowl with coconut cream, mango cubes, starfruit.
+27. Red date nourishing iced tea cup with jujube, longan, lotus seed, honey glow.
+28. Dark grass jelly dessert bowl with red bean, sago, taro balls, pink jelly.
+29. Popping boba fruit tea cup with colorful popping pearls, strawberry, grape, lemon, fizz.
+30. Crowned dragon fruit shaved-ice bowl with white-pink dragon fruit cubes, mint, golden citrus crown — a slightly more elaborate "celebration" badge.
+
+Row 6 (cells 31-36) — NEW summer extensions:
+31. Sakura lychee gradient ice smoothie cup, soft pink to white gradient, edible petals, lychee.
+32. Matcha red-bean white-rice-ball dessert bowl, vivid green and ivory cream, sweet red bean.
+33. Yuzu honey mint sparkling cup, lemon-yellow fizz, mint sprig, honey drizzle.
+34. Half coconut shell tropical fruit boat, brown coconut shell as bowl, packed with mango, pineapple, kiwi, cherry, mini paper umbrella.
+35. Butterfly-pea color-changing two-layer iced tea, deep blue to lavender gradient, lemon wheel, ice.
+36. Volcano lava mango sundae cup, bright orange-red base, whipped cream peak, golden syrup drizzle, mango chunks.
+
+NEGATIVE PROMPT:
+NO text, no numbers, no captions, no labels, no writing in any language anywhere in the image, no watermark, no logo, no QR code, no realistic photo, no busy decorative background, no human hands, no UI screenshot, no scroll banner, no poster frame around the whole thing, no cropped icon, no duplicate icon in one cell, no merged badges spanning two cells, no oversized icon that touches the cut lines.

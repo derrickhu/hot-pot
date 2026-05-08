@@ -1,0 +1,19 @@
+4:3 horizontal share-card illustration for a casual fruit-matching mini game. Output 1K, will later be center-cropped to 5:4 (1000x800).
+
+This image MUST keep the EXACT same art style and color palette as the reference image: bouncy 2.5D casual mobile game ad-art, warm honey-yellow + cream + strawberry-red palette, sunny gold radial sunbeams, glossy fruit highlights, soft drop shadows, NOT photoreal.
+
+Recompose the reference (portrait 9:16) into a 4:3 HORIZONTAL "HERO close-up" layout — DO NOT crop, REDRAW. NO outer poster frame this time, full-bleed cinematic style.
+
+Composition:
+- Center HERO: ONE large wooden bowl, slightly tilted toward camera, brimming with the same happy fruits as the reference (orange slices, banana slices, strawberries, blueberries, purple grape clusters, kiwi cross-section, golden mango cubes, watermelon wedge). The bowl takes ~50% of the frame, sitting on a soft cream surface.
+- Above the bowl: 2 or 3 orange slices flying in graceful arc trajectories, each with a glowing yellow / golden ribbon trail and sparkle particles, exactly like the reference's "fruit flying with golden trail" motion.
+- Upper area: 3 small order plates floating in a horizontal arc, each holding three identical fruits (one plate with three strawberries, one with three orange slices, one with three banana slices), each plate glowing with a soft gold halo. Position the plates spread across the top of the frame so the gameplay reads at thumbnail size.
+- Background: same warm honey-yellow + cream radial sunburst, gold sunray streaks, scattered sparkle stars + confetti, soft floating fruit stickers (strawberry, lemon, orange, kiwi, grapes) decorating the edges of the frame as small accents.
+- Bottom 18%: keep calmer, so an external Chinese title sticker can be added later — DO NOT draw any text yourself.
+
+Keep:
+- Identical art style to the reference (bouncy POP casual game illustration), same warm sunny palette, same glossy / slightly cartoony rendering.
+- The "fruits flying from bowl to order plate" gameplay must be instantly readable.
+
+Hard bans:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble, NO UI screenshot, NO buttons, NO captions, NO outer poster frame this time, NO black border, NO white border, NO photoreal style.

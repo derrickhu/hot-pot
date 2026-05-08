@@ -1,0 +1,24 @@
+Mobile game UI mockup — vertical 9:16 full screen, NOT photoreal, NOT hard 3D.
+
+Game vibe: cozy Chinese hot-pot party + cute fruit puzzle, warm summer afternoon, same family as a casual WeChat mini-game: soft rounded shapes, cream / honey / bamboo / light wood, playful but readable.
+
+Screen structure (top to bottom):
+
+1) STATUS BAR AREA: leave safe top margin; optional faint WeChat-style capsule hint only — do NOT add real logos or QR codes.
+
+2) HEADER BAR (~10% height): warm dark cocoa wood texture with subtle grain; left = round cream button with simple brown chevron ‹ back; center title "图鉴" in bold friendly rounded Chinese sans, off-white with soft warm shadow.
+
+3) TAB ROW below header: two pill toggles side by side — LEFT active tab "水果图鉴" in warm orange-amber fill, white text, soft inner highlight; RIGHT inactive "徽章图鉴" in muted taupe, cream text, thin wood border. Tabs look like small wooden tags or folded paper, not flat gray rectangles.
+
+4) MAIN BODY — scrollable collection grid (3 columns, ~4 visible rows):
+   - Background: soft gradient cream to pale peach, subtle repeating bamboo-mat or linen texture, very light vignette; small decorative corners: tiny chili, star anise, mint leaf as flat icons (very subtle, not clutter).
+   - Each cell is a "recipe card" or polaroid frame: light wood frame + soft drop shadow, inner cream paper; unlocked slots show cute stylized fruit icons (apple slice, banana, blueberry, melon — simple vector-game style, saturated colors, thick friendly outlines).
+   - Locked slots: NOT a plain gray box; use frosted paper / silhouette + small wax-seal or leaf stamp with "?" OR soft mist overlay; label "未解锁" in small warm gray-brown below.
+   - Unlocked labels: fruit names in Chinese under icon (苹果, 香蕉, 蓝莓…) in dark brown readable size.
+
+5) BOTTOM: thin home-indicator safe area (dark pill on light bar) optional.
+
+Strict constraints:
+- Single coherent UI design sheet, one screen only, no split panels, no watermark, no English UI text except if unavoidable in tiny decorative labels (prefer all Chinese for UI strings above).
+- High clarity hierarchy: header > tabs > grid; plenty of breathing room between cells.
+- Style: 2D illustrated mobile game UI concept art, polished "designed" look — NOT default ugly flat gray prototype.

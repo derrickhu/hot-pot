@@ -1,0 +1,19 @@
+4:3 horizontal promotional share-card illustration for a casual fruit-matching mini game called "水果捞" / "Fruit Bowl". Output 1K, intended to be later center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+VIBE: "图鉴 / 收藏家" — collection / pokédex / sticker album energy. Lots of varieties, abundance, "look at all these I can unlock!". Wholesome, slightly nostalgic sticker-book aesthetic.
+
+CORE COMPOSITION:
+- Foreground center: a big round wooden bowl tilted forward, on a wooden table surface with a soft tablecloth pattern, holding a few hero fruits stacked with sparkle highlights (like a "trophy" pose).
+- Around and behind the bowl: an arc of MANY different cute cartoon fruits (at least 14 distinct types — strawberry, blueberry, watermelon slice, peach, apple, pear, orange wedge, lemon slice, kiwi cross-section, pineapple chunk, grape cluster, cherry pair, mango slice, dragonfruit slice, banana, pomegranate seed cluster, etc.), each shown as a clean cute icon with a thin gold ring frame (like collectible badges), arranged in a neat curving lineup that frames the central bowl.
+- Each "badge" should look like an unlocked trophy: gold ribbon, soft drop shadow, small star sparkle in the corner. A few badges in the very back are lightly faded / question-mark-shaped (no English letter Q — use an abstract stylized "?" replaced by a sparkle silhouette to suggest "more to unlock") to imply "many more coming".
+- Floating decorations: small leaves, sparkle dots, tiny ribbons, abstract curly shapes.
+- Background: warm cream parchment / sticker-album page texture with soft brown dotted edges, a gentle radial spotlight on the central bowl, tiny corner ornaments suggesting an album page.
+- Bottom area: kept calmer with a horizontal soft band, suitable for adding an external Chinese title sticker later.
+
+LIGHTING & STYLE:
+- Palette: cream parchment, warm brown, gold accents, plus full saturated rainbow of fruit colors so the lineup pops.
+- Glossy 2.5D casual mobile game art, soft rim light, clean cartoon outlines, well-defined badges with metallic gold rims, layered depth (hero bowl front, badge arc midground, parchment background).
+- Each fruit must remain individually recognizable as that fruit at thumbnail size. Strong silhouettes.
+
+HARD BANS:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble with text, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border, NO photoreal style.

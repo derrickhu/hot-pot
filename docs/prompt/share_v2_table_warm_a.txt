@@ -1,0 +1,18 @@
+4:3 horizontal share-card illustration for a casual fruit-matching mini game. Output 1K, will later be center-cropped to 5:4 (1000x800).
+
+This image MUST keep the same art style, color palette, and overall vibe as the reference image: cozy pastel "treats café" 2.5D illustration, soft warm sunlight, mint-green table runner on a light wood table, bamboo / plant on the left edge, sakura petals drifting, cream / mint / peach / honey color palette, glossy soft shading, NOT photoreal, NOT hard 3D.
+
+Recompose the reference into a 4:3 horizontal layout (NOT a crop, redraw the composition):
+- The HERO is the central frosty fruit bowl with ice cubes, orange slices, kiwi slice, purple grapes, lemon slices, cute snowflake sparkles. Make it the visual focal point, slightly bigger than in the reference, sitting near the lower-center on the wood table.
+- To the left, a smaller pastel-purple yogurt bowl topped with strawberries, blueberry, banana slices and a mint leaf and wooden spoon (matching the reference exactly).
+- To the right, a pastel rattan plate with thick mango slice, watermelon wedges, pineapple chunk and a tiny coconut bowl, plus a cocktail-pick parasol (matching the reference style).
+- Upper-right corner: a pair of cartoon hands in a pink shirt + green apron holding a wooden tray with a small fruit-yogurt bowl, exactly like the reference.
+- Background: same soft cream wall + bamboo / plant on the left edge, soft sunbeams angling down from upper-center, drifting sakura petals, scattered gold-coin tokens and tiny sparkles on the table — keep these as light decoration only.
+- Bottom 18% should stay quieter (a soft cream band) so a Chinese title sticker can be placed later.
+
+Keep:
+- Identical art style, line weight, soft 2.5D shading, palette and lighting as the reference image.
+- Same character of fruit bowls; same wooden table look.
+
+Hard bans (override anything in the reference):
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border, NO photoreal style.

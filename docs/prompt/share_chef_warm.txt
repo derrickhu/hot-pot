@@ -1,0 +1,18 @@
+4:3 horizontal promotional share-card illustration for a casual fruit-matching mini game called "水果捞" / "Fruit Bowl". Output 1K, intended to be later center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+VIBE: cozy, warm, "小厨师 / 治愈营业中" emotional ad. A gentle Studio-Ghibli-meets-Pixar feeling: warm kitchen lamp light, soft steam, a tiny chef proudly presenting their fruit creation. Comforting evening-after-work mood.
+
+CORE COMPOSITION:
+- Center foreground: a CHIBI cartoon chef character (round face, big eyes, rosy cheeks, white chef hat with a tiny strawberry pin, white apron with a small fruit-shape patch), holding a HUGE round wooden bowl with both hands, presenting it forward to the viewer. The bowl is overflowing with cute happy fruits (strawberry, blueberry, watermelon slice, kiwi cross-section, peach, pineapple chunk, lemon slice) all with closed-eye smiles and tiny rosy cheeks. Soft puffs of steam / sparkle drift up from the bowl.
+- Around the chef on a wooden countertop: a few small order plates already filled with neat 3-fruit stacks, each glowing with a faint warm halo (delivered orders), plus a tiny clipboard-shaped icon (no text on it, just a clean wooden tablet shape with stylized abstract tick-mark patterns / dots, NO real letters).
+- Behind the chef: a softly blurred cozy kitchen interior — wooden shelves with jars of fruits, hanging pendant warm lamp casting a golden circle of light, a window with a sunset glow, plant in the corner.
+- Floating decorations: tiny soft sparkle dust, gentle steam swirls, a few drifting fruit leaves, dreamy glow particles around the bowl.
+- Bottom area: kept calmer with a slightly darker warm-wood horizontal band at the bottom (counter edge), so a Chinese title sticker can be added later — DO NOT draw any text yourself.
+
+LIGHTING & STYLE:
+- Palette: warm cream, honey amber, sunset gold, soft tomato red, leaf green, cozy brown wood; a single dominant warm key light from upper right (lamp), gentle ambient cool blue from the window for contrast.
+- Soft 2.5D Pixar-meets-Ghibli style, plush rounded forms, glossy fruit highlights, subtle volumetric god rays from the lamp, soft cast shadows. Layered depth: chef foreground, plates midground, kitchen blurred background.
+- Chef character must read as "small, friendly, serving up love"; bowl + fruits clearly recognizable at thumbnail size.
+
+HARD BANS:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble with text, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border, NO photoreal style.

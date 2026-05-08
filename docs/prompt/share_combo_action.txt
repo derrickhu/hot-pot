@@ -1,0 +1,19 @@
+4:3 horizontal promotional share-card illustration for a casual fruit-matching mini game called "水果捞" / "Fruit Bowl". Output 1K, intended to be later center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+VIBE: HIGH-SPEED COMBO / "三连消" satisfying moment. Action-cinematic energy, lots of motion blur ribbons, sparkle bursts, gold light streaks, "tasty pop" feeling. Like a Candy Crush ad's "match-3 explosion" frame, but for fruits flying onto plates.
+
+CORE COMPOSITION:
+- Center: a slightly low-angle shot of a wooden bowl on the lower-left, with three IDENTICAL fruits (e.g. three watermelon slices, OR three strawberries — pick ONE flavor and use exactly three of it as the hero combo) ZOOMING in arc trajectories from the bowl up to the upper-right, where a single round order plate is positioned mid-air. Two fruits already landed on the plate, forming a cute stack; the third fruit is a fraction-of-a-second from landing, with strong motion-trail.
+- Each flying fruit has clear motion ribbons trailing behind it: glowing gold ribbon + faint cyan inner glow + sparkle particles flicking off.
+- The order plate radiates a strong gold halo and a starburst flash at the contact point, emitting cartoon impact lines.
+- In the background, more cartoon fruits visible inside the wooden bowl, with happy "GO!" energy (no text, just expressions and motion).
+- Floating around: comic-book-style cartoon "ZAP" / "POP" abstract starburst shapes (NO English letters inside them — just shape outlines), sparkle dots, gold confetti dust, faint speed lines radiating from the order plate.
+- Background: warm peach-orange to deep red diagonal radial gradient, with anime-style speed-line streaks pointing toward the order plate (the visual focal point).
+
+LIGHTING & STYLE:
+- Palette: bright peach orange, warm red, gold, hot yellow highlights, plus the natural saturated colors of the chosen fruit. Strong contrast for "combo just landed!" energy.
+- Glossy 2.5D casual mobile game ad-art, dynamic motion, exaggerated bouncy proportions, strong rim lighting, layered depth. Cinematic camera lens slight chromatic edge.
+- Both bowl AND order plate must be clearly readable at thumbnail size, so the gameplay reads instantly as "fruits flying from bowl to plate to complete an order".
+
+HARD BANS:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble with text, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border, NO photoreal style.

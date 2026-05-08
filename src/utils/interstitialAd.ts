@@ -1,4 +1,5 @@
 import { analytics, EVENT_NAMES } from '@/analytics';
+import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
 export const CATALOG_INTERSTITIAL_AD_UNIT_ID = 'adunit-feb828f4fbe9298f';
 
@@ -72,6 +73,7 @@ function bindListeners(entry: InterstitialAdEntry): void {
       err_code: err?.errCode ?? -1,
       err_msg: err?.errMsg || 'unknown',
     });
+    entry.pendingContext = null;
   });
 }
 
@@ -102,6 +104,11 @@ export async function showInterstitialAd(
   context: InterstitialAdContext,
   unitId: string = CATALOG_INTERSTITIAL_AD_UNIT_ID,
 ): Promise<InterstitialAdResult> {
+  // 开发者工具里插屏常走 operateWXDataForAd 并报 system apperror，直接跳过避免控制台刷屏与干扰调试
+  if (isWxDevtoolsSimulator()) {
+    return 'unavailable';
+  }
+
   trackAd(EVENT_NAMES.AD_REQUEST, unitId, context);
 
   const entry = getEntry(unitId);

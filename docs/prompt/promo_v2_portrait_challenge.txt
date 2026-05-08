@@ -1,0 +1,37 @@
+9:16 vertical promotional poster for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). 1080x1920 portrait, premium polished casual mobile match-3 game advertisement key art (in the style of 开心消消乐 / Toon Blast / Royal Match / 梦幻花园 ads). Bold, saturated, energetic, gender-neutral; NOT cute girly pastel, NOT photoreal, NOT hard 3D render. Strong sense of CHALLENGE, LEVELS, and SATISFYING CLEAR.
+
+Composition (top to bottom):
+
+1. OUTER FRAME: a sturdy rounded poster frame in DEEP NAVY-SAPPHIRE BLUE with a thin GOLDEN inner outline and a darker outer outline, like a polished match-3 game challenge banner. Around the frame edges, scatter small icon stickers: a glowing GOLD COIN, a GOLD TROPHY, a few RED-ORANGE flame sparks, gold stars, a few semi-transparent BLUE ICE CUBES, a sparkling small fruit (a strawberry / a citrus slice). Decorations are bold gem-toned, NOT pastel, NOT cream.
+
+2. UPPER HUD STRIP (top ~12% of the frame): a horizontal navy-and-gold heads-up bar styled like a casual match-3 game's level header.
+   - Left: a glossy GOLD TROPHY badge with three filled stars and the text-like graphic "LV.99+" — render this as cute bold POP-style numbers, treat "LV." as a stylized graphic glyph rather than English text-based UI.
+   - Right: four small collection-tray chips in a row (each with a fruit and a "x3" chip), and beside them a bold yellow-on-red "999+" badge sticker, suggesting massive level count.
+
+3. CENTER ARTWORK (middle ~55% of the frame): a HUGE DRAMATIC FRUIT BOWL SCENE.
+   - A large rounded FRUIT BOWL seen in slight 3/4 perspective; the bowl rim is GLOSSY DARK PURPLE with a gold trim, the inside is a deep purple-to-magenta gradient yogurt base.
+   - The bowl is brimming with COLORFUL SLICED FRUITS — strawberry, orange, lemon, banana coins, grapes, kiwi, mango, blueberry, watermelon — and many SEMI-TRANSPARENT BLUE-WHITE ICE CUBES (hexagonal and cubic) layered over the fruits.
+   - Right at the center, THREE IDENTICAL fruits collide — connected by a thick, glowing yellow-gold S-shaped COMBO STREAK with motion lines and a giant burst of golden light radiating outward. Around the burst, RED-ORANGE EXPLOSION RAYS, scattered gold stars, sharp lightning sparks, and chunky YELLOW-ON-RED action-comic style impact symbols (just shapes, NOT text).
+   - Splashes of fruit pieces, droplets of cream and ice splinters fly outward from the burst.
+   - Around the bowl, floating GOLDEN COINS, a couple of bright GEMS, and small "+1 / +10 / +100" combo number tags drawn as cute red-and-yellow chunky badges (treat the numbers as stylized graphic glyphs, keep them small but readable, no other digits anywhere).
+
+4. LOWER STRIP (bottom ~33% of the frame): a wide curved scroll banner crossing horizontally over the lower part of the frame, but in a BOLDER look than the cute version — a DEEP CRIMSON / DARK RED ribbon with a GOLD inner border and a CREAM inner band where the title sits.
+   - Big bold Chinese title text on the cream band, EXACTLY four characters: 百关挑战
+     - Style: chunky aggressive POP-style Chinese game title, very thick strokes, BRIGHT GOLDEN-YELLOW fill, DEEP RED-ORANGE outline, dark BROWN-BLACK outermost outline, glossy highlight stripe on top of each stroke, soft gold drop shadow. Each character is large, well separated, instantly readable. Slightly bouncy baseline; conveys "challenge" energy.
+   - Below the main title, a smaller second line, EXACTLY five characters: 越通越上头
+     - Style: bold cream/white fill with deep red outline, sits on a small darker red ribbon strip directly under the scroll. Clearly legible, not too small.
+   - No other text anywhere in the image.
+
+Background INSIDE the frame: a moody radial gradient from a hot golden-orange center bloom (behind the bowl) outward to deep sapphire blue and dark plum at the edges. Cinematic radial sun-ray streaks emanate from the central combo burst. Tiny floating particles: gold sparkles, red embers, ice splinters, fruit confetti.
+
+Color palette: sapphire blue, deep navy, royal purple, golden yellow, red-orange, ruby red, ice blue-white, accent mint green and citrus orange. Saturated and high-contrast.
+
+Strict constraints:
+- Generate ONLY these Chinese strings exactly: 百关挑战 (main title) and 越通越上头 (subtitle). Each Chinese character must be COMPLETE, CORRECT and CLEARLY readable, no fake glyphs, no missing strokes, no extra characters, no other Chinese.
+- The numeric / English-looking glyphs (LV.99+, 999+, x3, +1/+10/+100) are STYLIZED GRAPHIC TAGS only. Do NOT add other text, NO sentences, NO dates, NO product info, NO captions.
+- NO female mascot, NO chef girl, NO chef hat, NO human character of any kind.
+- NO cream / pastel / soft pink frame; the frame is SAPPHIRE BLUE with GOLD trim.
+- NO cherry-blossom petals, NO floating flowers, NO bamboo shop, NO cottage scene, NO sunshine pastoral background.
+- NO app store badges, NO ad badges, NO speech bubbles, NO watermark, NO logo, NO QR code, NO phone hardware outline, NO UI buttons with words.
+- The poster frame itself IS the outer border; do NOT add a second border.
+- Single coherent illustration, not a collage of separate panels.

@@ -1,0 +1,28 @@
+16:9 ultra-wide horizontal cinematic key visual / banner art for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). 1920x1080 widescreen advertisement key art, premium polished 2.5D casual mobile-game style, saturated colors, soft volumetric light, glossy highlights, gentle top-down 3/4 perspective on a long wooden table that spans the whole frame. Hand-painted cute cartoon, NOT photoreal, NOT hard 3D render. NO frame border, NO poster border, full-bleed cinematic composition.
+
+Composition: a cute "fruit dessert party" tabletop scene seen from a slight 3/4 top-down angle, like a cozy summer afternoon at a fruit shop counter.
+
+The TABLE: a long pale wooden plank table running horizontally across the entire image, soft warm wood texture, with a faint linen runner in pastel mint underneath the central bowl. The table fills almost the whole frame with depth blur fading toward the back.
+
+THREE BIG FRUIT BOWLS arranged left, center, right, each clearly different to suggest "many bowls / many levels":
+
+- LEFT bowl: a YOGURT FRUIT BOWL — a wide ceramic bowl with PALE PURPLE-TO-CREAM gradient yogurt base. Topped with strawberry slices, blueberries, banana coins, a couple of cute mint leaves. A small wooden spoon sticks out.
+- CENTER bowl: an ICED FRUIT BOWL — a slightly larger bowl with semi-transparent BLUE-WHITE ICE CUBES (some hexagonal, some cubic) mixed with bright orange slices, lemon slices, purple grapes, kiwi slices, a few sparkles and tiny snowflakes drifting up. Slight cool light.
+- RIGHT bowl: a TROPICAL FRUIT PLATE — a shallow cream plate with bright pineapple chunks, golden mango slices, watermelon wedges, a sprinkle of coconut flakes, and a tiny paper umbrella.
+
+AROUND the bowls, scattered across the table: extra fruit slices, a couple of small wooden spoons, a sprig of mint, a soft pink flower, a small gold coin or two, a cute mini "menu card" prop (BLANK, no text), and tiny golden sparkles.
+
+EDGE OF FRAME, LEFT-LOWER: a small ORANGE TABBY CAT paw or curled tail peeking onto the table edge, no full face — a playful storytelling touch.
+
+EDGE OF FRAME, RIGHT-UPPER: a PAIR OF SMALL HANDS in cute apron sleeves entering from off-screen, holding a wooden tray with one MORE fruit bowl coming in (suggesting "still more levels coming"). Hands only, no face.
+
+BACKGROUND: soft creamy peach to mint-green vertical gradient, hazy depth-of-field with hints of bamboo shop counter shapes, gentle sunbeams from upper right, a few drifting petals and sparkles.
+
+Color palette: warm wood, cream, soft pink, mint, ice blue, strawberry red, citrus orange, golden yellow, deep purple yogurt accents. Cozy, abundant, food-magazine-style cute.
+
+Strict constraints:
+- This is a WIDE 16:9 banner. NO outer frame, NO poster border, NO white margin, NO black bars. Full bleed edge to edge.
+- NO text of any language anywhere. NO Chinese characters, NO English letters, NO numbers, NO logos, NO watermark, NO QR code, NO UI elements, NO buttons, NO speech bubbles.
+- NO scroll banner with title, NO ribbon, NO sticker decorations stuck around the artwork (this is NOT a poster, it's a clean cinematic banner).
+- NO direct gameplay screenshot look, NO phone frame.
+- Single coherent illustration, not a collage of separate panels — the three bowls share one continuous tabletop.

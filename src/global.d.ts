@@ -8,6 +8,8 @@ declare const wx: {
     statusBarHeight?: number;
     windowWidth?: number;
     windowHeight?: number;
+    /** 开发者工具为 `devtools`，真机为 `ios` | `android` 等 */
+    platform?: string;
   };
   getMenuButtonBoundingClientRect?: () => { top?: number };
   login?: (options: { success?: (res: { code?: string }) => void; fail?: (err: unknown) => void }) => void;

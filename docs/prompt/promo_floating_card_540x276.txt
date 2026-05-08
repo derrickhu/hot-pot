@@ -1,0 +1,33 @@
+16:9 horizontal floating overlay card image for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). Final delivery size will be 540x276 (slightly wider than 16:9), so design the composition with a SAFE INNER ZONE: keep all important elements within the central ~90% horizontal AND ~90% vertical area. The top and bottom 5% may be cropped during platform fitting; do NOT place subject details, title, or fruit bowl edges in those bands.
+
+Premium polished casual mobile game illustration style, hand-painted cute cartoon BUT light and breezy "tropical summer vacation" mood (NOT cute girly pastel like the previous treacly version, NOT bold sapphire challenge dark like the gold-and-red version). Saturated yet clean, summery, refreshing, gender-neutral. NOT photoreal, NOT hard 3D render. NO frame border, NO poster border, full-bleed cinematic composition.
+
+OVERALL VIBE: a tropical summer hero card. Mint-teal sky to ocean-blue background gradient, faint big PALM LEAF SILHOUETTES drifting at the edges as a soft pattern, warm sunshine spilling from upper-right with subtle god-rays, a few floating water droplets and tiny sparkle stars.
+
+Composition (left to right):
+
+LEFT 40%, FOREGROUND: a slightly TILTED CUTE WHITE WOODEN SIGNBOARD / cream rounded card prop, like a beach kiosk menu sign, with rounded corners, a thin warm-brown outline and small drilled holes at top corners as if hung up. On the front of this card sits two lines of bold Chinese title text rendered AS THE GRAPHIC PAINTED ON THE SIGN:
+- TOP LINE, EXACTLY four characters: 鲜果一夏
+  Style: chunky playful POP-style Chinese game title, very thick strokes, bright GOLDEN-YELLOW fill, RED-ORANGE outline, dark warm-brown outermost outline, soft drop shadow, slight bouncy baseline.
+- BOTTOM LINE, EXACTLY four characters: 清凉上头
+  Style: smaller bold cream/white fill with red-orange outline, sits on a small darker red ribbon strip directly under the top title.
+The signboard is decorated with a tiny 3D strawberry sticker on the upper-left corner and a small lemon-slice sticker on the lower-right corner, NOT covering the text.
+
+CENTER-RIGHT 55%, MIDGROUND HERO: a big GLOSSY TROPICAL FRUIT BOWL — a clear glass / pale coconut-cream bowl in slight 3/4 perspective, brimming with COLORFUL summer fruits — pineapple chunks, mango cubes, watermelon wedges, kiwi slices, orange slices, blueberries, strawberries — and a few SEMI-TRANSPARENT BLUE-WHITE ICE CUBES on top. A tiny red-and-white PAPER COCKTAIL UMBRELLA pokes out from the bowl, with a couple of fresh MINT LEAVES garnish.
+
+BEHIND THE BOWL: one large soft palm-leaf silhouette tilts diagonally from the right, framing the bowl. A second smaller palm leaf at the lower-left adds depth. Faint round bokeh light dots in the background.
+
+AMBIENT EFFECTS: warm sunbeam light streaks from upper-right, a few floating fresh fruit slice particles around the bowl (NOT exploding outward, just gentle drifting), tiny ice splinters and water droplets, soft sparkle stars, all in a calm "summer vacation" rhythm — NOT high-energy combo bursts.
+
+Color palette: MINT TEAL, OCEAN BLUE, COCONUT CREAM-WHITE, SUNSHINE YELLOW, WOODY BROWN ACCENT, BRIGHT TROPICAL FRUIT COLORS (pineapple yellow, mango orange, watermelon pink, kiwi green, blueberry purple). Saturated but breezy, NOT bold dark.
+
+Strict constraints:
+- This is a WIDE banner card. NO outer frame, NO poster border, NO white margin, NO black bars. Full bleed edge to edge.
+- Generate ONLY these Chinese strings exactly: 鲜果一夏 (top of signboard) and 清凉上头 (bottom of signboard). Each Chinese character must be COMPLETE, CORRECT, CLEARLY readable, no fake glyphs, no missing strokes, no extra characters, no random Chinese anywhere else.
+- NO English letters, NO numbers, NO logos, NO watermark, NO QR code, NO UI buttons with words, NO app store badges, NO speech bubbles.
+- NO female mascot, NO chef girl, NO chef hat, NO human character, NO faces, NO hands.
+- NO bold sapphire/navy/dark explosion challenge mood (this is the breezy summer card, NOT the boss-level challenge poster).
+- NO cherry-blossom rain, NO bamboo shop, NO cottage, NO indoor scene.
+- The signboard / sign card is small; the FRUIT BOWL must remain the visual hero on the right and read instantly even at thumbnail size.
+- Single coherent illustration, not a collage of separate panels.
+- IMPORTANT SAFE ZONE: keep the signboard text and the fruit bowl entirely within the central 90% horizontal × 90% vertical region. Do NOT place anything critical in the top 5% or bottom 5%, since those bands will be cropped at platform delivery.

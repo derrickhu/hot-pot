@@ -1,0 +1,20 @@
+16:9 ultra-wide horizontal cinematic key visual / banner art for a Chinese WeChat mini puzzle game called 别捞水果 (Fruit Bowl Match). 1920x1080 widescreen advertisement key art, premium polished 2.5D casual mobile-game style, saturated warm colors, soft volumetric light, glossy highlights, dynamic action moment, layered depth, motion lines and sparkles. Hand-painted cute cartoon, NOT photoreal, NOT hard 3D render. NO frame border, NO poster border, full-bleed cinematic composition.
+
+Composition (left to right, dynamic action burst):
+
+LEFT 35%, FOREGROUND: a cute cartoon Chinese girl mascot with the SAME design as the chef-girl banner — round friendly face, big sparkling eyes, soft brown short bob hair, pink cheek blush, small white CHEF HAT with strawberry sticker, cream-and-pink apron over a soft mint shirt. She is in mid-action: leans slightly forward with a happy / excited expression, mouth open in a delighted "wow", holding up a big WOODEN SPOON / SCOOP. From the spoon's bowl, three identical glossy fruit slices (e.g. three orange slices, OR three strawberries — pick one fruit and use three identical pieces) shoot up in a graceful golden ARC trail toward the right side of the frame, leaving a glowing yellow swoosh and bright golden sparkle trail.
+
+CENTER 30%, MIDGROUND: a HUGE colorful fruit bowl seen from slight 3/4 perspective, brimming with sliced fruits — strawberries, oranges, lemons, banana coins, grapes, kiwi, mango, blueberries — caught in mid-bounce, with a few fruits leaping up off the surface, splashing tiny droplets of cream / yogurt. Right above the bowl, a bright GOLDEN BURST of light, confetti and stars explodes outward, suggesting a satisfying 3-match clear.
+
+RIGHT 35%, MIDGROUND: three softly-glowing rounded "collection trays" hovering in the air, partly veiled by golden glow, each like a tiny floating plate with a darker rim. The middle / nearest tray has a cute green CHECK MARK glyph (just a simple chubby check, NOT text) lighting up brightly with extra confetti, suggesting "three matched, completed". The other two trays remain dimmer, hinting at "still more to clear".
+
+BACKGROUND: warm radial gradient — center bright cream / honey yellow blooming outward into soft peach pink and mint teal at the edges. Dynamic radial sun-ray streaks emit from the central golden burst. Floating particles: tiny fruit confetti slices, sparkle stars, a few cherry-blossom-style petals, drifting joyfully across the wide canvas.
+
+Color palette: cream, honey yellow, strawberry red, citrus orange, mint green, soft peach pink, deep purple grape accents, bright golden sparkles. Energetic, joyful, "satisfying match" feel.
+
+Strict constraints:
+- This is a WIDE 16:9 banner. NO outer frame, NO poster border, NO white margin, NO black bars. Full bleed edge to edge.
+- NO text of any language anywhere. NO Chinese characters, NO English letters, NO numbers, NO logos, NO watermark, NO QR code, NO UI text, NO buttons with words, NO speech bubbles, NO captions, NO score numbers. The check mark on the tray is a simple symbol shape, NOT text.
+- NO scroll banner with title, NO ribbon, NO sticker frame around the artwork (this is a clean cinematic banner, not a poster).
+- NO direct gameplay screenshot look, NO phone frame, NO UI bar.
+- Single coherent illustration, not a collage of separate panels.

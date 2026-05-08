@@ -1,0 +1,25 @@
+4:3 horizontal share-card illustration for a casual fruit-matching mini game. Output 1K, will later be center-cropped to 5:4 (1000x800).
+
+This image MUST keep the EXACT same art style, color palette, frame design, and Chinese title style as the reference image: warm cream + honey-yellow rounded poster frame with rounded thick yellow border decorated with small fruit stickers (strawberry, lemon, orange, kiwi, grapes) and gold coins around the edges; bright sunny gold radial sunbeams inside the frame; a cute "huahua POP" Chinese title scroll at the bottom; bouncy 2.5D casual mobile game ad-art style, NOT photoreal.
+
+Recompose the reference (which is portrait 9:16) into a 4:3 HORIZONTAL layout — DO NOT crop the reference, REDRAW it horizontally:
+
+Composition (horizontal, left to right):
+- The whole image is wrapped in the same honey-yellow poster frame as the reference, but adapted to a 4:3 horizontal aspect (rounded thick frame on all 4 sides, with the same fruit + coin decorations along the border).
+- Left half (inside the frame): three small "order plates" stacked horizontally — first plate filled with three strawberries, second with three orange slices, third with three banana slices, each plate glowing with a soft gold halo. Above these plates, a few sparkle stars and confetti (matching the reference).
+- Right half (inside the frame): the central wooden bowl as the HERO, tilted toward the camera, brimming with happy fruits (orange slices, banana, strawberries, blueberries, grape clusters, kiwi cross-section, mango cubes, watermelon). A few orange slices flying in arc trajectories from the bowl up toward the order plates on the left, with a glowing yellow trail like the reference image.
+- Bottom-center: the SAME white scroll banner ribbon as the reference, holding the SAME big bold Chinese title.
+
+CRITICAL — text on the scroll:
+- Title (large): EXACTLY four Chinese characters "鲜果三连"
+- Subtitle (smaller, on a small dark-red ribbon strip below): EXACTLY five Chinese characters "越捞越上头"
+- Title style: thick strokes, BRIGHT YELLOW fill, RED-ORANGE outline, dark-brown outermost outline, soft drop shadow, slightly bouncy baseline.
+- Subtitle style: cream / off-white fill, red outline, on a small darker red ribbon strip.
+- Each character must be COMPLETE, CORRECT, CLEARLY readable, no fake glyphs, no missing strokes, no extra characters.
+- Generate ONLY these Chinese strings exactly: 鲜果三连 / 越捞越上头. Do NOT add any other Chinese characters anywhere in the image.
+
+Keep:
+- IDENTICAL frame style, fruit/coin decorations, sunny gold sunbeam background inside the frame, palette and shading as the reference.
+
+Hard bans:
+NO English letters, NO numbers (zero digits anywhere, including on plates or in background), NO additional Chinese characters beyond the two strings above, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble, NO UI screenshot, NO buttons, NO captions, NO black border outside the yellow frame, NO photoreal style.

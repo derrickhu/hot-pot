@@ -1,0 +1,26 @@
+Mobile game UI element — VERTICAL 9:16 screen-sized BASEBOARD ONLY.
+
+Reference image is the catalog screen prototype; KEEP its overall art style (cozy hot-pot + cute fruit puzzle, warm cream / honey / cocoa wood, soft chunky outlines, slight 2D illustrated shading, NOT photoreal, NOT hard 3D).
+
+Render ONLY these layers, nothing else:
+
+1) Top HEADER BAR across the full width: thick dark cocoa-brown wooden plank with soft grain and chunky rounded corners; gentle inner shadow under the plank to lift it off the body.
+   - Center title: Chinese characters "图鉴" in big bold rounded sans-serif, off-white / cream fill with darker brown soft drop shadow. EXACTLY two characters: 图鉴. No other text anywhere.
+   - Left side: round cream-yellow circular back button with thin warm brown outline, a simple thick brown chevron "‹" centered in it.
+
+2) BODY BACKGROUND below the header, fills the rest of the screen: soft warm cream-to-peach vertical gradient, very subtle bamboo-mat / linen texture, faint vignette around edges.
+
+3) Tiny scattered decorative corner illustrations only (very small, low contrast, not clutter):
+   - Small flat red chili pepper bottom-left.
+   - Small star-anise icon mid-left edge.
+   - Small mint / green leaf bottom-right.
+   - Small star-anise top-right just below header.
+   (No characters, no fruits, no other props.)
+
+ABSOLUTELY DO NOT draw:
+- NO tab buttons, NO pill toggles, NO "水果图鉴" / "徽章图鉴" text or labels.
+- NO grid, NO cards, NO card frames, NO card slots, NO question mark slots.
+- NO fruits, NO icons of food, NO characters, NO mascots.
+- NO English text, NO numbers, NO watermark, NO QR code, NO logo, NO status bar mockup.
+
+Single coherent flat 2D UI background sheet, 9:16, ready to overlay tabs / cards / icons on top.

@@ -1,0 +1,18 @@
+4:3 horizontal promotional share-card illustration for a casual fruit-matching mini game called "水果捞" / "Fruit Bowl". Output 1K, intended to be later center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+VIBE: "躺平 / 摸鱼" Chinese internet meme energy — lazy, sleepy, slightly defeated cartoon fruits taking a nap on the job, while ONE energetic fruit hero is still trying to hustle. Funny, relatable, slightly self-deprecating; reads like a "工作日下午三点" emotional comic.
+
+CORE COMPOSITION:
+- Center foreground: a wide cartoon wooden bowl, but the fruits inside are ALL LYING DOWN / sprawled out with closed eyes, snoring bubbles (shape only, no text), tiny "Z" symbols stylized as cute curly clouds (NO English Z letters — replace with abstract sleepy spiral icons or curl shapes).
+- Sleepy fruits to include: a salty fish-style "tangping" lemon slice with X eyes and tongue out, a watermelon slice with sleeping mask made of leaf, a strawberry doing a starfish pose belly-up, a pineapple chunk leaning against the bowl rim with a tiny eye-mask, a blueberry tucked under a tiny leaf blanket.
+- ONE energetic strawberry with sweat drops and big determined eyes is up on top of the pile, waving tiny arms and pointing toward an empty order plate floating above the bowl, trying to wake everyone up. Visual gag: only this one fruit is "trying", everyone else is checked out.
+- Above the bowl: 2-3 round empty white-rim plates floating, looking impatient (tiny abstract emote eyes drawn with simple lines, no letters), with abstract sweat-drop shapes around them.
+- Background: soft cream-yellow lazy afternoon light, faint horizontal "office sunlight" rays, a couple of cartoon clouds drifting, small abstract floating "moodboard" stickers (NO text).
+
+LIGHTING & STYLE:
+- Warm afternoon palette: cream, mustard yellow, sunny yellow, peach, gentle desaturated greens for leaves; one strawberry-red as the focal pop.
+- Soft cartoon 2.5D, thick clean outlines, slightly squashed proportions to read "tired", glossy fruit highlights but lower contrast than the other variants. Comic-strip energy.
+- Bottom area: kept calmer for later Chinese title sticker overlay.
+
+HARD BANS:
+NO text, NO letters, NO Chinese characters, NO English, NO numbers, NO "Z" letter, NO logo, NO watermark, NO QR code, NO app store badge, NO speech bubble with text, NO UI screenshot, NO buttons, NO captions, NO black border, NO white border, NO photoreal style.
