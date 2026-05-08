@@ -81,7 +81,10 @@ declare const wx: {
     success?: () => void;
     fail?: (err: unknown) => void;
   }) => void;
-  onShareAppMessage?: (handler: () => { title: string; imageUrl?: string; query?: string }) => void;
+  /** 小游戏转发：res.from 为 menu | button 等，见微信文档 */
+  onShareAppMessage?: (
+    handler: (res?: { from?: string; target?: unknown }) => { title: string; imageUrl?: string; query?: string },
+  ) => void;
   createInnerAudioContext?: () => {
     src: string;
     loop: boolean;

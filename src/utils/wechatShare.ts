@@ -1,3 +1,5 @@
+import { analytics, EVENT_NAMES } from '@/analytics';
+
 const SHARE_QUERY = 'from=share';
 
 /** 转发标题池：每次分享随机一条（与配图独立抽取，组合更多样）。 */
@@ -67,12 +69,21 @@ interface WechatSharePayload {
   query: string;
 }
 
-export function getWechatSharePayload(): WechatSharePayload {
+function buildSharePayload(): WechatSharePayload {
   return {
     title: pickRandomShareTitle(),
     imageUrl: pickRandomShareImageUrl(),
     query: SHARE_QUERY,
   };
+}
+
+function trackShareAppMessage(payload: WechatSharePayload, entryPoint: string): void {
+  analytics.track(EVENT_NAMES.SHARE_APP_MESSAGE, {
+    entry_point: entryPoint,
+    title: payload.title,
+    image_url: payload.imageUrl || '',
+    query: payload.query || '',
+  });
 }
 
 export function setupWechatShare(): void {
@@ -85,7 +96,14 @@ export function setupWechatShare(): void {
     withShareTicket: true,
     menus: ['shareAppMessage'],
   });
-  api.onShareAppMessage?.(() => getWechatSharePayload());
+  api.onShareAppMessage?.((res) => {
+    const payload = buildSharePayload();
+    const from = res?.from;
+    const entryPoint =
+      from === 'button' ? 'wx_button' : from === 'menu' ? 'wx_menu' : 'wx_other';
+    trackShareAppMessage(payload, entryPoint);
+    return payload;
+  });
 }
 
 export function shareGame(): boolean {
@@ -93,6 +111,8 @@ export function shareGame(): boolean {
   if (!api?.shareAppMessage) {
     return false;
   }
-  api.shareAppMessage(getWechatSharePayload());
+  const payload = buildSharePayload();
+  trackShareAppMessage(payload, 'api_share_game');
+  api.shareAppMessage(payload);
   return true;
 }
