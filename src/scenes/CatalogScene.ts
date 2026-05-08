@@ -33,10 +33,10 @@ interface TabButton {
   refresh: () => void;
 }
 
-const CHROME_TEX_BASEBOARD = 'assets/images/catalog_baseboard.png';
-const CHROME_TEX_TAB_ACTIVE = 'assets/images/catalog_tab_active.png';
-const CHROME_TEX_TAB_INACTIVE = 'assets/images/catalog_tab_inactive.png';
-const CHROME_TEX_ITEM_CARD = 'assets/images/catalog_item_card.png';
+const CHROME_TEX_BASEBOARD = 'subpackages/bowl_game/assets/images/catalog/catalog_baseboard.png';
+const CHROME_TEX_TAB_ACTIVE = 'subpackages/bowl_game/assets/images/catalog/catalog_tab_active.png';
+const CHROME_TEX_TAB_INACTIVE = 'subpackages/bowl_game/assets/images/catalog/catalog_tab_inactive.png';
+const CHROME_TEX_ITEM_CARD = 'subpackages/bowl_game/assets/images/catalog/catalog_item_card.png';
 
 /** 底板 PNG 内已经画好的"图鉴"标题 / 返回按钮在缩到 logicWidth 后的近似坐标 */
 const PAINTED_BACK_X = 80;
@@ -139,6 +139,8 @@ export class CatalogScene implements Scene {
   }
 
   private async loadChromeTextures(): Promise<void> {
+    // chrome 4 张 PNG 已下沉到 bowl_game 分包，必须先把分包载入再加载贴图
+    await loadBowlSubpackage();
     await Promise.all([
       TextureCache.load('catalog_baseboard', CHROME_TEX_BASEBOARD),
       TextureCache.load('catalog_tab_active', CHROME_TEX_TAB_ACTIVE),
@@ -357,6 +359,8 @@ export class CatalogScene implements Scene {
     this.loading = true;
     try {
       if (!this.loadedTabs.has(tab)) {
+        // 水果图鉴贴图（fruit_book/）和徽章贴图都已经在 bowl_game 分包里
+        await loadBowlSubpackage();
         if (tab === 'fruit') {
           const slots = getCatalogSlots();
           const loads = slots
@@ -366,7 +370,6 @@ export class CatalogScene implements Scene {
             );
           await Promise.all(loads);
         } else {
-          await loadBowlSubpackage();
           await Promise.all(
             BOWL_BADGES.map((badge) => TextureCache.load(this.badgeTextureKey(badge), badge.asset)),
           );
