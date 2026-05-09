@@ -16,10 +16,26 @@ type InterstitialAd = ReturnType<NonNullable<typeof wx.createInterstitialAd>>;
 
 const AD_TYPE = 'interstitial';
 
+/**
+ * SDK 自定义错误码（与激励广告保持同一套语义）：
+ * - 负数 -100 段为 SDK 自定义码（unavailable / busy 等业务侧场景）
+ * - wx 真实 errCode 透传（-1 cgi fail / 1004 no advertisement / 1005 ad init failed 等）
+ */
+const SDK_ERR_UNAVAILABLE = -100;
+
 interface InterstitialAdEntry {
   ad: InterstitialAd;
   unitId: string;
+  /**
+   * 当前在播或刚刚结束的业务上下文。
+   *
+   * 注意：之前的实现里在 onClose 里直接清成 null，导致后续 wx 后台 prefetch 触发的 onError
+   * 拿不到 scene 落到 unknown 桶。改成 onClose 不清空、新一次 show 时再覆盖，
+   * 配合「无主错误不上报」逻辑（context 必为 truthy 才打 ad_error）。
+   */
   pendingContext: InterstitialAdContext | null;
+  /** 单次播放周期内是否已上报 ad_error，避免 onError 与 show().catch() 双发 */
+  errorReportedThisCycle: boolean;
   listenersReady: boolean;
 }
 
@@ -57,23 +73,40 @@ function trackAd(
   }
 }
 
+/**
+ * 同一周期内只允许打一次 ad_error；context 为空时直接跳过。
+ *
+ * wx 的 InterstitialAd 实例在没有任何业务 show() 调用时也会自动 prefetch / 重试，
+ * prefetch 失败也会触发 onError。这种「无主错误」与业务体验无关，上报会污染 scene 维度统计，
+ * 跳过即可。
+ */
+function reportAdErrorOnce(
+  entry: InterstitialAdEntry,
+  errCode: number,
+  errMsg: string,
+): void {
+  if (entry.errorReportedThisCycle) return;
+  if (!entry.pendingContext) return;
+  entry.errorReportedThisCycle = true;
+  trackAd(EVENT_NAMES.AD_ERROR, entry.unitId, entry.pendingContext, {
+    err_code: errCode,
+    err_msg: errMsg || 'unknown',
+  });
+}
+
 function bindListeners(entry: InterstitialAdEntry): void {
   if (entry.listenersReady) {
     return;
   }
   entry.listenersReady = true;
   entry.ad.onClose(() => {
-    const ctx = entry.pendingContext;
-    entry.pendingContext = null;
-    trackAd(EVENT_NAMES.AD_CLOSE, entry.unitId, ctx);
+    // 不再立即清 pendingContext —— 留给下一次 show() 覆盖即可，
+    // 中间 wx 自动 prefetch 触发的 onError 仍能拿到最近一次业务 scene。
+    trackAd(EVENT_NAMES.AD_CLOSE, entry.unitId, entry.pendingContext);
   });
   entry.ad.onError((err: { errMsg?: string; errCode?: number }) => {
     console.warn('Interstitial ad error', err);
-    trackAd(EVENT_NAMES.AD_ERROR, entry.unitId, entry.pendingContext, {
-      err_code: err?.errCode ?? -1,
-      err_msg: err?.errMsg || 'unknown',
-    });
-    entry.pendingContext = null;
+    reportAdErrorOnce(entry, Number(err?.errCode ?? -1), String(err?.errMsg || 'unknown'));
   });
 }
 
@@ -85,7 +118,13 @@ function getEntry(unitId: string): InterstitialAdEntry | null {
   if (!entry) {
     try {
       const ad = wx.createInterstitialAd({ adUnitId: unitId });
-      entry = { ad, unitId, pendingContext: null, listenersReady: false };
+      entry = {
+        ad,
+        unitId,
+        pendingContext: null,
+        errorReportedThisCycle: false,
+        listenersReady: false,
+      };
       entries.set(unitId, entry);
     } catch {
       return null;
@@ -113,11 +152,14 @@ export async function showInterstitialAd(
 
   const entry = getEntry(unitId);
   if (!entry) {
-    trackAd(EVENT_NAMES.AD_ERROR, unitId, context, { err_code: -100, err_msg: 'unavailable' });
+    trackAd(EVENT_NAMES.AD_ERROR, unitId, context, { err_code: SDK_ERR_UNAVAILABLE, err_msg: 'unavailable' });
     return 'unavailable';
   }
 
+  // 新一次播放：刷新业务上下文 + 重置 cycle 标志
   entry.pendingContext = context;
+  entry.errorReportedThisCycle = false;
+
   try {
     await entry.ad.show();
     trackAd(EVENT_NAMES.AD_SHOW, unitId, context);
@@ -130,12 +172,9 @@ export async function showInterstitialAd(
       trackAd(EVENT_NAMES.AD_SHOW, unitId, context);
       return 'shown';
     } catch (err2) {
-      const e = (err2 ?? err) as { errMsg?: string; errCode?: number };
-      trackAd(EVENT_NAMES.AD_ERROR, unitId, context, {
-        err_code: e?.errCode ?? -102,
-        err_msg: e?.errMsg || String(e),
-      });
-      entry.pendingContext = null;
+      const e = (err2 ?? err) as { errMsg?: string; errCode?: number } | undefined;
+      // 兜底：onError 没触发或 promise 立即 reject 时打一次，cycle 已上报则被去重
+      reportAdErrorOnce(entry, Number(e?.errCode ?? -1), String(e?.errMsg || 'unknown'));
       return 'error';
     }
   }
