@@ -1,0 +1,36 @@
+Create a dedicated background image for a WeChat Mini Game badge unlock share card.
+
+Goal:
+- More celebratory than v1, but still clean enough for a badge icon and Chinese text to be drawn on top.
+- Must match a cute fruit-bowl puzzle game's badge style: golden badge glow, soft enamel sticker feeling, warm fruit tea colors, polished casual game UI.
+- The center must be a clean badge stage, not a busy illustration.
+
+Canvas:
+- 5:4 horizontal share card composition.
+- Final use is 1000x800.
+- Generate a high quality master.
+
+Visual style:
+- Cute polished casual game art, same family as shiny unlock badges and fruit tea UI.
+- Warm golden cream background with soft mint and peach gradients.
+- Center has a large subtle medal-stage glow: pale gold circular halo, soft radial light, faint laurel / ribbon shapes in very low contrast.
+- Add celebratory atmosphere: small golden stars, tiny confetti dots, bubbles, sparkle particles, soft light rays.
+- Edge decoration only: small fruit tea ingredients around the border, such as orange slice, lemon, strawberry, blueberry, kiwi, mint leaves, a few translucent ice cubes.
+- Fruits should feel like small sticker decorations, not a full fruit pile.
+- Keep the center 55-60% mostly empty and bright for a dynamic badge overlay.
+- Corners can have soft blurred leaves and fruit pieces to frame the card.
+- Premium, joyful, polished, not photorealistic, not hard 3D.
+
+Composition:
+- Center: empty circular badge podium / glow area, suitable for a badge image.
+- Top area: enough clean space for Chinese headline overlay.
+- Bottom area: enough clean space for Chinese badge name overlay.
+- Outer border feel: subtle rounded-card glow, no hard frame.
+
+Strict constraints:
+- NO text, NO letters, NO numbers.
+- NO badge icon drawn in the image.
+- NO central cup, NO central bowl, NO central character.
+- NO dense fruit pile.
+- NO app logo, NO QR code, NO watermark.
+- Do not make the center busy.

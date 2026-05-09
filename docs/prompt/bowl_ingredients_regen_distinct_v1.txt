@@ -1,0 +1,40 @@
+Generate one square sprite sheet for 4 replacement bowl-game ingredient icons.
+
+Canvas and layout:
+- 2 rows x 2 columns grid.
+- One ingredient icon per cell.
+- Each icon centered in its cell with generous padding.
+- Solid pure black temporary background in every cell for clean cutout.
+- NO text, NO labels, NO numbers, NO watermark, NO UI frame, NO bowl, NO spoon.
+
+Art style:
+- Match the existing Hot Pot bowl ingredient assets.
+- 2D mobile casual game food icon.
+- Cute clean hand-painted cartoon style.
+- Slight top-down 3/4 view.
+- Warm dark brown outline, soft inner highlights, saturated appetizing colors.
+- Single compact subject, not a pile, not a large scene.
+- Keep each silhouette easy to recognize at small size.
+
+Cell descriptions:
+1. CRYSTAL_JELLY replacement:
+   A single transparent rounded jelly drop / low dome, pale aqua-blue glassy gel, soft wobbly highlights, rounded organic shape.
+   It must NOT be an ice cube, NOT a six-sided cube, NOT hard geometric ice, NOT frosty.
+
+2. SWEET_POTATO replacement:
+   A single long rectangular sweet potato stick / fry, rounded ends, orange-yellow flesh, visible purple-red skin strip along one side, soft baked texture.
+   It must NOT be a cube, NOT pumpkin, NOT square.
+
+3. SOUR_PLUM replacement as green plum:
+   A single small green plum, round to slightly oval, fresh green-yellow skin, tiny stem dimple, glossy highlight.
+   It should be small like a topping ingredient.
+   It must NOT be purple, NOT a sliced plum wedge, NOT red date, NOT cherry.
+
+4. WATER_CHESTNUT replacement:
+   A single flat round water chestnut slice, squat disk shape, creamy white flesh, light tan-brown skin rim on the edge, subtle crunchy texture.
+   It must NOT be a cube, NOT taro dice, NOT coconut jelly.
+
+Strict consistency:
+- All four icons should feel from the same asset pack.
+- Avoid extra crumbs, dots, splashes, stars, glow rays, or detached decoration.
+- Make the outside contour simple for background removal.

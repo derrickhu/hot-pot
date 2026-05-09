@@ -1,0 +1,31 @@
+Use the reference image of the existing in-game tool buttons as the source style.
+
+Create a single horizontal sprite sheet containing exactly 3 standalone tool icons for a cute fruit-bowl puzzle game.
+
+Important style matching:
+- Match the icons inside the current game tool buttons.
+- Keep the same simple flat-cartoon mobile game style, warm outline, clean shapes.
+- The icons should look like they belong inside the existing brown circular tool buttons.
+- Do NOT include the brown circular button backgrounds.
+- Do NOT include the red plus badges.
+- Do NOT include Chinese text or any labels.
+
+Layout:
+- 3 icons in one horizontal row.
+- Equal cell size and generous spacing.
+- Icon 1: add dish tool, a small cream plate with fruit pieces and a green plus mark.
+- Icon 2: remove tool, a small blue/yellow broom.
+- Icon 3: shuffle tool, a small wooden palette / fruit pieces with two green curved arrows.
+
+Cutout requirements:
+- Put icons on a clean pure white or very light plain background.
+- No checkerboard transparency pattern.
+- No dark background.
+- No cast shadow touching the background.
+- No border lines between cells.
+- Each icon must have a clear silhouette and enough spacing for background removal.
+
+Output:
+- Single coherent sprite sheet.
+- No text, no numbers, no watermark.
+- Icons must remain readable at 48x48 and 64x64.

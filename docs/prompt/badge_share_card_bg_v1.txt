@@ -1,0 +1,34 @@
+Create a clean default background image for a WeChat Mini Game share card.
+
+Purpose:
+- This background will be used behind a dynamically drawn badge icon and Chinese text.
+- The center area must stay clean so the badge can be placed on top.
+- Do NOT draw any badge, cup, bowl, title, text, letters, numbers, logo, QR code, watermark, or UI buttons.
+
+Canvas:
+- 5:4 horizontal share card composition.
+- Final use is 1000x800, but generate as a high quality master.
+
+Visual style:
+- Cute polished casual fruit-bowl puzzle game style.
+- Warm creamy pastel background with soft radial glow in the center.
+- Light mint / pale lemon / soft peach color palette.
+- Subtle dessert table feeling, but not busy.
+- A few small fruit decorations around the edges only: tiny strawberry, orange slice, blueberry, kiwi slice, lemon, mint leaves.
+- Soft sparkles and tiny bubbles around edges.
+- Center 60% of the image should be mostly empty, bright, and low detail.
+- Slight vignette at corners for depth.
+- Clean, premium, cheerful, not photorealistic, not hard 3D.
+
+Composition:
+- Center: empty glowing oval / circular stage for future badge placement.
+- Top and bottom edges: very light decorative fruit confetti, leaving plenty of space for Chinese text overlay.
+- Corners: small fruit leaves and sparkles, low contrast.
+
+Strict constraints:
+- NO text anywhere.
+- NO badge icon.
+- NO bowl/cup/drink in the center.
+- NO busy fruit pile.
+- NO dark background.
+- NO watermark.

@@ -1,0 +1,39 @@
+Generate ONE high-resolution game badge icon for a cute fruit-bowl puzzle game, matching the original badge style very closely.
+
+Reference:
+- Use the provided old badge only as a loose reference for subject and silhouette.
+- Use the provided old badge as the primary style reference.
+- Keep the same compact cute badge silhouette and same game icon proportions.
+- Create a cleaner, sharper, more polished version of the same badge style. Do not redesign it into a realistic illustration.
+
+Badge identity:
+- File target: bowl_badge_30
+- Chinese title in config: 终章龙果冰冠
+- Vessel type: wide dessert bowl with crowned shaved ice.
+- Main color: vivid dragon fruit pink.
+- Accent color: warm golden yellow.
+- Ingredients: dragon fruit chunks, white fruit cubes with tiny dark seeds, mango pieces, lemon slice, green mint leaves, small ice crystals.
+
+Unified badge style:
+- Same style as the reference: compact cartoon mobile game badge, not realistic, not painterly.
+- Thick dark brown outer outline, thin warm cream inner rim, soft sticker-like edge similar to the original.
+- Wide rounded bowl with simplified cute shapes, glossy rim, readable dragon fruit cubes and crown.
+- Keep the bowl and crown small and centered like the original badge, occupying about 76% of the square canvas.
+- Crown must be a small cute golden crown on top, not too large, matching the original silhouette.
+- Small golden sparkle rays and tiny white star highlights attached close to the bowl.
+- Soft watercolor-like fruit colors, but sharper and cleaner than the original.
+- Slight front view, centered object, no large scene, no full poster.
+- No text, no label, no numbers, no watermark.
+
+Background / cutout requirements:
+- Use transparent background if possible; otherwise use a flat black or pure green temporary background for easy cutout.
+- Do NOT leave a white rectangular background.
+- The sticker edge may be light cream like the original, but do NOT create a messy white halo or extra white border.
+- Object must be fully separated from background, clean silhouette, no cropped edges.
+- Leave small safe margin around the object.
+
+Quality constraints:
+- High detail, sharp, not blurry.
+- No fake Chinese text.
+- No extra props outside the badge.
+- One single complete badge icon only.

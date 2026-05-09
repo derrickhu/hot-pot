@@ -1,0 +1,56 @@
+Generate one square sprite sheet for 4 replacement bowl-game ingredient icons.
+
+Use the provided reference images as the exact art style target:
+- small bowl-game ingredient icons, not big sticker badges
+- compact subject inside a 96px transparent PNG style
+- thin dark brown outline
+- simple clean 2D mobile casual game rendering
+- soft but restrained highlights
+- minimal shadow, no thick white sticker border
+- slightly top-down 3/4 view
+- simple silhouette, readable at tiny in-game size
+
+Canvas and layout:
+- 2 rows x 2 columns grid.
+- One small ingredient icon per cell.
+- Keep the subject small, similar scale to the reference ingredients.
+- Solid pure black temporary background in each cell for clean cutout.
+- NO text, NO labels, NO numbers, NO watermark, NO UI frame, NO bowl, NO spoon.
+
+Cell 1, CRYSTAL_JELLY replacement:
+- A single small transparent rounded jelly piece.
+- Shape: soft rounded low dome or rounded blob, NOT a cube.
+- Color: very pale aqua blue, translucent.
+- Style should feel closer to mini_mochi / coconut_jelly references than to an ice cube.
+- Use only a few small highlights.
+- Must NOT look like ice_cube, NOT six-sided, NOT frosty, NOT hard geometric.
+
+Cell 2, SWEET_POTATO replacement:
+- A single short rectangular sweet potato stick.
+- Shape: long rounded cuboid strip, like a small fry, clearly longer than wide.
+- Orange-yellow flesh with a thin purple-red skin strip on one side or one end.
+- Simple baked texture, only 1-2 subtle darker marks.
+- Must NOT be a square cube, NOT pumpkin cube.
+
+Cell 3, SOUR_PLUM replacement as green plum:
+- A single small green plum topping.
+- Shape: small round or slightly oval fruit, compact.
+- Color: green-yellow skin, tiny stem dimple, one small highlight.
+- Make it smaller and simpler than a whole fruit hero asset.
+- Must NOT be purple, NOT a sliced wedge, NOT plum_1, NOT cherry, NOT red date.
+
+Cell 4, WATER_CHESTNUT replacement:
+- A single flat round water chestnut slice.
+- Shape: squat disk, wider than tall, flat circular top.
+- Creamy white top, light tan-brown outer rim/skin on the side.
+- Simple crunchy texture, small highlight.
+- Must NOT be cube, NOT taro dice, NOT coconut jelly.
+
+Strict negative constraints:
+- no photorealism
+- no sticker badge style
+- no thick white outline
+- no large glossy mascot icon
+- no extra crumbs, droplets, stars, glow rays, or detached decoration
+- no busy background
+- no text

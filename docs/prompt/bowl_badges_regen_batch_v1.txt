@@ -1,0 +1,46 @@
+Batch prompt guide for regenerating all bowl game badge icons.
+
+Global style locked from approved samples:
+- Match the original badge style closely: compact cute mobile-game badge, not realistic, not poster art.
+- Use the old badge image as the primary reference for silhouette and subject.
+- Create a sharper, cleaner, more polished version of the same badge.
+- Thick dark brown outer outline directly around the object.
+- Thin warm cream highlight rim inside the outline.
+- No thick white sticker backing, no messy white halo, no white rectangular background.
+- Hand-painted watercolor-like colors, but crisp and readable at small size.
+- Small golden rays / tiny star highlights close to the vessel only.
+- Solid pure black temporary background for clean cutout.
+- No text, no labels, no numbers, no watermark.
+- One complete centered badge icon only.
+
+Badge list:
+01 酸奶莓果杯: small rounded transparent yogurt dessert cup; creamy yogurt white; strawberries, blueberries, mango/yellow cubes, mint leaves.
+02 柠檬蓝莓冰茶: small transparent iced tea cup; lemon yellow tea; lemon slices, blueberries, pink jelly/fruit, mint leaves, ice.
+03 热带芒芒刨冰: wide dessert bowl; mango orange shaved ice; mango chunks, red fruit pieces, yellow toppings, mint leaves.
+04 星星西瓜水果捞: wide dessert bowl; pink watermelon fruit soup; watermelon pieces, green fruit, yellow star fruit, mint leaves.
+05 莓柚气泡冰杯: transparent bubble drink cup; berry pink and pale cyan; strawberry/berry, grapefruit, bubbles, mint leaves.
+06 坚果蜜桃雪顶杯: transparent dessert cup; peach cream and nut colors; peach slices, nut bits, snowy cream top, mint leaves.
+07 椰香桂圆冰碗: wide dessert bowl; coconut white and icy blue; coconut pieces, longan/golden fruit, mint leaves, ice.
+08 多彩小料奶茶: transparent milk tea cup; brown milk tea; colorful jelly pearls, yellow toppings, purple toppings, straw-like small garnish.
+09 脆脆莓莓冰沙: wide dessert bowl; berry pink ice; strawberry/berry pieces, crunchy yellow topping, purple fruit, mint leaves.
+10 双轨橙柚冰茶: small transparent iced tea cup; vivid orange citrus tea; orange slice, grapefruit wedge, lime/green fruit, ice cubes.
+11 十二鲜果冰碗: wide dessert bowl; pale fruit ice; red fruit, blueberry, yellow fruit, green fruit, many small toppings.
+12 续章荔枝水果茶: transparent cup; pale pink lychee tea; lychee/white fruit, pink fruit pieces, orange accent, mint leaves.
+13 东方梅子冰饮: transparent cup; plum purple drink; plum pieces, pink fruit, yellow garnish, mint leaves.
+14 混搭雪梨刨冰: wide dessert bowl; pear white shaved ice; pear/yellow fruit, orange fruit, green fruit, mint leaves.
+15 蜜瓜桃桃冰杯: transparent cup; honeydew green and peach pink; melon pieces, peach slices, yellow topping, mint leaves.
+16 满贯浆果雪山: wide dessert bowl; purple berry snow mountain; berries, blueberries, yellow topping, mint leaves.
+17 满贯椰椰冰茶: transparent cup; coconut cream and icy blue; coconut pieces, yellow fruit, green fruit, ice.
+18 杂烩水果捞碗: wide dessert bowl; orange fruit soup; red fruit, purple fruit, yellow fruit, green fruit, mint leaves.
+19 薄冰青柠杯: transparent cup; lime green iced drink; lime slices, white ice, cyan ice, mint leaves.
+20 四合莲藕冰碗: wide dessert bowl; lotus-root cream; lotus root slices, yellow fruit, purple topping, mint leaves.
+21 果阵红莓冰沙: transparent cup; red berry slush; red berries, blue fruit, yellow topping, mint leaves.
+22 果阵青柠雪碗: wide dessert bowl; lime green shaved ice; lime pieces, yellow fruit, cyan ice, mint leaves.
+23 滋补银耳甜品: wide dessert bowl; warm cream dessert; white snow fungus, purple fruit, yellow topping, mint leaves.
+24 小料珍珠奶茶: transparent cup; brown milk tea; black pearls, pink jelly, yellow topping, mint leaves.
+25 重口巧克力冰杯: transparent cup; chocolate brown dessert; chocolate chunks, cream cubes, pink fruit, mint leaves.
+26 果下芒果椰雪: wide dessert bowl; mango coconut snow; mango chunks, coconut white pieces, yellow fruit, mint leaves.
+27 滋补红枣冰饮: transparent cup; red date drink; red dates, golden fruit, cream/white accent, mint leaves.
+28 小料仙草冰碗: wide dessert bowl; dark grass jelly dessert; black jelly cubes, yellow topping, pink jelly, mint leaves.
+29 廿星爆珠水果茶: transparent cup; orange fruit tea; popping boba, red fruit, yellow fruit, blue/purple accent, green fruit.
+30 终章龙果冰冠: wide dessert bowl; dragon fruit pink shaved ice; dragon fruit cubes, white cubes with seeds, mango/yellow pieces, small golden crown.

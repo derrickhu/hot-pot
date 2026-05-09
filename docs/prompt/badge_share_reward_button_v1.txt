@@ -1,0 +1,21 @@
+Create a polished mobile game UI button image for a cute casual fruit-bowl puzzle game.
+
+Button content:
+- The button must include the exact Chinese text: 分享
+- Include a cute orange/yellow share arrow pointing to the upper-right on the right side of the button.
+- No other text, no numbers, no labels, no watermark.
+
+Button style:
+- Rounded rectangle button, horizontal pill shape.
+- Soft mint green / light lime green face.
+- Thick warm brown outer outline.
+- Subtle darker green bottom shadow, glossy top highlight strip.
+- Cute casual game UI style, matching cozy fruit dessert puzzle game.
+- The text "分享" should be large, centered slightly left, white or cream fill, thick warm brown outline, very readable.
+- The arrow should be integrated inside the button, not outside it.
+
+Output:
+- Single standalone button centered on transparent background.
+- Aspect ratio about 3.5:1.
+- Safe transparent padding around the button.
+- Do not include any background scene.

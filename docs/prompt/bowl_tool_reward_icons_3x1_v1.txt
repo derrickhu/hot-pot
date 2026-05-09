@@ -1,0 +1,35 @@
+Create a single horizontal sprite sheet with exactly 3 square cells in one row, transparent-background game UI reward icons for a cute casual fruit-bowl puzzle game.
+
+Canvas layout:
+- 3 columns x 1 row.
+- Each cell is a standalone centered icon.
+- Equal spacing and safe padding in every cell.
+- No dividing grid lines, no background, transparent PNG.
+
+Overall style:
+- Cute polished mobile game icon style.
+- Soft rounded shapes, thick warm brown outline, white outer sticker edge, small glossy highlight.
+- Matches cozy fruit dessert / hot-pot fruit bowl UI.
+- Bright, readable at 64x64 and 96x96.
+- NO TEXT, no letters, no numbers, no labels, no watermark.
+
+Cell 1: Add dish tool
+- A small cream plate with several colorful fruit cubes on it.
+- A bright green plus symbol attached near the upper-right of the plate.
+- Expresses "add one buffer dish / add plate".
+
+Cell 2: Remove / cleanup tool
+- A cute small broom sweeping away tiny fruit pieces or sparkles.
+- Include a blue-white cleaning shine and motion sweep.
+- Expresses "clear / remove items from tray".
+
+Cell 3: Shuffle tool
+- Two bright green curved arrows rotating around small fruit cubes.
+- Dynamic circular motion, playful, energetic.
+- Expresses "shuffle / rearrange".
+
+Output requirements:
+- Single coherent sprite sheet.
+- Icons must be centered in their cells and similar visual weight.
+- Transparent background around all icons.
+- NO text anywhere.
