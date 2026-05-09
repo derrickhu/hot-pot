@@ -7,6 +7,7 @@ import { Platform } from '@/core/PlatformService';
  * - 不进 CLOUD_SYNC_ALLOWLIST，避免被云端覆盖。
  */
 const FIRST_LEVEL_TUTORIAL_KEY = `${GAME_KEY}_tutorial_lvl1`;
+const SECOND_LEVEL_ORDER_PLATES_TUTORIAL_KEY = `${GAME_KEY}_tutorial_lvl2_order_plates`;
 const TRUE_FLAG = '1';
 
 export function isFirstLevelTutorialDone(): boolean {
@@ -15,6 +16,14 @@ export function isFirstLevelTutorialDone(): boolean {
 
 export function markFirstLevelTutorialDone(): void {
   Platform.setStorageSync(FIRST_LEVEL_TUTORIAL_KEY, TRUE_FLAG);
+}
+
+export function isSecondLevelOrderPlatesTutorialDone(): boolean {
+  return Platform.getStorageSync(SECOND_LEVEL_ORDER_PLATES_TUTORIAL_KEY) === TRUE_FLAG;
+}
+
+export function markSecondLevelOrderPlatesTutorialDone(): void {
+  Platform.setStorageSync(SECOND_LEVEL_ORDER_PLATES_TUTORIAL_KEY, TRUE_FLAG);
 }
 
 /** 调试用：清除引导标记，下次进第一关将重新显示。 */

@@ -74,8 +74,10 @@ import {
 import {
   isFirstLevelTutorialDone,
   isMechanicIntroSeen,
+  isSecondLevelOrderPlatesTutorialDone,
   markFirstLevelTutorialDone,
   markMechanicIntroSeen,
+  markSecondLevelOrderPlatesTutorialDone,
   type MechanicIntroKind,
 } from '@/utils/tutorialState';
 
@@ -298,7 +300,7 @@ export class BowlScene implements Scene {
    * - 'fruit'：依次指引点击对应水果，直至本单完成。
    */
   private tutorialActive = false;
-  private tutorialStep: 'order' | 'fruit' | null = null;
+  private tutorialStep: 'order' | 'fruit' | 'orderPlates' | null = null;
   private tutorialTargetFruit: FruitItem | null = null;
   /** 引导期间锁定的目标订单盘索引，用于在交付完成时判断是否结束引导 */
   private tutorialPlateIdx: PlateIdx | null = null;
@@ -2056,6 +2058,7 @@ export class BowlScene implements Scene {
     const next = this.pendingMechanicIntros.shift();
     if (!next) {
       this.tryStartFirstLevelTutorial();
+      this.tryStartSecondLevelOrderPlatesTutorial();
       return;
     }
     const content = this.buildMechanicIntroContent(next);
@@ -2142,6 +2145,39 @@ export class BowlScene implements Scene {
     this.tutorialPlateIdx = 0;
     this.tutorialOverlay.show();
     this.startTutorialOrderStep();
+  }
+
+  /**
+   * 第二关：首次进关时突出第 3/4 路订单盘。
+   * 这一关已默认开 4 路，让玩家马上感受到多订单并行会更快消耗水果、降低卡槽压力。
+   */
+  private tryStartSecondLevelOrderPlatesTutorial(): void {
+    if (this.tutorialActive) {
+      return;
+    }
+    if (!this.levelDef || this.levelDef.levelNumber !== 2) {
+      return;
+    }
+    if (isSecondLevelOrderPlatesTutorialDone()) {
+      return;
+    }
+    if (this.parallelPlateCount < 4) {
+      return;
+    }
+
+    this.tutorialActive = true;
+    this.tutorialStep = 'orderPlates';
+    this.tutorialTargetFruit = null;
+    this.tutorialPlateIdx = null;
+    this.tutorialOverlay.setCaption('解锁多个订单能更快过关');
+    this.tutorialOverlay.setHandFacing('up');
+    this.tutorialOverlay.enableTapCatcher(() => {
+      markSecondLevelOrderPlatesTutorialDone();
+      this.endTutorial();
+      this.evaluateBufferPanicState();
+    });
+    this.tutorialOverlay.show();
+    this.refreshTutorialHighlight();
   }
 
   /** 第一步：指订单气泡，文案告诉玩家任务目标 */
@@ -2268,6 +2304,21 @@ export class BowlScene implements Scene {
         cx: local.x,
         cy: local.y,
         r: radius,
+      });
+      return;
+    }
+    if (this.tutorialStep === 'orderPlates') {
+      const left = this.orderPlateCenterX[2] ?? Game.logicWidth * 0.62;
+      const right = this.orderPlateCenterX[3] ?? Game.logicWidth * 0.82;
+      const cx = (left + right) / 2;
+      const w = Math.abs(right - left) + ORDER_LOCK_PLATE_RADIUS * 2 + 34;
+      this.tutorialOverlay.setHighlight({
+        kind: 'rect',
+        cx,
+        cy: this.orderPlateRowY,
+        w,
+        h: ORDER_LOCK_PLATE_RADIUS * 2 + 32,
+        cornerR: 30,
       });
     }
   }

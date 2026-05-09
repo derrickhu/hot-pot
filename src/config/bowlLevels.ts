@@ -25,8 +25,8 @@ export interface BowlLevelDef {
   initialVisibleCount?: number;
   /** 每完成一盘订单后，从下层释放的物品数量 */
   revealPerOrderComplete?: number;
-  /** 开局并行订单路数，默认 2 */
-  plateLanesInitial?: 2 | 3;
+  /** 开局并行订单路数，默认 2；新手加速关可直接开到 4 路 */
+  plateLanesInitial?: 2 | 3 | 4;
   allowAddDish: boolean;
   allowRemove: boolean;
   allowShuffle: boolean;
@@ -90,7 +90,8 @@ function levelFruits(levelNumber: number): FruitId[] {
  * 30 关数值（v6，碗内"满当当"画面 + L3 起强压力）：
  *   `orderTarget` 全程 = 3（三消核心玩法不动）；
  *   `copiesPerFruit` 必须全程为 3 的倍数，避免生成无法凑满 x3 的尾数水果。
- *   `plateLanesInitial` 全程 = 2 —— 第 3/4 路订单盘上的「解锁」按钮点了才看广告解锁
+   *   `plateLanesInitial` 默认 = 2 —— 第 3/4 路订单盘上的「解锁」按钮点了才看广告解锁
+   *     L2 例外：首个扩展教学关直接开 4 路，让玩家体验多订单更快过关；
  *     （`unlockNextOrderPlateReward`）；失败复活也会顺带解锁一路。这是核心广告变现位。
  *   底部「加菜碟」工具是另一条广告点：每次 +1 个 `bufferSize`（最多 7），
  *     缓解 buffer 满压力但不解锁订单路。
@@ -130,7 +131,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     bufferSize: 5,
     initialVisibleCount: 32,
     revealPerOrderComplete: 5,
-    plateLanesInitial: 2,
+    plateLanesInitial: 4,
     ...allTools,
   },
   {
