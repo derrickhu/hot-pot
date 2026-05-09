@@ -41,7 +41,7 @@ const allTools = { allowAddDish: true, allowRemove: true, allowShuffle: true } a
 /**
  * 每关新解锁的食材（累积式：本关订单池 = 前 N 组并集）。
  * 节奏：L1=4、L2+4、L3+4 → L3 一开就 12 种；
- *      L4-5 各 +3、L6 +3、L7-15 各 +2、L16-30 各 +1，到 L30 累计 53 种。
+ *      L4-15 保持原解锁节奏不动，L16-30 补齐全部小料/滋补/甜品食材。
  * 关卡通关弹窗的「下一关解锁」会显示对应组中的新水果。
  */
 const UNLOCK_GROUPS = [
@@ -60,30 +60,82 @@ const UNLOCK_GROUPS = [
   ['plum', 'nectarine'],
   ['persimmon', 'almond_slice'],
   ['peanut', 'walnut_piece'],
-  ['chestnut'],
-  ['red_date'],
-  ['sour_plum'],
-  ['mint'],
-  ['osmanthus'],
-  ['radish_heart'],
-  ['black_rice'],
-  ['foxnut'],
-  ['lotus_seed'],
-  ['lily_bulb'],
-  ['lotus_root'],
-  ['snow_fungus'],
-  ['peach_gum'],
-  ['pumpkin_cube'],
-  ['sweet_potato'],
+  ['chestnut', 'oat_flake'],
+  ['red_date', 'sour_plum', 'mint'],
+  ['blackcurrant', 'gooseberry', 'osmanthus'],
+  ['basil_seed', 'crystal_jelly'],
+  ['lotus_root', 'water_chestnut', 'radish_heart'],
+  ['black_rice', 'red_bean'],
+  ['foxnut', 'lotus_seed'],
+  ['lily_bulb', 'snow_fungus', 'peach_gum'],
+  ['boba_pearl', 'pudding_cube', 'mini_mochi'],
+  ['chocolate_chip', 'cookie_crumb', 'marshmallow'],
+  ['pumpkin_cube', 'sweet_potato', 'durian'],
+  ['coconut_jelly', 'sago'],
+  ['grass_jelly', 'taro_ball', 'taro_dice'],
+  ['pop_boba'],
+  ['dragonfruit'],
 ] as const satisfies readonly (readonly FruitId[])[];
+
+/** 图鉴只展示关卡体系内真正可获得的食材，避免通关后仍出现永远无法解锁的占位。 */
+export const BOWL_UNLOCKABLE_FRUIT_IDS = Array.from(new Set<FruitId>(UNLOCK_GROUPS.flat()));
+
+/**
+ * 后 15 关不再把最早期全部基础水果无限累积进订单池，而是保留一批辨识度高的主食材，
+ * 再叠加最近解锁的小料/滋补/甜品，保证每关新鲜感和图鉴解锁一致。
+ */
+const POST_15_BASE_POOL = [
+  'apple',
+  'banana',
+  'grape',
+  'kiwi',
+  'peach',
+  'pineapple',
+  'watermelon',
+  'mango',
+  'cherry',
+  'cherry_tomato',
+  'grape_green',
+  'lime',
+  'mandarin',
+  'cantaloupe',
+  'honeydew',
+  'young_coconut',
+  'lychee',
+  'longan',
+  'bayberry',
+  'blackberry',
+  'cranberry',
+  'raspberry',
+  'mulberry',
+  'passionfruit',
+  'grapefruit',
+  'plum',
+  'nectarine',
+  'persimmon',
+  'almond_slice',
+  'peanut',
+  'walnut_piece',
+] as const satisfies readonly FruitId[];
+
+const POST_15_RECENT_GROUP_WINDOW = 8;
 
 /**
  * 累积式：第 N 关订单池 = UNLOCK_GROUPS[0..N-1] 全部并集（去重）。
- * 一旦解锁不再失踪，符合「难度只能加不能减」的诉求。
+ * L16 起改为「后期基础池 + 最近新解锁食材」，避免早期食材过度重复。
  */
 function levelFruits(levelNumber: number): FruitId[] {
   const idx = Math.max(0, Math.min(levelNumber - 1, UNLOCK_GROUPS.length - 1));
-  return Array.from(new Set<FruitId>(UNLOCK_GROUPS.slice(0, idx + 1).flat()));
+  if (idx < 15) {
+    return Array.from(new Set<FruitId>(UNLOCK_GROUPS.slice(0, idx + 1).flat()));
+  }
+  const recentStart = Math.max(15, idx - POST_15_RECENT_GROUP_WINDOW + 1);
+  return Array.from(
+    new Set<FruitId>([
+      ...POST_15_BASE_POOL,
+      ...UNLOCK_GROUPS.slice(recentStart, idx + 1).flat(),
+    ]),
+  );
 }
 
 /**

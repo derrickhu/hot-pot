@@ -1,4 +1,4 @@
-import { BOWL_LEVELS } from '@/config/bowlLevels';
+import { BOWL_LEVELS, BOWL_UNLOCKABLE_FRUIT_IDS } from '@/config/bowlLevels';
 import { FRUIT_CONFIGS, type FruitConfig, type FruitId } from '@/config/fruits';
 import { FRUIT_SLICE_WHOLE_PATH } from '@/config/fruitSliceWhole';
 import { getMaxUnlockedBowlLevelIndex } from '@/game/BowlProgress';
@@ -47,7 +47,8 @@ function getUnlockedFruitIds(): Set<FruitId> {
 /** 图鉴展示全部可收集食材；未解锁显示问号，占位不消失。 */
 export function getCatalogSlots(): CatalogSlot[] {
   const unlocked = getUnlockedFruitIds();
-  return FRUIT_CONFIGS.filter((fruit) => fruit.id !== 'ice_cube').map((fruit) => ({
+  const unlockable = new Set<FruitId>(BOWL_UNLOCKABLE_FRUIT_IDS);
+  return FRUIT_CONFIGS.filter((fruit) => unlockable.has(fruit.id)).map((fruit) => ({
     id: fruit.id,
     textureKey: `cat_${fruit.id}`,
     assetCandidates: catalogAssetCandidates(fruit),
