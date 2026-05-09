@@ -1,6 +1,7 @@
 import { analytics, EVENT_NAMES } from '@/analytics';
 
 const SHARE_QUERY = 'from=share';
+const SHARE_REWARD_QUERY = 'from=share&entry=badge_reward';
 
 /** 转发标题池：每次分享随机一条（与配图独立抽取，组合更多样）。 */
 const SHARE_TITLES = [
@@ -70,20 +71,31 @@ interface WechatSharePayload {
   query: string;
 }
 
-function buildSharePayload(): WechatSharePayload {
+interface SharePayloadOptions {
+  title?: string;
+  query?: string;
+  imageUrl?: string;
+}
+
+function buildSharePayload(options: SharePayloadOptions = {}): WechatSharePayload {
   return {
-    title: pickRandomShareTitle(),
-    imageUrl: pickRandomShareImageUrl(),
-    query: SHARE_QUERY,
+    title: options.title ?? pickRandomShareTitle(),
+    imageUrl: options.imageUrl ?? pickRandomShareImageUrl(),
+    query: options.query ?? SHARE_QUERY,
   };
 }
 
-function trackShareAppMessage(payload: WechatSharePayload, entryPoint: string): void {
+function trackShareAppMessage(
+  payload: WechatSharePayload,
+  entryPoint: string,
+  extra?: Record<string, string | number | boolean>,
+): void {
   analytics.track(EVENT_NAMES.SHARE_APP_MESSAGE, {
     entry_point: entryPoint,
     title: payload.title,
     image_url: payload.imageUrl || '',
     query: payload.query || '',
+    ...(extra ?? {}),
   });
 }
 
@@ -116,4 +128,49 @@ export function shareGame(): boolean {
   trackShareAppMessage(payload, 'api_share_game');
   api.shareAppMessage(payload);
   return true;
+}
+
+export type ShareGameResult = 'shared' | 'unavailable' | 'failed';
+
+export function shareGameForReward(options: SharePayloadOptions = {}): Promise<ShareGameResult> {
+  const api = typeof wx !== 'undefined' ? wx : null;
+  if (!api?.shareAppMessage) {
+    return Promise.resolve('unavailable');
+  }
+
+  const payload = buildSharePayload({
+    title: options.title ?? '我刚解锁新徽章，送你一碗水果捞！',
+    imageUrl: options.imageUrl,
+    query: SHARE_REWARD_QUERY,
+  });
+  trackShareAppMessage(payload, 'badge_unlock_reward', {
+    reward_type: 'remove',
+    daily_claimed: false,
+  });
+
+  return new Promise<ShareGameResult>((resolve) => {
+    let settled = false;
+    const finish = (result: ShareGameResult) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve(result);
+    };
+
+    try {
+      api.shareAppMessage({
+        ...payload,
+        success: () => finish('shared'),
+        fail: () => finish('failed'),
+        // 部分小游戏运行时不会可靠回调 success；complete 后给一个短延迟兜底。
+        complete: () => {
+          setTimeout(() => finish('shared'), 1200);
+        },
+      });
+      setTimeout(() => finish('shared'), 1800);
+    } catch {
+      finish('failed');
+    }
+  });
 }

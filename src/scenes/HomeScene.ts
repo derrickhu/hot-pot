@@ -126,17 +126,21 @@ export class HomeScene implements Scene {
   private applyPlayEntryArt(): void {
     const tex = TextureCache.get('home_play_btn');
     if (!tex) {
-      this.playEntryTitle.style.fill = 0xfff8ff;
+      this.playEntryTitle.style.fill = 0xfff4c2;
+      this.playEntryTitle.style.stroke = 0x5a2a19;
+      this.playEntryTitle.style.strokeThickness = 6;
       this.playEntryTitle.style.dropShadowColor = 0x3d2818;
-      this.playEntryTitle.style.dropShadowBlur = 2;
-      this.playEntryTitle.style.dropShadowDistance = 1;
+      this.playEntryTitle.style.dropShadowBlur = 3;
+      this.playEntryTitle.style.dropShadowDistance = 2;
       this.playEntryTitle.position.set(0, 0);
       this.playEntryRoot.hitArea = new PIXI.Rectangle(-220, -52, 440, 104);
       return;
     }
-    this.playEntryTitle.style.fill = 0x2a4f63;
-    this.playEntryTitle.style.dropShadowColor = 0xf5fdff;
-    this.playEntryTitle.style.dropShadowBlur = 3;
+    this.playEntryTitle.style.fill = 0xfff4c2;
+    this.playEntryTitle.style.stroke = 0x1b5965;
+    this.playEntryTitle.style.strokeThickness = 6;
+    this.playEntryTitle.style.dropShadowColor = 0xffffff;
+    this.playEntryTitle.style.dropShadowBlur = 4;
     this.playEntryTitle.style.dropShadowDistance = 0;
     if (this.playEntryBg.parent) {
       this.playEntryRoot.removeChild(this.playEntryBg);
@@ -151,8 +155,8 @@ export class HomeScene implements Scene {
     const s = targetW / tex.width;
     this.playEntrySprite.scale.set(s);
     const halfH = (tex.height * s) / 2;
-    /** 文案叠在贴图药丸中心（略上移 2px 对齐视觉中心） */
-    this.playEntryTitle.position.set(0, -2);
+    /** 文案叠在贴图药丸中心，略上移对齐按钮高光后的视觉中心 */
+    this.playEntryTitle.position.set(0, -3);
     const hitPadX = 20;
     const hitPadY = 14;
     this.playEntryRoot.hitArea = new PIXI.Rectangle(
@@ -237,15 +241,19 @@ export class HomeScene implements Scene {
     this.playEntryBg.endFill();
     this.playEntryRoot.addChild(this.playEntryBg);
     this.playEntryTitle = new PIXI.Text('第1关', {
-      fontSize: 38,
-      fill: 0xfff8ff,
-      fontWeight: '800',
+      fontSize: 42,
+      fill: 0xfff4c2,
+      fontWeight: '900',
+      stroke: 0x5a2a19,
+      strokeThickness: 6,
       dropShadow: true,
       dropShadowColor: 0x3d2818,
-      dropShadowBlur: 2,
-      dropShadowDistance: 1,
+      dropShadowBlur: 3,
+      dropShadowDistance: 2,
+      lineJoin: 'round',
     });
     this.playEntryTitle.anchor.set(0.5);
+    this.playEntryTitle.resolution = 2;
     this.playEntryTitle.position.set(0, 0);
     this.playEntryRoot.addChild(this.playEntryTitle);
     this.playEntryRoot.hitArea = new PIXI.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH);

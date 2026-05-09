@@ -74,7 +74,14 @@ declare const wx: {
     offError?: (handler: (err: { errMsg?: string; errCode?: number }) => void) => void;
     destroy?: () => void;
   };
-  shareAppMessage?: (options: { title: string; imageUrl?: string; query?: string }) => void;
+  shareAppMessage?: (options: {
+    title: string;
+    imageUrl?: string;
+    query?: string;
+    success?: () => void;
+    fail?: (err: unknown) => void;
+    complete?: () => void;
+  }) => void;
   showShareMenu?: (options?: {
     withShareTicket?: boolean;
     menus?: Array<'shareAppMessage' | 'shareTimeline'>;

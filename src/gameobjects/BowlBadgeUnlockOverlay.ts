@@ -2,16 +2,32 @@ import * as PIXI from 'pixi.js';
 import { AudioManager } from '@/core/AudioManager';
 import type { BowlBadgeDef } from '@/config/bowlBadges';
 import { mountBowlBadgeIcon } from '@/gameobjects/BowlBadgeIcon';
+import { toolLabel, type ToolKind } from '@/game/ToolInventory';
 
 const BADGE_ICON_SIZE = 252;
 const BADGE_CENTER_X = 0;
 const BADGE_CENTER_Y = 58;
 const BADGE_ROOT_BASE_Y = BADGE_CENTER_Y - BADGE_ICON_SIZE / 2;
 
+export interface BowlBadgeShareRewardResult {
+  status: 'claimed' | 'already_claimed' | 'unavailable' | 'failed';
+  count?: number;
+}
+
+export interface BowlBadgeShareRewardOptions {
+  toolKind: ToolKind;
+  iconTexture?: PIXI.Texture | null;
+  buttonTexture?: PIXI.Texture | null;
+  canClaim: boolean;
+  ownedCount: number;
+  onShare: () => Promise<BowlBadgeShareRewardResult>;
+}
+
 export interface BowlBadgeUnlockOverlayOptions {
   badge: BowlBadgeDef;
   texture: PIXI.Texture | null;
   onClose: () => void;
+  shareReward?: BowlBadgeShareRewardOptions;
 }
 
 export class BowlBadgeUnlockOverlay extends PIXI.Container {
@@ -27,9 +43,18 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
   private readonly titleSprite: PIXI.Sprite;
   private readonly badgeTitle: PIXI.Text;
   private readonly hintText: PIXI.Text;
+  private readonly shareRewardRoot: PIXI.Container;
+  private readonly shareButtonSprite: PIXI.Sprite;
+  private readonly shareButtonBg: PIXI.Graphics;
+  private readonly shareButtonText: PIXI.Text;
+  private readonly shareButtonArrow: PIXI.Text;
+  private readonly rewardIconHost: PIXI.Container;
+  private readonly rewardHintText: PIXI.Text;
   private readonly sparkles: Array<{ node: PIXI.DisplayObject; phase: number }> = [];
   private readonly tick = (delta: number): void => this.updateAnimation(delta);
   private titleTexture: PIXI.Texture | null = null;
+  private shareRewardOptions: BowlBadgeShareRewardOptions | null = null;
+  private shareRewardBusy = false;
   private onClose: () => void = () => {};
   private closing = false;
   private animationTime = 0;
@@ -107,6 +132,65 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
     this.badgeTitle.position.set(0, 150);
     this.panelRoot.addChild(this.badgeTitle);
 
+    this.shareRewardRoot = new PIXI.Container();
+    this.shareRewardRoot.position.set(w / 2, Math.round(h * 0.64));
+    this.shareRewardRoot.eventMode = 'static';
+    this.shareRewardRoot.cursor = 'pointer';
+    this.shareRewardRoot.hitArea = new PIXI.Rectangle(-178, -44, 356, 116);
+    this.shareRewardRoot.on('pointertap', (e: PIXI.FederatedPointerEvent) => {
+      e.stopPropagation();
+      void this.handleShareRewardTap();
+    });
+    this.addChild(this.shareRewardRoot);
+
+    this.shareButtonBg = new PIXI.Graphics();
+    this.shareRewardRoot.addChild(this.shareButtonBg);
+
+    this.shareButtonSprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
+    this.shareButtonSprite.anchor.set(0.5);
+    this.shareButtonSprite.visible = false;
+    this.shareRewardRoot.addChild(this.shareButtonSprite);
+
+    this.shareButtonText = new PIXI.Text('分享', {
+      fontSize: 40,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x5b3a32,
+      strokeThickness: 6,
+      lineJoin: 'round',
+    });
+    this.shareButtonText.anchor.set(0.5);
+    this.shareButtonText.position.set(-38, -6);
+    this.shareRewardRoot.addChild(this.shareButtonText);
+
+    this.shareButtonArrow = new PIXI.Text('↗', {
+      fontSize: 42,
+      fill: 0xffa61f,
+      fontWeight: '900',
+      stroke: 0x7d3f13,
+      strokeThickness: 4,
+      lineJoin: 'round',
+    });
+    this.shareButtonArrow.anchor.set(0.5);
+    this.shareButtonArrow.position.set(94, -8);
+    this.shareRewardRoot.addChild(this.shareButtonArrow);
+
+    this.rewardIconHost = new PIXI.Container();
+    this.rewardIconHost.position.set(-82, 82);
+    this.shareRewardRoot.addChild(this.rewardIconHost);
+
+    this.rewardHintText = new PIXI.Text('', {
+      fontSize: 28,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x3b2316,
+      strokeThickness: 4,
+      lineJoin: 'round',
+    });
+    this.rewardHintText.anchor.set(0, 0.5);
+    this.rewardHintText.position.set(-42, 82);
+    this.shareRewardRoot.addChild(this.rewardHintText);
+
     this.hintText = new PIXI.Text('点击任意处关闭', {
       fontSize: 24,
       fill: 0xfdf1d4,
@@ -115,7 +199,7 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
       strokeThickness: 4,
     });
     this.hintText.anchor.set(0.5);
-    this.hintText.position.set(w / 2, Math.round(h * 0.7));
+    this.hintText.position.set(w / 2, Math.round(h * 0.78));
     this.addChild(this.hintText);
 
     this.on('pointertap', () => {
@@ -138,6 +222,9 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
     this.refreshTitleVisual();
     mountBowlBadgeIcon(this.badgeRoot, options.badge, options.texture, BADGE_ICON_SIZE);
     this.badgeTitle.text = options.badge.title;
+    this.shareRewardOptions = options.shareReward ?? null;
+    this.shareRewardBusy = false;
+    this.refreshShareRewardVisual();
     this.visible = true;
     PIXI.Ticker.shared.remove(this.tick);
     PIXI.Ticker.shared.add(this.tick);
@@ -156,6 +243,141 @@ export class BowlBadgeUnlockOverlay extends PIXI.Container {
     this.closing = true;
     this.hide();
     this.onClose();
+  }
+
+  private async handleShareRewardTap(): Promise<void> {
+    const reward = this.shareRewardOptions;
+    if (!reward || this.shareRewardBusy) {
+      return;
+    }
+
+    AudioManager.playButtonSound();
+    this.shareRewardBusy = true;
+    this.shareButtonText.text = '分享中';
+    if (reward.canClaim) {
+      this.rewardHintText.text = `分享完成后领取${toolLabel(reward.toolKind)} +1`;
+      this.rewardHintText.visible = true;
+      this.rewardIconHost.visible = true;
+    }
+    try {
+      const result = await reward.onShare();
+      if (result.status === 'claimed') {
+        reward.canClaim = false;
+        reward.ownedCount = result.count ?? reward.ownedCount + 1;
+        this.rewardHintText.text = `获得${toolLabel(reward.toolKind)} +1 · 已有 ${reward.ownedCount}`;
+        this.rewardHintText.visible = true;
+        this.rewardIconHost.visible = true;
+      } else if (result.status === 'already_claimed') {
+        reward.canClaim = false;
+        this.rewardHintText.visible = false;
+        this.rewardIconHost.visible = false;
+      } else if (result.status === 'unavailable') {
+        this.rewardHintText.text = '请在微信小游戏中分享领取';
+        this.rewardHintText.visible = true;
+        this.rewardIconHost.visible = true;
+      } else {
+        this.rewardHintText.text = '分享未完成，请稍后再试';
+        this.rewardHintText.visible = true;
+        this.rewardIconHost.visible = true;
+      }
+    } finally {
+      this.shareRewardBusy = false;
+      this.shareButtonText.text = reward.canClaim ? '分享' : '已领取';
+      this.shareButtonArrow.visible = reward.canClaim;
+      this.shareRewardRoot.cursor = reward.canClaim ? 'pointer' : 'default';
+      this.drawShareButtonBg(reward.canClaim);
+    }
+  }
+
+  private refreshShareRewardVisual(): void {
+    const reward = this.shareRewardOptions;
+    this.shareRewardRoot.visible = !!reward;
+    if (!reward) {
+      return;
+    }
+    const enabled = reward.canClaim && !this.shareRewardBusy;
+    this.shareRewardRoot.cursor = this.shareRewardBusy ? 'default' : 'pointer';
+    this.shareButtonText.text = reward.canClaim ? '分享' : '已领取';
+    this.shareButtonArrow.visible = reward.canClaim;
+    this.rewardHintText.text = reward.canClaim
+      ? '+1（今日0/1）'
+      : `今日已领取 · 已有 ${reward.ownedCount}`;
+    this.rewardHintText.visible = reward.canClaim;
+    this.rewardIconHost.visible = reward.canClaim;
+    this.drawShareButtonBg(enabled);
+    this.mountShareButtonTexture(reward.buttonTexture ?? null);
+    this.mountRewardIcon(reward.iconTexture ?? null, reward.toolKind);
+  }
+
+  private mountShareButtonTexture(texture: PIXI.Texture | null): void {
+    const hasTexture = !!texture && texture.width > 0 && texture.height > 0;
+    this.shareButtonSprite.visible = hasTexture;
+    this.shareButtonBg.visible = !hasTexture;
+    this.shareButtonText.visible = !hasTexture;
+    this.shareButtonArrow.visible = !hasTexture && this.shareButtonArrow.visible;
+    if (!hasTexture || !texture) {
+      return;
+    }
+    this.shareButtonSprite.texture = texture;
+    const targetW = 260;
+    const scale = targetW / Math.max(1, texture.width);
+    this.shareButtonSprite.scale.set(scale);
+  }
+
+  private drawShareButtonBg(enabled: boolean): void {
+    const g = this.shareButtonBg;
+    g.clear();
+    const outer = enabled ? 0x6b4b42 : 0x5f5a55;
+    const face = enabled ? 0xc9f6a6 : 0xb8b2aa;
+    const inner = enabled ? 0xe3ffc7 : 0xd2ccc4;
+    g.beginFill(0x2e2018, 0.28);
+    g.drawRoundedRect(-164, -44, 328, 76, 20);
+    g.endFill();
+    g.lineStyle(5, outer, 1);
+    g.beginFill(face);
+    g.drawRoundedRect(-168, -50, 336, 78, 18);
+    g.endFill();
+    g.lineStyle(2, 0xffffff, 0.55);
+    g.beginFill(inner, 0.7);
+    g.drawRoundedRect(-156, -42, 312, 42, 16);
+    g.endFill();
+  }
+
+  private mountRewardIcon(texture: PIXI.Texture | null, kind: ToolKind): void {
+    this.rewardIconHost.removeChildren();
+    if (texture && texture.width > 0 && texture.height > 0) {
+      const sp = new PIXI.Sprite(texture);
+      sp.anchor.set(0.5);
+      const side = 58;
+      const scale = side / Math.max(texture.width, texture.height);
+      sp.scale.set(scale);
+      this.rewardIconHost.addChild(sp);
+      return;
+    }
+    this.drawFallbackToolIcon(kind);
+  }
+
+  private drawFallbackToolIcon(kind: ToolKind): void {
+    const g = new PIXI.Graphics();
+    g.lineStyle(3, 0x2f3d40, 1);
+    g.beginFill(0xf7fbff);
+    g.drawCircle(0, 0, 20);
+    g.endFill();
+    if (kind === 'remove') {
+      g.lineStyle(5, 0x6b4b2a, 1);
+      g.moveTo(4, 8);
+      g.lineTo(22, 26);
+      g.lineStyle(0);
+      g.beginFill(0x7cc7ff);
+      g.drawRoundedRect(-18, -14, 28, 16, 6);
+      g.endFill();
+      g.beginFill(0x2f79bd);
+      for (let i = 0; i < 4; i += 1) {
+        g.drawRect(-15 + i * 6, 2, 3, 16);
+      }
+      g.endFill();
+    }
+    this.rewardIconHost.addChild(g);
   }
 
   private refreshTitleVisual(): void {

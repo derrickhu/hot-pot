@@ -26,15 +26,25 @@ import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
 import { FRUIT_MAP, type FruitId } from '@/config/fruits';
 import { getBowlLevelIndex, recordBowlBadgeUnlocked, setBowlLevelIndex } from '@/game/BowlProgress';
 import { analytics, EVENT_NAMES } from '@/analytics';
+import {
+  canClaimDailyShareToolReward,
+  claimDailyShareCleanupReward,
+  consumeTool,
+  getToolCount,
+  toolKindForIndex,
+  toolLabel,
+  type ToolKind,
+} from '@/game/ToolInventory';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
+import { createBadgeShareCard } from '@/utils/badgeShareCard';
 import {
   loadSettingsButtonTexture,
   mountSettingsButtonSprite,
   SETTINGS_BTN_TEXTURE_KEY,
 } from '@/utils/settingsButtonSprite';
-import { shareGame } from '@/utils/wechatShare';
+import { shareGame, shareGameForReward } from '@/utils/wechatShare';
 import { showGameplayRewardedAd } from '@/utils/rewardedAd';
 import { FruitItem } from '@/gameobjects/FruitItem';
 import { BowlFailSettlementOverlay } from '@/gameobjects/BowlFailSettlementOverlay';
@@ -85,6 +95,10 @@ const BOWL_TOOL_SHEET_TEXTURE = `${BOWL_IMAGES_ROOT}/bowl_tool_buttons.png`;
 const BOWL_TOOL_PANELS_TEXTURE = `${BOWL_IMAGES_ROOT}/bowl_tool_panels.png`;
 const UI_PANEL_FREE_BTN_TEXTURE = `${BOWL_IMAGES_ROOT}/ui_panel_free_btn.png`;
 const BOWL_PLATES_TEXTURE = `${BOWL_IMAGES_ROOT}/bowl_plates.png`;
+const BOWL_TOOL_REWARD_ICONS_TEXTURE_KEY = 'bowl_tool_reward_icons';
+const BOWL_TOOL_REWARD_ICONS_ASSET = `${BOWL_IMAGES_ROOT}/tool_reward_icons.png`;
+const BADGE_SHARE_REWARD_BUTTON_TEXTURE_KEY = 'badge_share_reward_button';
+const BADGE_SHARE_REWARD_BUTTON_ASSET = `${BOWL_IMAGES_ROOT}/badge_share_reward_button.png`;
 const BOWL_BADGE_UNLOCK_TITLE_TEXTURE_KEY = 'bowl_badge_unlock_title';
 const BOWL_BADGE_UNLOCK_TITLE_ASSET = `${BOWL_IMAGES_ROOT}/bowl_badge_unlock_title.png`;
 const ICE_CUBE_ID: FruitId = 'ice_cube';
@@ -414,11 +428,13 @@ export class BowlScene implements Scene {
 
   /** 底部三工具槽（预加载后可能换为雪碧条贴图） */
   private readonly toolSlots: PIXI.Container[] = [];
+  private readonly toolInventoryBadges: PIXI.Container[] = [];
+  private readonly toolInventoryBadgeTexts: PIXI.Text[] = [];
 
   /**
    * 暂存盘全满（占用 === bufferSize）时进入"紧迫态"：
    *   - 每个菜碟槽单独红色圆角描边 + 外圈柔光，整排同步「呼吸」缩放提醒
-   *   - 底部"加菜牌 / 移除"按钮自身脉冲 + 救场气泡
+   *   - 底部"加菜碟 / 移除"按钮自身脉冲 + 救场气泡
    *   - 警告音节奏重播
    * 任意一格变空立即退出。`tutorialActive` 期间一律不触发，避免抢戏。
    */
@@ -439,7 +455,7 @@ export class BowlScene implements Scene {
     anchorBaseScaleX: number;
     anchorBaseScaleY: number;
   }> = [];
-  /** 与 toolSlots 同长度；仅 0=加菜牌、1=移除 启用，2=打乱保持 null */
+  /** 与 toolSlots 同长度；仅 0=加菜碟、1=移除 启用，2=打乱保持 null */
   private readonly toolPanicHints: Array<{
     halo: PIXI.Graphics;
     bubble: PIXI.Container;
@@ -453,6 +469,15 @@ export class BowlScene implements Scene {
   private readonly toolHelpSprite = new PIXI.Sprite();
   private readonly toolHelpCloseBtn = new PIXI.Container();
   private readonly toolHelpFreeBtn = new PIXI.Sprite();
+  private readonly toolHelpInventoryBtn = new PIXI.Container();
+  private readonly toolHelpInventoryText = new PIXI.Text('', {
+    fontSize: 36,
+    fill: 0x2e5262,
+    fontWeight: '900',
+    stroke: 0xeaf8ff,
+    strokeThickness: 4,
+    lineJoin: 'round',
+  });
   /** 仅在 Shuffle 面板叠加的「冻果可解冻」补充说明（图片面板已烘焙文案，这里小字补丁） */
   private readonly toolHelpExtraNote = new PIXI.Text('', {
     fontSize: 22,
@@ -924,6 +949,10 @@ export class BowlScene implements Scene {
       const slot = new PIXI.Container();
       slot.position.set(TOOL_SLOT_XS[i], toolY);
       slot.addChild(this.createToolButtonFallback(TOOL_LABELS[i], TOOL_FALLBACK_COLORS[i]));
+      const inventoryBadge = this.createToolInventoryBadge();
+      inventoryBadge.visible = false;
+      this.toolInventoryBadges.push(inventoryBadge);
+      this.toolInventoryBadgeTexts.push(inventoryBadge.getChildAt(1) as PIXI.Text);
       slot.visible = false;
       this.toolSlots.push(slot);
       slot.eventMode = 'static';
@@ -966,6 +995,7 @@ export class BowlScene implements Scene {
       slot.on('pointerupoutside', () => {
         clearToolTimer();
       });
+      slot.addChild(inventoryBadge);
       this.container.addChild(slot);
     }
     this.container.addChild(this.tutorialOverlay);
@@ -1122,6 +1152,8 @@ export class BowlScene implements Scene {
     jobs.push(TextureCache.load('bowl_tool_panels', BOWL_TOOL_PANELS_TEXTURE));
     jobs.push(TextureCache.load('ui_panel_free_btn', UI_PANEL_FREE_BTN_TEXTURE));
     jobs.push(TextureCache.load('bowl_plates', BOWL_PLATES_TEXTURE));
+    jobs.push(TextureCache.load(BOWL_TOOL_REWARD_ICONS_TEXTURE_KEY, BOWL_TOOL_REWARD_ICONS_ASSET));
+    jobs.push(TextureCache.load(BADGE_SHARE_REWARD_BUTTON_TEXTURE_KEY, BADGE_SHARE_REWARD_BUTTON_ASSET));
     jobs.push(TextureCache.load(BOWL_BADGE_UNLOCK_TITLE_TEXTURE_KEY, BOWL_BADGE_UNLOCK_TITLE_ASSET));
     jobs.push(TextureCache.load(LEVEL_CLEAR_ACTION_ICONS_TEXTURE_KEY, LEVEL_CLEAR_ACTION_ICONS_ASSET));
     jobs.push(TextureCache.load(BOWL_UNLOCK_PANEL_TEXTURE_KEY, BOWL_UNLOCK_PANEL_ASSET));
@@ -1527,7 +1559,7 @@ export class BowlScene implements Scene {
     this.showWinOverlay();
   }
 
-  /** 雪碧条三列：左加菜牌、中移除、右打乱；失败则保留矢量兜底 */
+  /** 雪碧条三列：左加菜碟、中移除、右打乱；失败则保留矢量兜底 */
   private mountToolButtons(): void {
     const sheet = TextureCache.get('bowl_tool_sheet');
     for (let i = 0; i < 3; i += 1) {
@@ -1556,7 +1588,9 @@ export class BowlScene implements Scene {
         const r = toolButtonDisplayTarget() * 0.58;
         slot.hitArea = new PIXI.Circle(0, 8, r);
       }
+      slot.addChild(this.toolInventoryBadges[i]!);
     }
+    this.refreshToolInventoryBadges();
   }
 
   private buildToolHelpOverlay(): void {
@@ -1616,6 +1650,22 @@ export class BowlScene implements Scene {
     });
     this.toolHelpPanelRoot.addChild(this.toolHelpFreeBtn);
 
+    this.toolHelpInventoryBtn.eventMode = 'static';
+    this.toolHelpInventoryBtn.cursor = 'pointer';
+    this.toolHelpInventoryBtn.visible = false;
+    this.toolHelpInventoryBtn.on('pointertap', (e: PIXI.FederatedPointerEvent) => {
+      e.stopPropagation();
+      AudioManager.playButtonSound();
+      const toolIndex = this.pendingToolIndex;
+      if (toolIndex === null) {
+        return;
+      }
+      this.tryUseInventoryTool(toolIndex);
+    });
+    this.toolHelpInventoryText.anchor.set(0.5);
+    this.toolHelpInventoryBtn.addChild(this.createInventoryUseButtonBg(), this.toolHelpInventoryText);
+    this.toolHelpPanelRoot.addChild(this.toolHelpInventoryBtn);
+
     this.toolHelpOverlay.visible = false;
     this.toolHelpOverlay.eventMode = 'static';
     this.toolHelpOverlay.addChild(this.toolHelpPanelRoot);
@@ -1660,7 +1710,21 @@ export class BowlScene implements Scene {
     } else {
       this.toolHelpExtraNote.visible = false;
     }
-    if (freeTex) {
+    const toolKind = toolKindForIndex(panelIndex);
+    const ownedCount = getToolCount(toolKind);
+    if (ownedCount > 0) {
+      const panelHalfW = (w * sc) / 2;
+      const btnW = Math.min(Game.logicWidth * 0.76, panelHalfW * 1.6);
+      const btnH = 104;
+      const btnHalfH = btnH / 2;
+      const gap = 14;
+      this.redrawInventoryUseButtonBg(btnW, btnH);
+      this.toolHelpInventoryText.text = `使用 1/${ownedCount}`;
+      this.toolHelpInventoryBtn.position.set(0, extraNoteBottom + gap + btnHalfH);
+      this.toolHelpInventoryBtn.hitArea = new PIXI.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH);
+      this.toolHelpInventoryBtn.visible = true;
+      this.toolHelpFreeBtn.visible = false;
+    } else if (freeTex) {
       this.toolHelpFreeBtn.texture = freeTex;
       const maxBw = Game.logicWidth * 0.72;
       const targetH = Game.logicHeight * 0.13;
@@ -1670,8 +1734,10 @@ export class BowlScene implements Scene {
       const btnHalfH = (freeTex.height * bs) / 2;
       this.toolHelpFreeBtn.position.set(0, extraNoteBottom + gap + btnHalfH);
       this.toolHelpFreeBtn.visible = true;
+      this.toolHelpInventoryBtn.visible = false;
     } else {
       this.toolHelpFreeBtn.visible = false;
+      this.toolHelpInventoryBtn.visible = false;
     }
 
     this.toolHelpOverlay.visible = true;
@@ -1689,6 +1755,32 @@ export class BowlScene implements Scene {
     }
   }
 
+  private createInventoryUseButtonBg(): PIXI.Graphics {
+    const bg = new PIXI.Graphics();
+    bg.name = 'inventoryUseButtonBg';
+    return bg;
+  }
+
+  private redrawInventoryUseButtonBg(w: number, h: number): void {
+    const bg = this.toolHelpInventoryBtn.getChildByName('inventoryUseButtonBg') as PIXI.Graphics | null;
+    if (!bg) {
+      return;
+    }
+    const r = h / 2;
+    bg.clear();
+    bg.beginFill(0x5caed0, 0.28);
+    bg.drawRoundedRect(-w / 2 + 4, -h / 2 + 6, w, h, r);
+    bg.endFill();
+    bg.lineStyle(5, 0x2c5970, 1);
+    bg.beginFill(0xc9efff, 1);
+    bg.drawRoundedRect(-w / 2, -h / 2, w, h, r);
+    bg.endFill();
+    bg.lineStyle(2, 0xffffff, 0.65);
+    bg.beginFill(0xeaf8ff, 0.75);
+    bg.drawRoundedRect(-w / 2 + 12, -h / 2 + 10, w - 24, h * 0.42, h * 0.21);
+    bg.endFill();
+  }
+
   private useTool(slotIndex: number): void {
     if (!this.loaded || this.isBowlInteractionBlocked()) {
       return;
@@ -1700,6 +1792,59 @@ export class BowlScene implements Scene {
     } else {
       this.toolShuffleBowl();
     }
+  }
+
+  private tryUseInventoryTool(slotIndex: number): void {
+    if (!this.loaded || this.isBowlInteractionBlocked()) {
+      return;
+    }
+    const kind = toolKindForIndex(slotIndex);
+    const available = this.getToolAvailability(slotIndex);
+    if (!available.ok) {
+      this.toast(available.message);
+      return;
+    }
+    const result = consumeTool(kind);
+    if (!result.consumed) {
+      this.toast('道具数量不足');
+      this.showToolHelpPanel(slotIndex);
+      return;
+    }
+    analytics.track('tool_inventory_use', {
+      tool_kind: kind,
+      level_id: this.levelDef?.levelNumber,
+      count_after: result.count,
+      source: 'inventory',
+    });
+    this.hideToolHelpPanel();
+    this.useTool(slotIndex);
+    this.refreshToolInventoryBadges();
+  }
+
+  private getToolAvailability(slotIndex: number): { ok: boolean; message: string } {
+    if (slotIndex === 0) {
+      if (!this.levelDef.allowAddDish) {
+        return { ok: false, message: '本关不可用' };
+      }
+      if (this.bufferSize >= BUFFER_SLOTS_MAX) {
+        return { ok: false, message: '菜碟已满（最多7个）' };
+      }
+      return { ok: true, message: '' };
+    }
+    if (slotIndex === 1) {
+      if (!this.levelDef.allowRemove) {
+        return { ok: false, message: '本关不可用' };
+      }
+      const hasBufferFruit = this.bufferSlots.slice(0, this.bufferSize).some(Boolean);
+      if (!hasBufferFruit) {
+        return { ok: false, message: '暂存区是空的' };
+      }
+      return { ok: true, message: '' };
+    }
+    if (!this.levelDef.allowShuffle) {
+      return { ok: false, message: '本关不可用' };
+    }
+    return { ok: true, message: '' };
   }
 
   private toast(title: string): void {
@@ -2025,6 +2170,7 @@ export class BowlScene implements Scene {
     this.mountBufferStripTextures();
     this.refreshHud();
     this.fruitLayer.eventMode = 'static';
+    this.refreshToolInventoryBadges();
 
     this.queueMechanicIntrosForLevel();
     this.runNextMechanicIntroOrTutorial();
@@ -2311,14 +2457,16 @@ export class BowlScene implements Scene {
       const left = this.orderPlateCenterX[2] ?? Game.logicWidth * 0.62;
       const right = this.orderPlateCenterX[3] ?? Game.logicWidth * 0.82;
       const cx = (left + right) / 2;
-      const w = Math.abs(right - left) + ORDER_LOCK_PLATE_RADIUS * 2 + 34;
+      /** 第二关只框住后两个订单盘本体，避免把上方订单气泡也纳入高亮范围。 */
+      const plateR = ORDER_LOCK_PLATE_RADIUS * 0.82;
+      const w = Math.abs(right - left) + plateR * 2 + 14;
       this.tutorialOverlay.setHighlight({
         kind: 'rect',
         cx,
-        cy: this.orderPlateRowY,
+        cy: this.orderPlateRowY + 2,
         w,
-        h: ORDER_LOCK_PLATE_RADIUS * 2 + 32,
-        cornerR: 30,
+        h: plateR * 2 + 16,
+        cornerR: 24,
       });
     }
   }
@@ -2645,6 +2793,18 @@ export class BowlScene implements Scene {
     }
   }
 
+  private getToolRewardIconTexture(kind: ToolKind): PIXI.Texture | null {
+    const sheet = TextureCache.get(BOWL_TOOL_REWARD_ICONS_TEXTURE_KEY);
+    if (!sheet || sheet.width <= 0 || sheet.height <= 0) {
+      return null;
+    }
+    const index = kind === 'addDish' ? 0 : kind === 'remove' ? 1 : 2;
+    const cellW = Math.floor(sheet.width / 3);
+    const x = cellW * index;
+    const w = index === 2 ? sheet.width - cellW * 2 : cellW;
+    return new PIXI.Texture(sheet.baseTexture, new PIXI.Rectangle(x, 0, w, sheet.height));
+  }
+
   private releaseBufferSlotToBowl(bufIdx: number): void {
     const fruit = this.bufferSlots[bufIdx];
     if (!fruit) {
@@ -2912,6 +3072,38 @@ export class BowlScene implements Scene {
     this.badgeUnlockOverlay.show({
       badge,
       texture: TextureCache.get(`bowl_badge_${badge.levelNumber}`),
+      shareReward: {
+        toolKind: 'remove',
+        iconTexture: this.getToolRewardIconTexture('remove'),
+        buttonTexture: TextureCache.get(BADGE_SHARE_REWARD_BUTTON_TEXTURE_KEY),
+        canClaim: canClaimDailyShareToolReward(),
+        ownedCount: getToolCount('remove'),
+        onShare: async () => {
+          const cardImageUrl = await createBadgeShareCard({ badge });
+          const shareResult = await shareGameForReward({
+            title: `我刚解锁「${badge.title}」徽章！来挑战一下`,
+            imageUrl: cardImageUrl ?? undefined,
+          });
+          if (shareResult === 'unavailable') {
+            return { status: 'unavailable' };
+          }
+          if (shareResult === 'failed') {
+            return { status: 'failed' };
+          }
+          const reward = claimDailyShareCleanupReward();
+          if (!reward) {
+            return { status: 'already_claimed', count: getToolCount('remove') };
+          }
+          analytics.track('tool_reward_claim', {
+            level_id: this.levelDef?.levelNumber,
+            tool_kind: reward.kind,
+            count_after: reward.count,
+            source: 'daily_share',
+          });
+          this.refreshToolInventoryBadges();
+          return { status: 'claimed', count: reward.count };
+        },
+      },
       onClose: showLevelClear,
     });
   }
@@ -3768,6 +3960,38 @@ export class BowlScene implements Scene {
     return container;
   }
 
+  private createToolInventoryBadge(): PIXI.Container {
+    const root = new PIXI.Container();
+    root.eventMode = 'none';
+    root.position.set(38, -48);
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0xff4f43, 1);
+    bg.lineStyle(3, 0xffffff, 1);
+    bg.drawCircle(0, 0, 19);
+    bg.endFill();
+    const text = new PIXI.Text('', {
+      fontSize: 18,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x8b241e,
+      strokeThickness: 3,
+    });
+    text.anchor.set(0.5);
+    root.addChild(bg, text);
+    return root;
+  }
+
+  private refreshToolInventoryBadges(): void {
+    for (let i = 0; i < this.toolInventoryBadges.length; i += 1) {
+      const kind = toolKindForIndex(i);
+      const count = getToolCount(kind);
+      const badge = this.toolInventoryBadges[i]!;
+      const text = this.toolInventoryBadgeTexts[i]!;
+      badge.visible = count > 0;
+      text.text = count > 9 ? '9+' : String(count);
+    }
+  }
+
   private createCenterText(text: string, fontSize: number, fill: number): PIXI.Text {
     const node = new PIXI.Text(text, {
       fontSize,
@@ -3929,9 +4153,9 @@ export class BowlScene implements Scene {
     }
   }
 
-  /** 在底部加菜牌 / 移除按钮上挂"用我救场"高亮气泡，遵循本关 allowAddDish/allowRemove */
+  /** 在底部加菜碟 / 移除按钮上挂"用我救场"高亮气泡，遵循本关 allowAddDish/allowRemove */
   private mountToolPanicHints(): void {
-    const labels: Record<number, string> = { 0: '加菜牌！', 1: '点这里救场！' };
+    const labels: Record<number, string> = { 0: '加菜碟！', 1: '点这里救场！' };
     const allows: Record<number, boolean> = {
       0: !!this.levelDef?.allowAddDish && this.bufferSize < BUFFER_SLOTS_MAX,
       1: !!this.levelDef?.allowRemove,
