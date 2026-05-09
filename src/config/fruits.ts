@@ -164,7 +164,7 @@ export const FRUIT_CONFIGS: FruitConfig[] = [
   { id: 'red_date', label: '红枣', color: 0xd32f2f, asset: bowl('red_date', 1), bowlAsset2: bowl('red_date', 2) },
   { id: 'sago', label: '西米', color: 0xd7ccc8, asset: bowl('sago', 1), bowlAsset2: bowl('sago', 2) },
   { id: 'snow_fungus', label: '银耳', color: 0x8d6e63, asset: bowl('snow_fungus', 1), bowlAsset2: bowl('snow_fungus', 2) },
-  { id: 'sour_plum', label: '酸梅', color: 0x6a1b9a, asset: bowl('sour_plum', 1), bowlAsset2: bowl('sour_plum', 2) },
+  { id: 'sour_plum', label: '青梅', color: 0x8bc34a, asset: bowl('sour_plum', 1), bowlAsset2: bowl('sour_plum', 2) },
   { id: 'starfruit', label: '杨桃', color: 0xfdd835, asset: bowl('starfruit', 1), bowlAsset2: bowl('starfruit', 2) },
   { id: 'strawberry', label: '草莓', color: 0xd32f2f, asset: bowl('strawberry', 1), bowlAsset2: bowl('strawberry', 2) },
   { id: 'sweet_potato', label: '蜜红薯', color: 0xfdd835, asset: bowl('sweet_potato', 1), bowlAsset2: bowl('sweet_potato', 2) },
