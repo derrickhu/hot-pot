@@ -102,7 +102,7 @@ const BADGE_SHARE_REWARD_BUTTON_ASSET = `${BOWL_IMAGES_ROOT}/badge_share_reward_
 const BOWL_BADGE_UNLOCK_TITLE_TEXTURE_KEY = 'bowl_badge_unlock_title';
 const BOWL_BADGE_UNLOCK_TITLE_ASSET = `${BOWL_IMAGES_ROOT}/bowl_badge_unlock_title.png`;
 const ICE_CUBE_ID: FruitId = 'ice_cube';
-const NON_ORDER_FRUIT_IDS = new Set<FruitId>([ICE_CUBE_ID, 'crystal_jelly']);
+const NON_ORDER_FRUIT_IDS = new Set<FruitId>([ICE_CUBE_ID]);
 
 /**
  * 冻果倒计时（毫秒）：进入 buffer 后开始递减，归零自动解冻。
@@ -110,7 +110,9 @@ const NON_ORDER_FRUIT_IDS = new Set<FruitId>([ICE_CUBE_ID, 'crystal_jelly']);
  * 玩家可主动 Shuffle 立即解冻（顺带打乱碗），或 Remove 直接清槽位。
  */
 const FROZEN_FRUIT_THAW_MS = 30000;
-const SHUFFLE_SURFACE_REVEAL_SEC = 1.15;
+const SHUFFLE_DEPTH_SWAP_SEC = 1.15;
+const SHUFFLE_ICE_RESURFACE_SEC = 22;
+const SHUFFLE_ICE_HOLD_SUBMERGED_RATIO = 0.9;
 
 /** 菜碟暂存槽：开局数量与上限（加菜碟工具每次 +1，至多多 2 格） */
 const BUFFER_SLOTS_MAX = 7;
@@ -132,6 +134,9 @@ const FRUIT_DRIFT_MAX_X = 16;
 const FRUIT_DRIFT_MAX_Y = 11;
 const FRUIT_SURFACE_BOB_THRESHOLD = 0.86;
 const FRUIT_SUBMERGE_BOB_THRESHOLD = -0.3;
+const HIDDEN_RESERVE_REBALANCE_RATIO = 0.35;
+const HIDDEN_RESERVE_REBALANCE_MIN_VISIBLE = 36;
+const HIDDEN_RESERVE_REBALANCE_MAX_BATCH = 14;
 const BOWL_FRUIT_SCALE_MIN = 1.24;
 const BOWL_FRUIT_SCALE_MAX = 1.54;
 const BOWL_FRUIT_SIZE_MULTIPLIER: Partial<Record<FruitId, number>> = {
@@ -406,8 +411,10 @@ export class BowlScene implements Scene {
   /** 当前可用菜碟槽数 5～7 */
   private bufferSize = BUFFER_SLOTS_INITIAL;
   private driftAccumSec = 0;
-  /** Shuffle 后短暂强制所有可见水果浮到 surface 层，增强打乱反馈 */
-  private shuffleSurfaceRevealSec = 0;
+  /** Shuffle 后短暂锁住上下层互换结果，增强搅拌反馈 */
+  private shuffleDepthSwapSec = 0;
+  /** Shuffle 后让冰块先沉底，再逐步浮回上层 */
+  private shuffleIceResurfaceSec = 0;
   /** 本关仍需完成的订单数（每完成一盘 xN 订单 −1） */
   private ordersRemaining = 0;
   private totalOrdersForProgress = 0;
@@ -586,7 +593,8 @@ export class BowlScene implements Scene {
     if (driftPulse) {
       this.driftAccumSec = 0;
     }
-    this.shuffleSurfaceRevealSec = Math.max(0, this.shuffleSurfaceRevealSec - dt);
+    this.shuffleDepthSwapSec = Math.max(0, this.shuffleDepthSwapSec - dt);
+    this.shuffleIceResurfaceSec = Math.max(0, this.shuffleIceResurfaceSec - dt);
     this.updateSoupAnimation(dt);
 
     const now = Date.now();
@@ -634,13 +642,19 @@ export class BowlScene implements Scene {
         fruit.zIndex = 1_000_000;
       } else if (fruit.fruitId === ICE_CUBE_ID) {
         /**
-         * 冰块是阻挡道具：始终保留在 surface 层（不下沉到 submerged，否则被遮罩变暗失去阻挡感）。
+         * 冰块是阻挡道具：默认保留在 surface 层。
+         * Shuffle 后例外：先全部沉到 submerged，再按进度分批浮回 surface，让搅拌效果更明显。
          * zIndex 与普通水果（≈ y*10）的范围**有意交叉**，让冰块像「在汤里浮沉」：
          *   - 上档（wobble = +1）：y*10 + 3000，明显压在同位置水果之上
          *   - 下档（wobble = -1）：y*10 - 1000，低于同位置水果，会被前景水果盖住一部分
          *   - 平均：略高于同位置普通水果
          * 不同冰块 bobSeed 错相位 → 任意时刻都有冰块浮在上面、有冰块陷在水果之间。
          */
+        if (this.shuffleIceResurfaceSec > 0) {
+          this.updateShuffleIceDepth(fruit);
+          fruit.zIndex = Math.round(fruit.y * 10 - 3200 + fruit.depthJitter * 300);
+          continue;
+        }
         if (fruit.parent !== this.surfaceFruitLayer) {
           const world = fruit.toGlobal(new PIXI.Point(0, 0));
           fruit.position.copyFrom(this.surfaceFruitLayer.toLocal(world));
@@ -649,16 +663,12 @@ export class BowlScene implements Scene {
         }
         const iceWobble = Math.sin(now * 0.0006 + fruit.bobSeed * 1.7);
         fruit.zIndex = Math.round(fruit.y * 10 + 1000 + iceWobble * 2000);
-      } else if (this.shuffleSurfaceRevealSec > 0) {
-        /** Shuffle 反馈：所有可见水果短暂浮到 surface 层，再交还给常规汤面沉浮 */
-        if (fruit.parent !== this.surfaceFruitLayer) {
-          const world = fruit.toGlobal(new PIXI.Point(0, 0));
-          fruit.position.copyFrom(this.surfaceFruitLayer.toLocal(world));
-          this.surfaceFruitLayer.addChild(fruit);
-          this.applyFruitSoupVisual(fruit);
-        }
-        const revealRatio = this.shuffleSurfaceRevealSec / SHUFFLE_SURFACE_REVEAL_SEC;
-        fruit.zIndex = Math.round(fruit.y * 10 + fruit.depthJitter * 1000 + revealRatio * 800);
+      } else if (this.shuffleDepthSwapSec > 0) {
+        /** Shuffle 反馈：短暂锁住「上层/下层互换」的结果，再交还给常规汤面沉浮 */
+        this.applyFruitSoupVisual(fruit);
+        const swapRatio = this.shuffleDepthSwapSec / SHUFFLE_DEPTH_SWAP_SEC;
+        const layerBias = fruit.parent === this.surfaceFruitLayer ? 900 : -900;
+        fruit.zIndex = Math.round(fruit.y * 10 + fruit.depthJitter * 1000 + layerBias * swapRatio);
       } else {
         this.updateFruitSoupDepth(fruit, bob);
         fruit.zIndex = Math.round(fruit.y * 10 + fruit.depthJitter * 1000);
@@ -1782,7 +1792,13 @@ export class BowlScene implements Scene {
   }
 
   private useTool(slotIndex: number): void {
-    if (!this.loaded || this.isBowlInteractionBlocked()) {
+    if (!this.loaded) {
+      return;
+    }
+    if (this.toolHelpOverlay.visible) {
+      this.hideToolHelpPanel();
+    }
+    if (this.isBowlInteractionBlocked()) {
       return;
     }
     if (slotIndex === 0) {
@@ -1864,6 +1880,7 @@ export class BowlScene implements Scene {
         levelId: this.levelDef?.levelNumber,
       });
       if (result === 'completed' || result === 'unavailable') {
+        this.hideToolHelpPanel();
         action();
       } else if (result === 'skipped') {
         this.toast('看完广告后才能使用');
@@ -1958,14 +1975,15 @@ export class BowlScene implements Scene {
     Game.ticker.add(ticker);
   }
 
-  /** 打乱：先解冻 buffer 内冻果，再随机换位碗内水果 */
+  /** 打乱：先解冻所有冻果，再随机换位并交换上下层 */
   private toolShuffleBowl(): void {
     if (!this.levelDef.allowShuffle) {
       this.toast('本关不可用');
       return;
     }
-    this.unfreezeAllBufferFrozen();
-    this.shuffleSurfaceRevealSec = SHUFFLE_SURFACE_REVEAL_SEC;
+    this.unfreezeAllFrozenFruits();
+    this.shuffleDepthSwapSec = SHUFFLE_DEPTH_SWAP_SEC;
+    this.shuffleIceResurfaceSec = SHUFFLE_ICE_RESURFACE_SEC;
     for (const fruit of this.fruits) {
       if (fruit.phase !== 'bowl' || fruit.picked || fruit.hiddenReserve) {
         continue;
@@ -1974,6 +1992,13 @@ export class BowlScene implements Scene {
       fruit.position.set(p.x, p.y);
       fruit.velocityX = this.randomInRange(-14, 14);
       fruit.velocityY = this.randomInRange(-9, 9);
+      if (fruit.fruitId === ICE_CUBE_ID) {
+        this.moveFruitToSoupLayer(fruit, this.submergedFruitLayer);
+      } else if (fruit.parent === this.surfaceFruitLayer) {
+        this.moveFruitToSoupLayer(fruit, this.submergedFruitLayer);
+      } else if (fruit.parent === this.submergedFruitLayer) {
+        this.moveFruitToSoupLayer(fruit, this.surfaceFruitLayer);
+      }
     }
   }
 
@@ -2059,15 +2084,21 @@ export class BowlScene implements Scene {
   }
 
   /**
-   * 解冻 buffer 槽内所有冻果：清除 frozen 标记并隐藏冰块层，随后立即触发一次
-   * tryConsumeOrderFromBuffer，让解冻后的水果按常规规则匹配订单飞盘。
+   * 解冻本关所有冻果：暂存碟与碗内冻果都清除 frozen 标记并隐藏冰块层。
+   * 随后立即触发一次 tryConsumeOrderFromBuffer，让解冻后的暂存水果按常规规则匹配订单飞盘。
    */
-  private unfreezeAllBufferFrozen(): void {
+  private unfreezeAllFrozenFruits(): void {
     let any = false;
     for (let i = 0; i < this.bufferSize; i += 1) {
       const slot = this.bufferSlots[i];
       if (slot && slot.frozen) {
         slot.setFrozen(false);
+        any = true;
+      }
+    }
+    for (const fruit of this.fruits) {
+      if (fruit.frozen) {
+        fruit.setFrozen(false);
         any = true;
       }
     }
@@ -2092,7 +2123,8 @@ export class BowlScene implements Scene {
     this.pendingBufferSlotIndexes.clear();
     this.pendingOrderPlateCounts = [0, 0, 0, 0];
     this.driftAccumSec = 0;
-    this.shuffleSurfaceRevealSec = 0;
+    this.shuffleDepthSwapSec = 0;
+    this.shuffleIceResurfaceSec = 0;
 
     for (const anchor of this.bufferSlotAnchors) {
       anchor.removeChildren();
@@ -2882,6 +2914,7 @@ export class BowlScene implements Scene {
       this.assignOrderToPlate(plateIdx);
       this.revealHiddenReserveForActiveOrders();
       this.revealHiddenReserveBatch(this.levelDef.revealPerOrderComplete ?? 0);
+      this.rebalanceHiddenReserveVisibility();
       this.renderOrders();
       this.refreshHud();
       this.checkLevelClear();
@@ -3350,6 +3383,7 @@ export class BowlScene implements Scene {
     fruit.destroy({ children: true });
     this.renderOrders();
     this.refreshHud();
+    this.rebalanceHiddenReserveVisibility();
 
     const order = this.parallelOrders[plateIdx];
     /** 先让引导决定下一步（结束 or 指下一颗），再走通用补盘 / 关卡判定 */
@@ -3667,6 +3701,21 @@ export class BowlScene implements Scene {
     return Math.sin(Date.now() * FRUIT_BOB_SPEED + fruit.bobSeed) < FRUIT_SURFACE_BOB_THRESHOLD;
   }
 
+  private moveFruitToSoupLayer(fruit: FruitItem, target: PIXI.Container): void {
+    if (fruit.parent === target) {
+      this.applyFruitSoupVisual(fruit);
+      return;
+    }
+    const parent = fruit.parent;
+    if (parent) {
+      const world = parent.toGlobal(new PIXI.Point(fruit.x, fruit.y));
+      parent.removeChild(fruit);
+      fruit.position.copyFrom(target.toLocal(world));
+    }
+    target.addChild(fruit);
+    this.applyFruitSoupVisual(fruit);
+  }
+
   private mountFruitInBowlLayer(fruit: FruitItem, rerollDepth = false): void {
     if (rerollDepth) {
       fruit.bobSeed = Math.random() * Math.PI * 2;
@@ -3674,6 +3723,13 @@ export class BowlScene implements Scene {
     const target = this.shouldSubmergeFruit(fruit) ? this.submergedFruitLayer : this.surfaceFruitLayer;
     target.addChild(fruit);
     this.applyFruitSoupVisual(fruit);
+  }
+
+  private updateShuffleIceDepth(fruit: FruitItem): void {
+    const progress = 1 - this.shuffleIceResurfaceSec / SHUFFLE_ICE_RESURFACE_SEC;
+    const stagger = ((Math.sin(fruit.bobSeed * 1.37) + 1) / 2) * 0.42;
+    const shouldFloat = progress >= SHUFFLE_ICE_HOLD_SUBMERGED_RATIO + stagger;
+    this.moveFruitToSoupLayer(fruit, shouldFloat ? this.surfaceFruitLayer : this.submergedFruitLayer);
   }
 
   private updateFruitSoupDepth(fruit: FruitItem, bob: number): void {
@@ -3782,6 +3838,47 @@ export class BowlScene implements Scene {
     batch.forEach((fruit, index) => {
       this.revealHiddenReserveFruit(fruit, index);
     });
+  }
+
+  private countVisibleOrderPiecesInBowl(): number {
+    let count = 0;
+    for (const fruit of this.fruits) {
+      if (
+        fruit.phase === 'bowl' &&
+        !fruit.picked &&
+        !fruit.hiddenReserve &&
+        !NON_ORDER_FRUIT_IDS.has(fruit.fruitId)
+      ) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private rebalanceHiddenReserveVisibility(): void {
+    if (this.hiddenReserveFruits.length === 0) {
+      return;
+    }
+    const remainingOrderPieces = this.totalRemainingInLevel();
+    if (remainingOrderPieces <= 0) {
+      return;
+    }
+    const visibleOrderPieces = this.countVisibleOrderPiecesInBowl();
+    const targetVisible = Math.min(
+      remainingOrderPieces,
+      Math.max(
+        HIDDEN_RESERVE_REBALANCE_MIN_VISIBLE,
+        Math.ceil(remainingOrderPieces * HIDDEN_RESERVE_REBALANCE_RATIO),
+      ),
+    );
+    const need = Math.min(
+      HIDDEN_RESERVE_REBALANCE_MAX_BATCH,
+      targetVisible - visibleOrderPieces,
+    );
+    if (need <= 0) {
+      return;
+    }
+    this.revealHiddenReserveBatch(need);
   }
 
   private revealHiddenReserveFruit(fruit: FruitItem, scatterIndex = 0): void {
