@@ -119,6 +119,20 @@ const POST_15_BASE_POOL = [
 ] as const satisfies readonly FruitId[];
 
 const POST_15_RECENT_GROUP_WINDOW = 8;
+const POST_15_FIRST_LEVEL = 16;
+const POST_15_START_ORDER_COUNT = 80;
+const POST_15_ORDER_INCREMENT = 2;
+const POST_15_COPIES_PER_FRUIT = 6;
+
+function uniqueFruitIds(ids: readonly FruitId[]): FruitId[] {
+  return Array.from(new Set<FruitId>(ids));
+}
+
+function post15TargetFoodCount(levelNumber: number): number {
+  const orderCount =
+    POST_15_START_ORDER_COUNT + (levelNumber - POST_15_FIRST_LEVEL) * POST_15_ORDER_INCREMENT;
+  return Math.ceil((orderCount * 3) / POST_15_COPIES_PER_FRUIT);
+}
 
 /**
  * 累积式：第 N 关订单池 = UNLOCK_GROUPS[0..N-1] 全部并集（去重）。
@@ -127,15 +141,15 @@ const POST_15_RECENT_GROUP_WINDOW = 8;
 function levelFruits(levelNumber: number): FruitId[] {
   const idx = Math.max(0, Math.min(levelNumber - 1, UNLOCK_GROUPS.length - 1));
   if (idx < 15) {
-    return Array.from(new Set<FruitId>(UNLOCK_GROUPS.slice(0, idx + 1).flat()));
+    return uniqueFruitIds(UNLOCK_GROUPS.slice(0, idx + 1).flat());
   }
   const recentStart = Math.max(15, idx - POST_15_RECENT_GROUP_WINDOW + 1);
-  return Array.from(
-    new Set<FruitId>([
-      ...POST_15_BASE_POOL,
-      ...UNLOCK_GROUPS.slice(recentStart, idx + 1).flat(),
-    ]),
-  );
+  const targetFoodCount = post15TargetFoodCount(levelNumber);
+  return uniqueFruitIds([
+    ...UNLOCK_GROUPS.slice(recentStart, idx + 1).flat(),
+    ...POST_15_BASE_POOL,
+    ...UNLOCK_GROUPS.slice(0, recentStart).flat(),
+  ]).slice(0, targetFoodCount);
 }
 
 /**
@@ -152,9 +166,9 @@ function levelFruits(levelNumber: number): FruitId[] {
  *   A 段 教学（L1-2）           — 零障碍上手；L2 起 8 种水果让选择压力出现
  *   B 段 习惯养成（L3-7）       — L3 一上来 12 种 + 48 单位 + 4 颗冰 + 72 颗满碗；必用 1 道具/关
  *   C 段 中阶（L8-13）          — 25-35 种水果，冰 8→11、冻果 3→5，碗内 110-125 颗高密度
- *   D 段 高阶（L14-30）         — buffer 收紧 4 格 + 大量冰冻果 + 130-175 颗碗满，30 关末 53 单位
+ *   D 段 高阶（L14-30）         — buffer 收紧 4 格 + 冰冻果增压；L16+ 每关约 +2 单
  *
- * 总订单单位 (`ordersRemaining`)：L1=4 → L3=48 → L10=87 → L18=32 → L30=53
+ * 总订单单位 (`ordersRemaining`)：L1=4 → L3=48 → L10=87 → L15=78 → L16=80 → L30=108
  * `bufferSize`：L1-L10 全 5 格保新手手感；L11+ 起收紧为 4 格，与水果种类峰值同步加压。
  * `initialVisibleCount`：L1=14、L2=32、L3=72，从 L3 起碗内堆出明显视觉压力；
  *   `revealPerOrderComplete` 与 `parallelPlateCount × orderTarget`（=6/盘）持平，
@@ -370,7 +384,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 16,
     displayName: '第16关 十五星上席',
     fruitIds: levelFruits(16),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 13,
@@ -384,7 +398,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 17,
     displayName: '第17关 十五星收束',
     fruitIds: levelFruits(17),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 13,
@@ -398,7 +412,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 18,
     displayName: '第18关 杂味圆舞',
     fruitIds: levelFruits(18),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 14,
@@ -412,7 +426,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 19,
     displayName: '第19关 薄冰试炼',
     fruitIds: levelFruits(19),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 14,
@@ -426,7 +440,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 20,
     displayName: '第20关 四味重奏',
     fruitIds: levelFruits(20),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 15,
@@ -440,7 +454,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 21,
     displayName: '第21关 果阵初章',
     fruitIds: levelFruits(21),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 15,
@@ -454,7 +468,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 22,
     displayName: '第22关 果阵回环',
     fruitIds: levelFruits(22),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 16,
@@ -468,7 +482,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 23,
     displayName: '第23关 滋补雅集',
     fruitIds: levelFruits(23),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 16,
@@ -482,7 +496,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 24,
     displayName: '第24关 小料满仓',
     fruitIds: levelFruits(24),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 17,
@@ -496,7 +510,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 25,
     displayName: '第25关 重味温习',
     fruitIds: levelFruits(25),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 17,
@@ -510,7 +524,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 26,
     displayName: '第26关 果阵再开',
     fruitIds: levelFruits(26),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 18,
@@ -524,7 +538,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 27,
     displayName: '第27关 滋补再炖',
     fruitIds: levelFruits(27),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 18,
@@ -538,7 +552,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 28,
     displayName: '第28关 小料再添',
     fruitIds: levelFruits(28),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 19,
@@ -552,7 +566,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 29,
     displayName: '第29关 廿星连珠',
     fruitIds: levelFruits(29),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 19,
@@ -566,7 +580,7 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 30,
     displayName: '第30关 廿四终宴',
     fruitIds: levelFruits(30),
-    copiesPerFruit: 6,
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
     bufferSize: 4,
     iceCount: 20,
