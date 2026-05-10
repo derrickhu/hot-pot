@@ -763,11 +763,8 @@ export class BowlScene implements Scene {
       letterSpacing: 1.2,
       stroke: 0x4b2e19,
       strokeThickness: 3,
-      dropShadow: true,
-      dropShadowColor: 0x2b1a12,
-      dropShadowAlpha: 0.35,
-      dropShadowBlur: 2,
-      dropShadowDistance: 2,
+      // 真机 Canvas 对 PIXI.Text 阴影合成不稳定，容易把按钮文字染出黑边。
+      dropShadow: false,
     });
     levelText.anchor.set(0.5);
     this.container.addChild(levelText);
@@ -1030,7 +1027,6 @@ export class BowlScene implements Scene {
     this.paintSceneTheme(this.currentTheme);
     this.hudLevelText.style.fill = this.currentTheme.hudText;
     this.hudLevelText.style.stroke = this.currentTheme.hudOuter;
-    this.hudLevelText.style.dropShadowColor = this.currentTheme.hudOuter;
     this.hudRemainderText.style.fill = this.currentTheme.hudText;
   }
 
