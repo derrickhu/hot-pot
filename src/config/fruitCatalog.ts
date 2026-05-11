@@ -31,7 +31,7 @@ function catalogAssetCandidates(fruit: FruitConfig): string[] {
   return out;
 }
 
-function getUnlockedFruitIds(): Set<FruitId> {
+export function getUnlockedFruitIds(): Set<FruitId> {
   const maxLevel = Math.max(0, Math.min(getMaxUnlockedBowlLevelIndex(), BOWL_LEVELS.length - 1));
   const unlocked = new Set<FruitId>();
   for (let i = 0; i <= maxLevel; i += 1) {

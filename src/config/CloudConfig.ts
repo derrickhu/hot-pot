@@ -16,6 +16,7 @@ export const BACKEND_ANON_ID_KEY = `${GAME_KEY}_anon_id`;
 
 export const BOWL_PROGRESS_KEY = `${GAME_KEY}_bowl_progress`;
 export const USER_SETTINGS_KEY = `${GAME_KEY}_settings`;
+export const FRUIT_SLICE_PROGRESS_KEY = `${GAME_KEY}_fruit_slice_progress`;
 
 export const CLOUD_SYNC_SCHEMA_VERSION = 1;
 export const CLOUD_SYNC_META_KEY = `${GAME_KEY}_cloud_meta`;
@@ -23,6 +24,7 @@ export const CLOUD_SYNC_META_KEY = `${GAME_KEY}_cloud_meta`;
 export const CLOUD_SYNC_ALLOWLIST = [
   BOWL_PROGRESS_KEY,
   USER_SETTINGS_KEY,
+  FRUIT_SLICE_PROGRESS_KEY,
 ] as const;
 
 export const CLOUD_SYNC_EXCLUDE_KEYS = [

@@ -107,7 +107,7 @@ export function setupWechatShare(): void {
 
   api.showShareMenu?.({
     withShareTicket: true,
-    menus: ['shareAppMessage'],
+    menus: ['shareAppMessage', 'shareTimeline'],
   });
   api.onShareAppMessage?.((res) => {
     const payload = buildSharePayload();
@@ -117,14 +117,19 @@ export function setupWechatShare(): void {
     trackShareAppMessage(payload, entryPoint);
     return payload;
   });
+  api.onShareTimeline?.(() => {
+    const payload = buildSharePayload();
+    trackShareAppMessage(payload, 'wx_timeline');
+    return payload;
+  });
 }
 
-export function shareGame(): boolean {
+export function shareGame(options: SharePayloadOptions = {}): boolean {
   const api = typeof wx !== 'undefined' ? wx : null;
   if (!api?.shareAppMessage) {
     return false;
   }
-  const payload = buildSharePayload();
+  const payload = buildSharePayload(options);
   trackShareAppMessage(payload, 'api_share_game');
   api.shareAppMessage(payload);
   return true;

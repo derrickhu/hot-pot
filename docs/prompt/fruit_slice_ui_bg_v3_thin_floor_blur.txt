@@ -1,0 +1,10 @@
+Generate ONLY a vertical 9:16 mobile game background illustration. No UI, no characters, no fruits, no text, no watermark, no phone frame.
+
+Composition (top to bottom, exact height budgets on canvas):
+- Top 42%: bright cheerful summer sky, soft clean gradient light cyan to sky blue, a few fluffy rounded white cartoon clouds with gentle shading.
+- Middle 48%: heavily blurred distant horizon band (strong bokeh / gaussian blur look): pale turquoise calm sea meeting pale sandy beach, very soft silhouettes of light blue-gray summer buildings far away, one extremely soft out-of-focus beach umbrella hint on the right edge only. Everything in this band must read as OUT OF FOCUS background depth, low contrast, no sharp edges, no readable windows.
+- Bottom 10–14% ONLY: a very thin soft grounding strip: pale warm beige / sand / barely-there honey tone blending upward into the blurred sea and sky colors. It must NOT be a tall wooden tabletop, NOT prominent wood grain planks, NOT a large cutting-board surface. If any wood suggestion exists, keep it extremely subtle, low saturation, and blurred so it feels like distant warm haze, not furniture.
+
+Style: cute clean 2D mobile casual vector-like painting, smooth gradients, friendly summer vacation mood, single coherent image.
+
+Strict negatives: no large brown wooden floor occupying more than 15% of height, no strong horizontal wood plank texture dominating the lower third, no dark walnut table, no props, no railings, no fruits.

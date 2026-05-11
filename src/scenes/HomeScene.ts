@@ -8,18 +8,34 @@ import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
 import { TextureCache } from '@/utils/TextureCache';
 
-/** 底栏雪碧图：左图鉴、右果切（进包路径；未放入时回退矢量） */
-const HOME_FOOTER_SHEET = 'assets/images/home_footer_buttons.png';
-/** 首页主按钮：绿色无字药丸 + 边饰（关卡标题由程序叠在下方） */
+/** 首页图鉴入口：独立图标，不带按钮底框 */
+const HOME_CATALOG_ICON_TEXTURE = 'assets/images/home_catalog_icon.png';
+/** 主按钮：绿色无字药丸 + 边饰（关卡标题由程序叠字） */
 const HOME_PLAY_BTN_TEXTURE = 'assets/images/home_play_btn.png';
+/** 果切挑战：与关卡按钮同构药丸、暖色；文字与图标已烘焙在贴图内 */
+const HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE = 'assets/images/home_fruit_slice_challenge_btn.png';
 /** 游戏字标「别捞水果」 */
 const HOME_LOGO_TITLE_TEXTURE = 'assets/images/game_logo_title.png';
 /** 游戏圈入口：靠底但仍需足够对比与点击区域（与微信原生按钮同尺寸基准） */
 const GAME_CLUB_LOGIC_RECT = { width: 140, height: 50 } as const;
 
-/** 底侧「图鉴 / 果切」贴图较长边目标尺寸（与主按钮区拉开、略放大） */
-function homeFooterDisplayTarget(): number {
-  return Math.round(Game.logicWidth * 0.2);
+/** 关卡药丸贴图目标逻辑宽度（与历史实现一致） */
+function homePlayEntryTargetWidth(): number {
+  return Math.min(480, Game.logicWidth * 0.62);
+}
+
+/**
+ * 果切药丸是副玩法入口，需明显小于主关卡药丸（贴图缩放、布局、兜底矢量共用）。
+ */
+const HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE = 0.68;
+
+function homeFruitSliceEntryTargetWidth(): number {
+  return homePlayEntryTargetWidth() * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE;
+}
+
+/** 右侧图鉴图标较长边目标尺寸，保持醒目但弱于主按钮。 */
+function homeCatalogIconDisplayTarget(): number {
+  return Math.round(Math.min(96, Math.max(76, Game.logicWidth * 0.13)));
 }
 
 /** 主页：夏日底图 + 进入关卡 */
@@ -34,6 +50,11 @@ export class HomeScene implements Scene {
   private playEntryBg!: PIXI.Graphics;
   private playEntryTitle!: PIXI.Text;
   private playEntrySprite: PIXI.Sprite | null = null;
+  /** 果切无尽：暖色药丸贴图（字与图标在贴图内；无贴图时程序叠字兜底） */
+  private readonly fruitSliceEntryRoot = new PIXI.Container();
+  private fruitSliceEntryBg!: PIXI.Graphics;
+  private fruitSliceEntryTitle!: PIXI.Text;
+  private fruitSliceEntrySprite: PIXI.Sprite | null = null;
   /** 顶栏与主按钮之间的 Logo 区（有贴图再显示） */
   private readonly homeLogoRoot = new PIXI.Container();
   private readonly homeLogoSprite = new PIXI.Sprite();
@@ -44,6 +65,7 @@ export class HomeScene implements Scene {
   private readonly gameClubFallbackRoot = new PIXI.Container();
   private gameClubButton: ReturnType<NonNullable<typeof wx.createGameClubButton>> | null = null;
   private enteringBowl = false;
+  private enteringFruitSlice = false;
 
   constructor() {
     this.settingsOverlay = new SettingsPauseOverlay(Game.logicWidth, Game.logicHeight, {
@@ -55,11 +77,12 @@ export class HomeScene implements Scene {
     });
     this.build();
     void this.loadHomeBackdrop(Game.logicWidth, Game.logicHeight);
-    void this.loadHomeFooterSheet();
+    void this.loadHomeCatalogIcon();
   }
 
   onEnter(): void {
     this.refreshPlayEntryTitle();
+    this.layoutHomeMainColumn();
     this.bringGameClubAboveHomeUi();
     this.syncGameClubNativeButton();
     setTimeout(() => this.syncGameClubNativeButton(), 0);
@@ -89,12 +112,15 @@ export class HomeScene implements Scene {
     await Promise.all([
       TextureCache.load('__home_bg', 'assets/images/home_bg_summer.jpg'),
       TextureCache.load('home_play_btn', HOME_PLAY_BTN_TEXTURE),
+      TextureCache.load('home_fruit_slice_challenge_btn', HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE),
       TextureCache.load('game_logo_title', HOME_LOGO_TITLE_TEXTURE),
     ]);
     const tex = TextureCache.get('__home_bg');
     if (!tex) {
       this.applyPlayEntryArt();
+      this.applyFruitSliceEntryArt();
       this.applyHomeLogoTitle();
+      this.layoutHomeMainColumn();
       this.bringGameClubAboveHomeUi();
       return;
     }
@@ -105,7 +131,9 @@ export class HomeScene implements Scene {
     this.container.removeChild(this.bgFill);
     this.container.removeChild(this.gradFill);
     this.applyPlayEntryArt();
+    this.applyFruitSliceEntryArt();
     this.applyHomeLogoTitle();
+    this.layoutHomeMainColumn();
     this.bringGameClubAboveHomeUi();
   }
 
@@ -129,9 +157,7 @@ export class HomeScene implements Scene {
       this.playEntryTitle.style.fill = 0xfff4c2;
       this.playEntryTitle.style.stroke = 0x5a2a19;
       this.playEntryTitle.style.strokeThickness = 6;
-      this.playEntryTitle.style.dropShadowColor = 0x3d2818;
-      this.playEntryTitle.style.dropShadowBlur = 3;
-      this.playEntryTitle.style.dropShadowDistance = 2;
+      this.playEntryTitle.style.dropShadow = false;
       this.playEntryTitle.position.set(0, 0);
       this.playEntryRoot.hitArea = new PIXI.Rectangle(-220, -52, 440, 104);
       return;
@@ -139,9 +165,7 @@ export class HomeScene implements Scene {
     this.playEntryTitle.style.fill = 0xfff4c2;
     this.playEntryTitle.style.stroke = 0x1b5965;
     this.playEntryTitle.style.strokeThickness = 6;
-    this.playEntryTitle.style.dropShadowColor = 0xffffff;
-    this.playEntryTitle.style.dropShadowBlur = 4;
-    this.playEntryTitle.style.dropShadowDistance = 0;
+    this.playEntryTitle.style.dropShadow = false;
     if (this.playEntryBg.parent) {
       this.playEntryRoot.removeChild(this.playEntryBg);
     }
@@ -151,7 +175,7 @@ export class HomeScene implements Scene {
       this.playEntryRoot.addChildAt(this.playEntrySprite, 0);
     }
     this.playEntrySprite.texture = tex;
-    const targetW = Math.min(480, Game.logicWidth * 0.62);
+    const targetW = homePlayEntryTargetWidth();
     const s = targetW / tex.width;
     this.playEntrySprite.scale.set(s);
     const halfH = (tex.height * s) / 2;
@@ -167,37 +191,130 @@ export class HomeScene implements Scene {
     );
   }
 
-  /** 两列雪碧：图鉴 | 果切；无贴图时保持 build 中的兜底 */
-  private async loadHomeFooterSheet(): Promise<void> {
-    await TextureCache.load('home_footer_sheet', HOME_FOOTER_SHEET);
-    const sheet = TextureCache.get('home_footer_sheet');
-    for (let i = 0; i < 2; i += 1) {
+  /** 果切挑战：有贴图则仅显示贴图；无贴图时矢量底 + 程序叠字兜底 */
+  private applyFruitSliceEntryArt(): void {
+    const tex = TextureCache.get('home_fruit_slice_challenge_btn');
+    if (!tex) {
+      this.fruitSliceEntryTitle.visible = true;
+      this.fruitSliceEntryTitle.style.fill = 0xfff4c2;
+      this.fruitSliceEntryTitle.style.stroke = 0x5a2a19;
+      this.fruitSliceEntryTitle.style.strokeThickness = 6;
+      this.fruitSliceEntryTitle.style.dropShadow = false;
+      this.fruitSliceEntryTitle.position.set(0, -3);
+      const hw = Math.round(220 * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE);
+      const hh = Math.round(52 * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE);
+      this.fruitSliceEntryRoot.hitArea = new PIXI.Rectangle(-hw, -hh, hw * 2, hh * 2);
+      return;
+    }
+    /** 贴图已含「果切挑战」与图标，避免与程序文字叠影 */
+    this.fruitSliceEntryTitle.visible = false;
+    if (this.fruitSliceEntryBg.parent) {
+      this.fruitSliceEntryRoot.removeChild(this.fruitSliceEntryBg);
+    }
+    if (!this.fruitSliceEntrySprite) {
+      this.fruitSliceEntrySprite = new PIXI.Sprite();
+      this.fruitSliceEntrySprite.anchor.set(0.5);
+      this.fruitSliceEntryRoot.addChildAt(this.fruitSliceEntrySprite, 0);
+    }
+    this.fruitSliceEntrySprite.texture = tex;
+    const targetW = homeFruitSliceEntryTargetWidth();
+    const s = targetW / tex.width;
+    this.fruitSliceEntrySprite.scale.set(s);
+    const halfH = (tex.height * s) / 2;
+    const hitPadX = 20;
+    const hitPadY = 14;
+    this.fruitSliceEntryRoot.hitArea = new PIXI.Rectangle(
+      -targetW / 2 - hitPadX,
+      -halfH - hitPadY,
+      targetW + hitPadX * 2,
+      halfH * 2 + hitPadY * 2,
+    );
+  }
+
+  /** 主按钮柱（关卡 + 果切）与底栏图鉴、游戏圈纵向位置 */
+  private layoutHomeMainColumn(): void {
+    const W = Game.logicWidth;
+    const H = Game.logicHeight;
+    const top = Game.safeTop;
+    const contentTop = top + 8;
+    const bottomBarTop = H - 100;
+    const playY = contentTop + (bottomBarTop - contentTop) * 0.5;
+
+    let playHalf = 52;
+    if (
+      this.playEntrySprite?.texture
+      && this.playEntrySprite.texture !== PIXI.Texture.EMPTY
+      && this.playEntrySprite.texture.width > 2
+    ) {
+      const tw = this.playEntrySprite.texture.width;
+      const targetW = homePlayEntryTargetWidth();
+      const s = targetW / tw;
+      playHalf = (this.playEntrySprite.texture.height * s) / 2;
+    } else if (this.playEntryBg.parent) {
+      playHalf = 52;
+    }
+
+    let fruitHalf = 52;
+    if (
+      this.fruitSliceEntrySprite?.texture
+      && this.fruitSliceEntrySprite.texture !== PIXI.Texture.EMPTY
+      && this.fruitSliceEntrySprite.texture.width > 2
+    ) {
+      const tw = this.fruitSliceEntrySprite.texture.width;
+      const targetW = homeFruitSliceEntryTargetWidth();
+      const s = targetW / tw;
+      fruitHalf = (this.fruitSliceEntrySprite.texture.height * s) / 2;
+    } else if (this.fruitSliceEntryBg.parent) {
+      fruitHalf = 52;
+    }
+
+    const gap = 16;
+    this.playEntryRoot.position.set(W / 2, playY);
+    const fruitY = playY + playHalf + gap + fruitHalf;
+    this.fruitSliceEntryRoot.position.set(W / 2, fruitY);
+
+    const bookSlot = this.homeFooterSlots[0];
+    if (bookSlot) {
+      const playW = homePlayEntryTargetWidth();
+      const iconTarget = homeCatalogIconDisplayTarget();
+      const iconX = Math.min(W - iconTarget * 0.56 - 12, W / 2 + playW / 2 + iconTarget * 0.58);
+      bookSlot.position.set(Math.round(iconX), playY - 2);
+      const gameClubY = Math.min(H - 48, Math.max(fruitY + fruitHalf + 72, H - 76));
+      this.gameClubFallbackRoot.position.set(Math.round(W * 0.5), gameClubY);
+    }
+  }
+
+  /** 图鉴入口：独立图标；无贴图时保持 build 中的兜底 */
+  private async loadHomeCatalogIcon(): Promise<void> {
+    await TextureCache.load('home_catalog_icon', HOME_CATALOG_ICON_TEXTURE);
+    const tex = TextureCache.get('home_catalog_icon');
+    for (let i = 0; i < this.homeFooterSlots.length; i += 1) {
       const slot = this.homeFooterSlots[i];
+      if (!slot) {
+        continue;
+      }
       slot.removeChildren();
-      if (sheet) {
-        const colW = Math.floor(sheet.width / 2);
-        const x0 = i * colW;
-        const w = i === 1 ? sheet.width - colW : colW;
-        const rect = new PIXI.Rectangle(x0, 0, w, sheet.height);
-        const sub = new PIXI.Texture(sheet.baseTexture, rect);
-        const sp = new PIXI.Sprite(sub);
+      if (tex) {
+        const sp = new PIXI.Sprite(tex);
         sp.anchor.set(0.5);
-        const target = homeFooterDisplayTarget();
-        const sc = target / Math.max(w, sheet.height);
+        const target = homeCatalogIconDisplayTarget();
+        const sc = target / Math.max(tex.width, tex.height);
         sp.scale.set(sc);
+        sp.position.set(0, -8);
         slot.addChild(sp);
-        const dw = w * sc;
-        const dh = sheet.height * sc;
-        slot.hitArea = new PIXI.Rectangle(-dw / 2, -dh / 2, dw, dh);
+        const dw = tex.width * sc;
+        const dh = tex.height * sc;
+        const label = this.createCatalogIconLabel();
+        label.position.set(0, dh / 2 + 8);
+        slot.addChild(label);
+        slot.hitArea = new PIXI.Rectangle(-dw / 2 - 12, -dh / 2 - 20, dw + 24, dh + 48);
       } else {
-        const fb =
-          i === 0
-            ? this.createHomeFooterFallback('图鉴', '📖')
-            : this.createHomeFooterFallback('果切', '🍉');
+        const fb = this.createHomeFooterFallback('图鉴', '📖');
         slot.addChild(fb);
         slot.hitArea = new PIXI.Rectangle(-75, -50, 150, 100);
       }
     }
+    this.layoutHomeMainColumn();
   }
 
   private build(): void {
@@ -220,6 +337,9 @@ export class HomeScene implements Scene {
     const bottomBarTop = H - 100;
     const btnW = 440;
     const btnH = 104;
+    const fruitBtnW = Math.round(btnW * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE);
+    const fruitBtnH = Math.round(btnH * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE);
+    const fruitBtnR = Math.max(18, Math.round(30 * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE));
     const playY = contentTop + (bottomBarTop - contentTop) * 0.5;
     const logoBandTop = contentTop + 40;
     const logoBandBottom = playY - btnH / 2 - 20;
@@ -246,10 +366,7 @@ export class HomeScene implements Scene {
       fontWeight: '900',
       stroke: 0x5a2a19,
       strokeThickness: 6,
-      dropShadow: true,
-      dropShadowColor: 0x3d2818,
-      dropShadowBlur: 3,
-      dropShadowDistance: 2,
+      dropShadow: false,
       lineJoin: 'round',
     });
     this.playEntryTitle.anchor.set(0.5);
@@ -263,10 +380,44 @@ export class HomeScene implements Scene {
     });
     this.container.addChild(this.playEntryRoot);
 
-    /** 主按钮下方、底装饰之上；窄屏时夹在 play 与底边之间 */
-    const sideBtnY = Math.max(playY + 192, Math.min(playY + 232, H - 32));
+    this.fruitSliceEntryRoot.position.set(W / 2, playY + 120);
+    this.fruitSliceEntryRoot.eventMode = 'static';
+    this.fruitSliceEntryRoot.cursor = 'pointer';
+    this.fruitSliceEntryBg = new PIXI.Graphics();
+    this.fruitSliceEntryBg.beginFill(0xffb47a);
+    this.fruitSliceEntryBg.lineStyle(4, 0xb86a28, 1);
+    this.fruitSliceEntryBg.drawRoundedRect(-fruitBtnW / 2, -fruitBtnH / 2, fruitBtnW, fruitBtnH, fruitBtnR);
+    this.fruitSliceEntryBg.endFill();
+    this.fruitSliceEntryRoot.addChild(this.fruitSliceEntryBg);
+    this.fruitSliceEntryTitle = new PIXI.Text('果切挑战', {
+      fontSize: 38,
+      fill: 0xfff4c2,
+      fontWeight: '900',
+      stroke: 0x5a2a19,
+      strokeThickness: 6,
+      dropShadow: false,
+      lineJoin: 'round',
+    });
+    this.fruitSliceEntryTitle.anchor.set(0.5);
+    this.fruitSliceEntryTitle.resolution = 2;
+    this.fruitSliceEntryTitle.position.set(0, -3);
+    this.fruitSliceEntryTitle.visible = false;
+    this.fruitSliceEntryRoot.addChild(this.fruitSliceEntryTitle);
+    this.fruitSliceEntryRoot.hitArea = new PIXI.Rectangle(
+      -fruitBtnW / 2,
+      -fruitBtnH / 2,
+      fruitBtnW,
+      fruitBtnH,
+    );
+    this.fruitSliceEntryRoot.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      void this.enterFruitSliceWithLoading();
+    });
+    this.container.addChild(this.fruitSliceEntryRoot);
+
+    /** 主按钮下方：仅图鉴；果切已并入主按钮柱 */
     const bookSlot = new PIXI.Container();
-    bookSlot.position.set(Math.round(W * 0.12), sideBtnY);
+    bookSlot.position.set(Math.round(W * 0.12), Math.max(playY + 220, H - 160));
     bookSlot.eventMode = 'static';
     bookSlot.cursor = 'pointer';
     bookSlot.hitArea = new PIXI.Rectangle(-75, -50, 150, 100);
@@ -276,24 +427,15 @@ export class HomeScene implements Scene {
       SceneManager.switchTo('catalog');
     });
 
-    const fruitSlot = new PIXI.Container();
-    fruitSlot.position.set(Math.round(W * 0.88), sideBtnY);
-    fruitSlot.eventMode = 'static';
-    fruitSlot.cursor = 'pointer';
-    fruitSlot.hitArea = new PIXI.Rectangle(-75, -50, 150, 100);
-    fruitSlot.addChild(this.createHomeFooterFallback('果切', '🍉'));
-    fruitSlot.on('pointertap', () => {
-      AudioManager.playButtonSound();
-      const api = typeof wx !== 'undefined' ? wx : null;
-      api?.showToast?.({ title: '敬请期待', icon: 'none' });
-    });
+    this.homeFooterSlots.push(bookSlot);
+    this.container.addChild(bookSlot);
 
-    this.homeFooterSlots.push(bookSlot, fruitSlot);
-    this.container.addChild(bookSlot, fruitSlot);
-
-    /** 游戏圈：靠下装饰带，略抬高避免贴底被手势条/误触；矮屏仍低于图鉴/果切一行 */
-    const gameClubY = Math.min(H - 48, Math.max(sideBtnY + 72, H - 76));
+    /** 游戏圈：靠下装饰带，略抬高避免贴底被手势条/误触 */
+    const provisionalSideY = Math.max(playY + 220, H - 160);
+    const gameClubY = Math.min(H - 48, Math.max(provisionalSideY + 72, H - 76));
     this.mountGameClubFallback(Math.round(W * 0.5), gameClubY);
+
+    this.layoutHomeMainColumn();
 
     this.container.addChild(this.settingsOverlay);
   }
@@ -323,6 +465,34 @@ export class HomeScene implements Scene {
       }
       loadingOverlay.destroy();
       this.enteringBowl = false;
+    }
+  }
+
+  private async enterFruitSliceWithLoading(): Promise<void> {
+    if (this.enteringFruitSlice) {
+      return;
+    }
+    this.enteringFruitSlice = true;
+    this.hideGameClubNativeButton();
+    const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
+    Game.stage.addChild(loadingOverlay.container);
+    try {
+      loadingOverlay.setProgress(0.16);
+      await loadingOverlay.loadAssets();
+      loadingOverlay.setProgress(0.46);
+      await SceneManager.prepare('fruitSlice');
+      loadingOverlay.setProgress(1);
+      SceneManager.switchTo('fruitSlice');
+    } catch (error) {
+      console.error('[HomeScene] enter fruit slice failed', error);
+      const api = typeof wx !== 'undefined' ? wx : null;
+      api?.showToast?.({ title: '加载失败，请重试', icon: 'none' });
+    } finally {
+      if (loadingOverlay.container.parent) {
+        loadingOverlay.container.parent.removeChild(loadingOverlay.container);
+      }
+      loadingOverlay.destroy();
+      this.enteringFruitSlice = false;
     }
   }
 
@@ -486,25 +656,33 @@ export class HomeScene implements Scene {
 
   private createHomeFooterFallback(label: string, emoji: string): PIXI.Container {
     const c = new PIXI.Container();
-    const base = new PIXI.Graphics();
-    base.lineStyle(2, 0xb0d4ea, 1);
-    base.beginFill(0xd6f0fc);
-    base.drawRoundedRect(-48, -32, 96, 64, 16);
-    base.endFill();
-    c.addChild(base);
-    const e = new PIXI.Text(emoji, { fontSize: 28, fill: 0x3a5f78 });
+    const e = new PIXI.Text(emoji, {
+      fontSize: 42,
+      fill: 0x3a5f78,
+      stroke: 0xffffff,
+      strokeThickness: 4,
+    });
     e.anchor.set(0.5);
     e.position.set(0, -10);
     c.addChild(e);
-    const t = new PIXI.Text(label, {
-      fontSize: 18,
-      fill: 0x2a4f63,
-      fontWeight: '700',
-    });
-    t.anchor.set(0.5);
-    t.position.set(0, 18);
+    const t = this.createCatalogIconLabel(label);
+    t.position.set(0, 32);
     c.addChild(t);
-    c.scale.set(1.55);
     return c;
+  }
+
+  private createCatalogIconLabel(text = '图鉴'): PIXI.Text {
+    const label = new PIXI.Text(text, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 23,
+      fill: 0x275f2d,
+      fontWeight: '900',
+      stroke: 0xffffff,
+      strokeThickness: 5,
+      lineJoin: 'round',
+    });
+    label.anchor.set(0.5);
+    label.resolution = 2;
+    return label;
   }
 }

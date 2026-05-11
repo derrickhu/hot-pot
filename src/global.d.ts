@@ -92,6 +92,10 @@ declare const wx: {
   onShareAppMessage?: (
     handler: (res?: { from?: string; target?: unknown }) => { title: string; imageUrl?: string; query?: string },
   ) => void;
+  /** 小游戏分享到朋友圈：需要 showShareMenu 同时开启 shareTimeline 菜单。 */
+  onShareTimeline?: (
+    handler: () => { title: string; imageUrl?: string; query?: string },
+  ) => void;
   createInnerAudioContext?: () => {
     src: string;
     loop: boolean;

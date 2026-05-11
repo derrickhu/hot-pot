@@ -77,6 +77,10 @@
         "value": ".cursor"
       },
       {
+        "type": "folder",
+        "value": ".tmp_asset_work"
+      },
+      {
         "type": "file",
         "value": ".DS_Store"
       },

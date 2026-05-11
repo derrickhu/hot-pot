@@ -1,6 +1,7 @@
 import { analytics, EVENT_NAMES } from '@/analytics';
 
 export const GAMEPLAY_REWARDED_AD_UNIT_ID = 'adunit-baadf000b7626d29';
+export const FRUIT_SLICE_REWARDED_AD_UNIT_ID = 'adunit-1e675e21c04200f3';
 
 export type RewardedAdResult = 'completed' | 'skipped' | 'unavailable' | 'error';
 
@@ -16,9 +17,12 @@ export interface RewardedAdContext {
 type RewardedVideoAd = ReturnType<NonNullable<typeof wx.createRewardedVideoAd>>;
 
 let gameplayRewardedAd: RewardedVideoAd | null = null;
+let fruitSliceRewardedAd: RewardedVideoAd | null = null;
 let pendingResolve: ((result: RewardedAdResult) => void) | null = null;
 let pendingContext: RewardedAdContext | null = null;
 let rewardedAdListenersReady = false;
+let fruitSliceRewardedAdListenersReady = false;
+let pendingAdUnitId = GAMEPLAY_REWARDED_AD_UNIT_ID;
 /**
  * 单次播放周期内是否已上报过 ad_error。
  *
@@ -29,7 +33,6 @@ let rewardedAdListenersReady = false;
 let errorReportedThisCycle = false;
 
 const AD_TYPE = 'reward';
-const AD_UNIT_ID = GAMEPLAY_REWARDED_AD_UNIT_ID;
 
 /**
  * SDK 自定义错误码，与 wx 真实 errCode 共存于同一个 err_code 字段。
@@ -41,7 +44,7 @@ const SDK_ERR_BUSY = -101;
 
 function buildAdParams(context: RewardedAdContext | null, extras?: Record<string, string | number | boolean>): Record<string, string | number | boolean | null> {
   const base: Record<string, string | number | boolean | null> = {
-    ad_unit_id: AD_UNIT_ID,
+    ad_unit_id: pendingAdUnitId,
     ad_type: AD_TYPE,
     scene: context?.scene || 'unknown',
   };
@@ -99,10 +102,14 @@ function finishPendingRewardedAd(result: RewardedAdResult): void {
 }
 
 function bindGameplayRewardedAdListeners(ad: RewardedVideoAd): void {
-  if (rewardedAdListenersReady) {
+  if (pendingAdUnitId === FRUIT_SLICE_REWARDED_AD_UNIT_ID) {
+    if (fruitSliceRewardedAdListenersReady) return;
+    fruitSliceRewardedAdListenersReady = true;
+  } else if (rewardedAdListenersReady) {
     return;
+  } else {
+    rewardedAdListenersReady = true;
   }
-  rewardedAdListenersReady = true;
   ad.onClose((res?: { isEnded?: boolean }) => {
     finishPendingRewardedAd(res?.isEnded === false ? 'skipped' : 'completed');
   });
@@ -127,15 +134,46 @@ function getGameplayRewardedAd(): RewardedVideoAd | null {
   }
 }
 
+function getRewardedAdByUnitId(adUnitId: string): RewardedVideoAd | null {
+  if (adUnitId === GAMEPLAY_REWARDED_AD_UNIT_ID) {
+    return getGameplayRewardedAd();
+  }
+  if (typeof wx === 'undefined' || !wx.createRewardedVideoAd) {
+    return null;
+  }
+  try {
+    if (adUnitId === FRUIT_SLICE_REWARDED_AD_UNIT_ID) {
+      fruitSliceRewardedAd ??= wx.createRewardedVideoAd({ adUnitId });
+      pendingAdUnitId = adUnitId;
+      bindGameplayRewardedAdListeners(fruitSliceRewardedAd);
+      return fruitSliceRewardedAd;
+    }
+    const ad = wx.createRewardedVideoAd({ adUnitId });
+    pendingAdUnitId = adUnitId;
+    bindGameplayRewardedAdListeners(ad);
+    return ad;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * 播放激励视频广告。
  * 自动上报 ad_request / ad_show / ad_close / ad_error 四种事件，业务方只需传 scene 上下文。
  * scene 不能为空，否则经分聚合时会落到 unknown 桶。
  */
 export async function showGameplayRewardedAd(context: RewardedAdContext): Promise<RewardedAdResult> {
+  return showRewardedAd(context, GAMEPLAY_REWARDED_AD_UNIT_ID);
+}
+
+export async function showRewardedAd(
+  context: RewardedAdContext,
+  adUnitId = GAMEPLAY_REWARDED_AD_UNIT_ID,
+): Promise<RewardedAdResult> {
+  pendingAdUnitId = adUnitId;
   trackAd(EVENT_NAMES.AD_REQUEST, context);
 
-  const ad = getGameplayRewardedAd();
+  const ad = getRewardedAdByUnitId(adUnitId);
   if (!ad) {
     // SDK 不可用走自定义码（不会被 wx 真实码覆盖）
     trackAd(EVENT_NAMES.AD_ERROR, context, { err_code: SDK_ERR_UNAVAILABLE, err_msg: 'unavailable' });

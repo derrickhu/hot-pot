@@ -1,7 +1,8 @@
 import { USER_SETTINGS_KEY } from '@/config/CloudConfig';
 import { PersistService } from '@/core/PersistService';
 
-const BGM_SRC = 'assets/audio/melon_spoon_loop.mp3';
+const DEFAULT_BGM_SRC = 'assets/audio/melon_spoon_loop.mp3';
+const FRUIT_SLICE_BGM_SRC = 'assets/audio/fruit_slice_bgm.mp3';
 const SCOOP_SFX_SRC = 'assets/audio/scoop_2.mp3';
 const ORDER_COMPLETE_SFX_SRC = 'assets/audio/order_complete.mp3';
 const BUTTON_SFX_SRC = 'assets/audio/button_common.mp3';
@@ -39,6 +40,7 @@ class AudioManagerClass {
   private firstGestureBound = false;
   private musicEnabled = this.readSettings().musicEnabled;
   private soundEnabled = this.readSettings().soundEnabled;
+  private bgmSrc = DEFAULT_BGM_SRC;
 
   constructor() {
     PersistService.subscribeCloudImport(() => {
@@ -55,7 +57,7 @@ class AudioManagerClass {
     const api = typeof wx !== 'undefined' ? wx : null;
     if (api?.createInnerAudioContext) {
       const bgm = api.createInnerAudioContext();
-      bgm.src = BGM_SRC;
+      bgm.src = this.bgmSrc;
       bgm.loop = true;
       bgm.volume = 0.42;
       bgm.autoplay = false;
@@ -65,7 +67,7 @@ class AudioManagerClass {
       });
       this.wxBgm = bgm;
     } else if (typeof Audio !== 'undefined') {
-      const bgm = new Audio(BGM_SRC);
+      const bgm = new Audio(this.bgmSrc);
       bgm.loop = true;
       bgm.volume = 0.42;
       bgm.preload = 'auto';
@@ -144,6 +146,14 @@ class AudioManagerClass {
     } catch {
       // Pausing audio should never block gameplay.
     }
+  }
+
+  useDefaultBackgroundMusic(): void {
+    this.switchBackgroundMusic(DEFAULT_BGM_SRC);
+  }
+
+  useFruitSliceBackgroundMusic(): void {
+    this.switchBackgroundMusic(FRUIT_SLICE_BGM_SRC);
   }
 
   private playSoundEffect(src: string, maxDurationSec?: number): void {
@@ -225,6 +235,39 @@ class AudioManagerClass {
     const root = typeof globalThis !== 'undefined' ? globalThis : null;
     root?.addEventListener?.('pointerdown', () => this.playBackgroundMusic(), { once: true });
     root?.addEventListener?.('touchstart', () => this.playBackgroundMusic(), { once: true });
+  }
+
+  private switchBackgroundMusic(src: string): void {
+    if (this.bgmSrc === src) {
+      this.playBackgroundMusic();
+      return;
+    }
+    this.bgmSrc = src;
+    if (!this.initialized) {
+      if (this.musicEnabled) {
+        this.initBackgroundMusic();
+      }
+      return;
+    }
+    try {
+      if (this.wxBgm) {
+        this.wxBgm.pause();
+        this.wxBgm.src = src;
+        this.wxBgm.loop = true;
+        this.wxBgm.volume = 0.42;
+        this.wxBgm.seek?.(0);
+      }
+      if (this.webBgm) {
+        this.webBgm.pause();
+        this.webBgm.src = src;
+        this.webBgm.loop = true;
+        this.webBgm.volume = 0.42;
+        this.webBgm.load();
+      }
+    } catch {
+      // 切换曲目失败不应打断玩法；下一次点击会继续尝试播放当前 src。
+    }
+    this.playBackgroundMusic();
   }
 
   reloadSettingsFromPersist(): void {

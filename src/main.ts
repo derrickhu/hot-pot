@@ -9,7 +9,7 @@ import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { CloudSyncManager } from '@/managers/CloudSyncManager';
 import { BowlScene } from '@/scenes/BowlScene';
 import { CatalogScene } from '@/scenes/CatalogScene';
-import { FruitSliceScene } from '@/scenes/FruitSliceScene';
+import { FruitSliceEndlessScene } from '@/scenes/FruitSliceEndlessScene';
 import { HomeScene } from '@/scenes/HomeScene';
 import { setupWechatShare } from '@/utils/wechatShare';
 
@@ -58,7 +58,7 @@ async function main(): Promise<void> {
 
     const homeScene = new HomeScene();
     const bowlScene = new BowlScene();
-    const fruitSliceScene = new FruitSliceScene();
+    const fruitSliceScene = new FruitSliceEndlessScene();
     const catalogScene = new CatalogScene();
     SceneManager.register(homeScene);
     SceneManager.register(bowlScene);
