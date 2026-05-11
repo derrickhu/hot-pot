@@ -6,6 +6,9 @@ import { SceneManager } from '@/core/SceneManager';
 import { getBowlLevelIndex } from '@/game/BowlProgress';
 import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
+import { openLeaderboardWithProfile } from '@/scenes/LeaderboardScene';
+import { RANK_BOARD_BOWL } from '@/services/RankService';
+import { UserProfileService } from '@/services/UserProfileService';
 import { TextureCache } from '@/utils/TextureCache';
 
 /** 首页图鉴入口：独立图标，不带按钮底框 */
@@ -33,10 +36,16 @@ function homeFruitSliceEntryTargetWidth(): number {
   return homePlayEntryTargetWidth() * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE;
 }
 
-/** 右侧图鉴图标较长边目标尺寸，保持醒目但弱于主按钮。 */
+/** 底部图鉴/排行榜内置图标的较长边目标尺寸，保持醒目但弱于主按钮。 */
 function homeCatalogIconDisplayTarget(): number {
   return Math.round(Math.min(96, Math.max(76, Game.logicWidth * 0.13)));
 }
+
+/** 底部图标卡片（白色圆角背板）尺寸：保持两张卡片并排居中且不与主按钮抢视觉。 */
+const HOME_FOOTER_CARD_W = 156;
+const HOME_FOOTER_CARD_H = 168;
+/** 底部图标卡片两两之间的水平间距 */
+const HOME_FOOTER_CARD_GAP = 28;
 
 /** 主页：夏日底图 + 进入关卡 */
 export class HomeScene implements Scene {
@@ -45,6 +54,7 @@ export class HomeScene implements Scene {
 
   private readonly settingsOverlay: SettingsPauseOverlay;
   private readonly homeFooterSlots: PIXI.Container[] = [];
+  private readonly leaderboardEntryRoot = new PIXI.Container();
   /** 进入关卡：贴图或紫底兜底 */
   private readonly playEntryRoot = new PIXI.Container();
   private playEntryBg!: PIXI.Graphics;
@@ -66,6 +76,20 @@ export class HomeScene implements Scene {
   private gameClubButton: ReturnType<NonNullable<typeof wx.createGameClubButton>> | null = null;
   private enteringBowl = false;
   private enteringFruitSlice = false;
+  /**
+   * 透明 wx.createUserInfoButton，覆盖在「排行榜」卡片上。
+   * 玩家点排行榜实际就是点这个原生按钮 → 微信自动连弹「隐私协议 → 用户信息授权」，
+   * 拿到 userInfo 后再进入排行榜场景。
+   * 已经授权过的玩家 / 非微信环境下不再创建此按钮，由 PIXI pointertap 走兜底路径。
+   */
+  private rankEntryAuthBtn: ReturnType<NonNullable<typeof wx.createUserInfoButton>> | null = null;
+  /** UserProfileService 资料变化时同步透明按钮的取消订阅 */
+  private unsubRankProfileChange: (() => void) | null = null;
+  /**
+   * 上一次写入透明按钮的 CSS 坐标，rect 没变就跳过 Object.assign(style, ...)，
+   * 避免基础库 3.15+ 上每次写 style 都刷出 updateTextView:fail SystemError。
+   */
+  private rankEntryLastCss: { left: number; top: number; width: number; height: number } | null = null;
 
   constructor() {
     this.settingsOverlay = new SettingsPauseOverlay(Game.logicWidth, Game.logicHeight, {
@@ -87,6 +111,11 @@ export class HomeScene implements Scene {
     this.syncGameClubNativeButton();
     setTimeout(() => this.syncGameClubNativeButton(), 0);
     setTimeout(() => this.syncGameClubNativeButton(), 160);
+    // 排行榜入口的透明 wx 授权按钮：未授权时挂上，授权完成立即销毁
+    this.syncRankEntryAuthBtn();
+    if (!this.unsubRankProfileChange) {
+      this.unsubRankProfileChange = UserProfileService.onChange(() => this.syncRankEntryAuthBtn());
+    }
   }
 
   /** 保证在底图之上、且盖住同屏其它控件（仍低于设置全屏层） */
@@ -102,6 +131,11 @@ export class HomeScene implements Scene {
 
   onExit(): void {
     this.hideGameClubNativeButton();
+    this.destroyRankEntryAuthBtn();
+    if (this.unsubRankProfileChange) {
+      this.unsubRankProfileChange();
+      this.unsubRankProfileChange = null;
+    }
   }
 
   private refreshPlayEntryTitle(): void {
@@ -273,18 +307,27 @@ export class HomeScene implements Scene {
     const fruitY = playY + playHalf + gap + fruitHalf;
     this.fruitSliceEntryRoot.position.set(W / 2, fruitY);
 
+    /** 底部两张卡片并排：左排行榜 / 右图鉴；居中对齐主按钮柱 */
+    const cardCenterY = Math.round(fruitY + fruitHalf + 24 + HOME_FOOTER_CARD_H / 2);
+    const cardLeftX = Math.round(W / 2 - (HOME_FOOTER_CARD_W + HOME_FOOTER_CARD_GAP) / 2);
+    const cardRightX = Math.round(W / 2 + (HOME_FOOTER_CARD_W + HOME_FOOTER_CARD_GAP) / 2);
+
     const bookSlot = this.homeFooterSlots[0];
     if (bookSlot) {
-      const playW = homePlayEntryTargetWidth();
-      const iconTarget = homeCatalogIconDisplayTarget();
-      const iconX = Math.min(W - iconTarget * 0.56 - 12, W / 2 + playW / 2 + iconTarget * 0.58);
-      bookSlot.position.set(Math.round(iconX), playY - 2);
-      const gameClubY = Math.min(H - 48, Math.max(fruitY + fruitHalf + 72, H - 76));
-      this.gameClubFallbackRoot.position.set(Math.round(W * 0.5), gameClubY);
+      bookSlot.position.set(cardRightX, cardCenterY);
     }
+    this.leaderboardEntryRoot.position.set(cardLeftX, cardCenterY);
+
+    /** 游戏圈紧贴屏幕底部，并与图标卡片留出足够呼吸感 */
+    const gameClubMinY = cardCenterY + HOME_FOOTER_CARD_H / 2 + 36;
+    const gameClubY = Math.min(H - 48, Math.max(gameClubMinY, H - 76));
+    this.gameClubFallbackRoot.position.set(Math.round(W * 0.5), gameClubY);
+
+    // 排行榜入口位置变化后，同步上面的透明 wx 原生按钮坐标
+    this.syncRankEntryAuthBtn();
   }
 
-  /** 图鉴入口：独立图标；无贴图时保持 build 中的兜底 */
+  /** 图鉴入口：白色卡片底 + 草莓贴图（无贴图时落入 emoji 兜底） */
   private async loadHomeCatalogIcon(): Promise<void> {
     await TextureCache.load('home_catalog_icon', HOME_CATALOG_ICON_TEXTURE);
     const tex = TextureCache.get('home_catalog_icon');
@@ -294,25 +337,36 @@ export class HomeScene implements Scene {
         continue;
       }
       slot.removeChildren();
+      slot.addChild(this.createFooterCardBackdrop());
+
+      const iconArea = new PIXI.Container();
+      iconArea.position.set(0, -HOME_FOOTER_CARD_H / 2 + 70);
+      slot.addChild(iconArea);
+
       if (tex) {
         const sp = new PIXI.Sprite(tex);
         sp.anchor.set(0.5);
-        const target = homeCatalogIconDisplayTarget();
+        const target = Math.min(82, homeCatalogIconDisplayTarget());
         const sc = target / Math.max(tex.width, tex.height);
         sp.scale.set(sc);
-        sp.position.set(0, -8);
-        slot.addChild(sp);
-        const dw = tex.width * sc;
-        const dh = tex.height * sc;
-        const label = this.createCatalogIconLabel();
-        label.position.set(0, dh / 2 + 8);
-        slot.addChild(label);
-        slot.hitArea = new PIXI.Rectangle(-dw / 2 - 12, -dh / 2 - 20, dw + 24, dh + 48);
+        iconArea.addChild(sp);
       } else {
-        const fb = this.createHomeFooterFallback('图鉴', '📖');
-        slot.addChild(fb);
-        slot.hitArea = new PIXI.Rectangle(-75, -50, 150, 100);
+        const e = new PIXI.Text('🍓', { fontSize: 70 });
+        e.anchor.set(0.5);
+        e.resolution = 2;
+        iconArea.addChild(e);
       }
+
+      const label = this.createFooterCardLabel('图鉴', 0xa14a0d);
+      label.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
+      slot.addChild(label);
+
+      slot.hitArea = new PIXI.Rectangle(
+        -HOME_FOOTER_CARD_W / 2 - 6,
+        -HOME_FOOTER_CARD_H / 2 - 6,
+        HOME_FOOTER_CARD_W + 12,
+        HOME_FOOTER_CARD_H + 12,
+      );
     }
     this.layoutHomeMainColumn();
   }
@@ -415,13 +469,26 @@ export class HomeScene implements Scene {
     });
     this.container.addChild(this.fruitSliceEntryRoot);
 
-    /** 主按钮下方：仅图鉴；果切已并入主按钮柱 */
+    /** 底部两张卡片入口：左排行榜 / 右图鉴；与「果切挑战」上下相接 */
     const bookSlot = new PIXI.Container();
-    bookSlot.position.set(Math.round(W * 0.12), Math.max(playY + 220, H - 160));
+    bookSlot.position.set(Math.round(W * 0.62), Math.max(playY + 220, H - 200));
     bookSlot.eventMode = 'static';
     bookSlot.cursor = 'pointer';
-    bookSlot.hitArea = new PIXI.Rectangle(-75, -50, 150, 100);
-    bookSlot.addChild(this.createHomeFooterFallback('图鉴', '📖'));
+    bookSlot.hitArea = new PIXI.Rectangle(
+      -HOME_FOOTER_CARD_W / 2 - 6,
+      -HOME_FOOTER_CARD_H / 2 - 6,
+      HOME_FOOTER_CARD_W + 12,
+      HOME_FOOTER_CARD_H + 12,
+    );
+    bookSlot.addChild(this.createFooterCardBackdrop());
+    const bookFallbackIcon = new PIXI.Text('🍓', { fontSize: 70 });
+    bookFallbackIcon.anchor.set(0.5);
+    bookFallbackIcon.resolution = 2;
+    bookFallbackIcon.position.set(0, -HOME_FOOTER_CARD_H / 2 + 70);
+    bookSlot.addChild(bookFallbackIcon);
+    const bookLabel = this.createFooterCardLabel('图鉴', 0xa14a0d);
+    bookLabel.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
+    bookSlot.addChild(bookLabel);
     bookSlot.on('pointertap', () => {
       AudioManager.playButtonSound();
       SceneManager.switchTo('catalog');
@@ -429,6 +496,36 @@ export class HomeScene implements Scene {
 
     this.homeFooterSlots.push(bookSlot);
     this.container.addChild(bookSlot);
+
+    this.leaderboardEntryRoot.position.set(Math.round(W * 0.38), Math.max(playY + 220, H - 200));
+    this.leaderboardEntryRoot.eventMode = 'static';
+    this.leaderboardEntryRoot.cursor = 'pointer';
+    this.leaderboardEntryRoot.hitArea = new PIXI.Rectangle(
+      -HOME_FOOTER_CARD_W / 2 - 6,
+      -HOME_FOOTER_CARD_H / 2 - 6,
+      HOME_FOOTER_CARD_W + 12,
+      HOME_FOOTER_CARD_H + 12,
+    );
+    this.leaderboardEntryRoot.addChild(this.createFooterCardBackdrop());
+    const rankIcon = this.createLeaderboardCardIcon();
+    rankIcon.position.set(0, -HOME_FOOTER_CARD_H / 2 + 72);
+    this.leaderboardEntryRoot.addChild(rankIcon);
+    const rankLabel = this.createFooterCardLabel('排行榜', 0x275f2d);
+    rankLabel.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
+    this.leaderboardEntryRoot.addChild(rankLabel);
+    /**
+     * 仅在「没有原生 wx 授权按钮覆盖」时才会真正触发：
+     *   - 玩家已授权过本机资料 → 不创建覆盖按钮，PIXI 这一路直接进入排行榜
+     *   - 非微信小游戏（开发环境 / 抖音端等） → 同上
+     * 微信小游戏未授权状态下，玩家点击的是上面盖着的透明 createUserInfoButton，
+     * 其 onTap → handleRankEntryAuthTap → openLeaderboardWithProfile 才是主路径。
+     */
+    this.leaderboardEntryRoot.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      this.hideGameClubNativeButton();
+      openLeaderboardWithProfile(RANK_BOARD_BOWL);
+    });
+    this.container.addChild(this.leaderboardEntryRoot);
 
     /** 游戏圈：靠下装饰带，略抬高避免贴底被手势条/误触 */
     const provisionalSideY = Math.max(playY + 220, H - 160);
@@ -644,6 +741,180 @@ export class HomeScene implements Scene {
     }
   }
 
+  /**
+   * 同步「排行榜」卡片上方的透明 wx.createUserInfoButton。
+   * - 未授权 + 微信端：创建/更新一个完全透明的原生按钮覆盖在卡片上
+   * - 已授权 / 非微信：销毁按钮，让 PIXI pointertap 走兜底路径
+   */
+  private syncRankEntryAuthBtn(): void {
+    const api = typeof wx !== 'undefined' ? wx : null;
+    if (!api?.createUserInfoButton) {
+      this.destroyRankEntryAuthBtn();
+      return;
+    }
+    // 已经拿到真实昵称头像，就不需要再卡这一层授权按钮
+    if (UserProfileService.hasRealProfile()) {
+      this.destroyRankEntryAuthBtn();
+      return;
+    }
+
+    const rect = this.computeRankEntryCssRect();
+    if (!rect) {
+      this.destroyRankEntryAuthBtn();
+      return;
+    }
+
+    if (!this.rankEntryAuthBtn) {
+      try {
+        // 注：text 必须非空、fontSize 最低 12，部分基础库下 text='' 或 fontSize<12
+        // 按钮不会被渲染（也就不会触发 onTap），用空格 + color 透明能避开这条坑。
+        const btn = api.createUserInfoButton({
+          type: 'text',
+          text: ' ',
+          style: {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+            backgroundColor: 'rgba(0,0,0,0)',
+            borderColor: 'rgba(0,0,0,0)',
+            borderWidth: 0,
+            borderRadius: 24,
+            color: 'rgba(0,0,0,0)',
+            fontSize: 12,
+            lineHeight: rect.height,
+          },
+          withCredentials: false,
+        });
+        if (btn) {
+          this.rankEntryAuthBtn = btn;
+          this.rankEntryLastCss = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+          btn.onTap?.((res) => this.handleRankEntryAuthTap(res));
+          btn.show?.();
+          console.log(
+            `[HomeScene] rank entry wx btn created css(left=${rect.left} top=${rect.top}` +
+              ` w=${rect.width} h=${rect.height})`,
+          );
+        } else {
+          console.warn('[HomeScene] createUserInfoButton returned falsy');
+        }
+      } catch (error) {
+        console.warn('[HomeScene] create rank entry userInfo button failed', error);
+      }
+      return;
+    }
+
+    const last = this.rankEntryLastCss;
+    if (last && last.left === rect.left && last.top === rect.top && last.width === rect.width && last.height === rect.height) {
+      // 坐标无变化，跳过 style 写入，避免 updateTextView 噪音
+      return;
+    }
+    try {
+      this.rankEntryLastCss = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+      if (this.rankEntryAuthBtn.style) {
+        Object.assign(this.rankEntryAuthBtn.style, {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
+      this.rankEntryAuthBtn.show?.();
+    } catch (error) {
+      console.warn('[HomeScene] sync rank entry userInfo button failed', error);
+    }
+  }
+
+  private destroyRankEntryAuthBtn(): void {
+    this.rankEntryLastCss = null;
+    if (!this.rankEntryAuthBtn) {
+      return;
+    }
+    try {
+      this.rankEntryAuthBtn.hide?.();
+    } catch {
+      // 隐藏失败不影响后续 destroy
+    }
+    try {
+      this.rankEntryAuthBtn.destroy?.();
+    } catch {
+      // 部分基础库 destroy 后会抛错，忽略
+    }
+    this.rankEntryAuthBtn = null;
+  }
+
+  /**
+   * 把「排行榜」卡片的设计像素中心点 → CSS 像素左上角矩形。
+   * 必须等 layoutHomeMainColumn 把 leaderboardEntryRoot 摆好后再算。
+   */
+  private computeRankEntryCssRect(): { left: number; top: number; width: number; height: number } | null {
+    const designW = Game.designWidth || 750;
+    const screenW = Game.screenWidth || designW;
+    if (!screenW || !designW) {
+      return null;
+    }
+    const designToCss = screenW / designW;
+    const cx = this.leaderboardEntryRoot.x;
+    const cy = this.leaderboardEntryRoot.y;
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) {
+      return null;
+    }
+    const cssLeft = Math.round((cx - HOME_FOOTER_CARD_W / 2) * designToCss);
+    const cssTop = Math.round((cy - HOME_FOOTER_CARD_H / 2) * designToCss);
+    const cssW = Math.max(1, Math.round(HOME_FOOTER_CARD_W * designToCss));
+    const cssH = Math.max(1, Math.round(HOME_FOOTER_CARD_H * designToCss));
+    return { left: cssLeft, top: cssTop, width: cssW, height: cssH };
+  }
+
+  /**
+   * 透明 wx.createUserInfoButton 的 onTap 回调：
+   * - 拿到 userInfo（真实昵称头像）→ 写入 UserProfileService → 进排行榜
+   * - 玩家拒绝授权 / 隐私协议未配置 / 任何异常 → 也进排行榜，由榜内 CTA 兑底
+   */
+  private handleRankEntryAuthTap(res: any): void {
+    const api = typeof wx !== 'undefined' ? wx : null;
+    AudioManager.playButtonSound();
+    this.hideGameClubNativeButton();
+
+    const errMsg: string = (res?.errMsg as string) || '';
+    const errCode = res?.err_code;
+    // 排错关键日志：把微信回调的核心字段全部打印（避免 stringify 整个 res 导致超长）
+    console.log(
+      `[HomeScene] rank entry userInfo onTap:` +
+        ` hasUserInfo=${!!res?.userInfo}` +
+        ` nick="${res?.userInfo?.nickName || ''}"` +
+        ` avatarUrl=${res?.userInfo?.avatarUrl ? String(res.userInfo.avatarUrl).slice(0, 64) + '...' : '(empty)'}` +
+        ` errMsg="${errMsg}"` +
+        ` errCode=${errCode}`,
+    );
+
+    // -12034：开发者侧没在小程序后台配置「用户隐私保护指引」
+    const privacyNotConfigured = errCode === -12034 || errMsg.includes('no privacy api permission');
+
+    if (res?.userInfo) {
+      // 这里 applyFromWeChat 会同步触发 RankUpload 主动 flush，
+      // 不再依赖之后的 LeaderboardScene.onEnter 才上报新资料。
+      const applied = UserProfileService.applyFromWeChat(res.userInfo);
+      if (applied) {
+        try {
+          api?.showToast?.({ title: '已带微信昵称上榜', icon: 'success', duration: 1200 });
+        } catch {
+          // 部分宿主无 showToast，安静失败
+        }
+      }
+    } else if (privacyNotConfigured) {
+      try {
+        api?.showToast?.({ title: '隐私协议未配置', icon: 'none', duration: 1500 });
+      } catch {
+        // 同上
+      }
+    }
+    // 不管授权结果如何，都进入排行榜：
+    //   - 同意了：榜单立即显示真实头像昵称
+    //   - 拒绝了 / 隐私未配置：榜内仍有「使用微信昵称头像上榜」CTA 兜底
+    openLeaderboardWithProfile(RANK_BOARD_BOWL);
+  }
+
   private getGameClubLogicRect(centerX = Game.logicWidth * 0.5, centerY = 0): { x: number; y: number; width: number; height: number } {
     const y = centerY > 0 ? centerY : this.gameClubFallbackRoot.y;
     return {
@@ -654,21 +925,109 @@ export class HomeScene implements Scene {
     };
   }
 
-  private createHomeFooterFallback(label: string, emoji: string): PIXI.Container {
-    const c = new PIXI.Container();
-    const e = new PIXI.Text(emoji, {
-      fontSize: 42,
-      fill: 0x3a5f78,
+  /** 底部图标卡片的白色圆角背板（带阴影 + 卡片描边，所有底部入口共用） */
+  private createFooterCardBackdrop(): PIXI.Container {
+    const root = new PIXI.Container();
+    const shadow = new PIXI.Graphics();
+    shadow.beginFill(0x274a4f, 0.18);
+    shadow.drawRoundedRect(
+      -HOME_FOOTER_CARD_W / 2 + 4,
+      -HOME_FOOTER_CARD_H / 2 + 8,
+      HOME_FOOTER_CARD_W,
+      HOME_FOOTER_CARD_H,
+      26,
+    );
+    shadow.endFill();
+    root.addChild(shadow);
+
+    const card = new PIXI.Graphics();
+    card.beginFill(0xffffff);
+    card.lineStyle(3, 0xc7e4d6, 1);
+    card.drawRoundedRect(
+      -HOME_FOOTER_CARD_W / 2,
+      -HOME_FOOTER_CARD_H / 2,
+      HOME_FOOTER_CARD_W,
+      HOME_FOOTER_CARD_H,
+      26,
+    );
+    card.endFill();
+    // 内侧次级描边，模拟参考 UI 的双层圆角
+    card.lineStyle(2, 0xeef9f1, 1);
+    card.drawRoundedRect(
+      -HOME_FOOTER_CARD_W / 2 + 5,
+      -HOME_FOOTER_CARD_H / 2 + 5,
+      HOME_FOOTER_CARD_W - 10,
+      HOME_FOOTER_CARD_H - 10,
+      22,
+    );
+    root.addChild(card);
+    return root;
+  }
+
+  /** 底部卡片下方居中的彩色标签文字 */
+  private createFooterCardLabel(text: string, color: number): PIXI.Text {
+    const label = new PIXI.Text(text, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 26,
+      fill: color,
+      fontWeight: '900',
       stroke: 0xffffff,
       strokeThickness: 4,
+      lineJoin: 'round',
+      letterSpacing: 2,
     });
-    e.anchor.set(0.5);
-    e.position.set(0, -10);
-    c.addChild(e);
-    const t = this.createCatalogIconLabel(label);
-    t.position.set(0, 32);
-    c.addChild(t);
-    return c;
+    label.anchor.set(0.5);
+    label.resolution = 2;
+    return label;
+  }
+
+  /** 排行榜卡片图标：绿色柱状图 + 顶部金色奖杯小角标 */
+  private createLeaderboardCardIcon(): PIXI.Container {
+    const root = new PIXI.Container();
+
+    // 底座阴影
+    const base = new PIXI.Graphics();
+    base.beginFill(0xd8ebd1, 0.6);
+    base.drawRoundedRect(-44, 30, 88, 12, 6);
+    base.endFill();
+    root.addChild(base);
+
+    // 三根高度递增的柱子（从左到右）
+    const bars = new PIXI.Graphics();
+    const cols: Array<{ x: number; h: number; fill: number; stroke: number }> = [
+      { x: -32, h: 30, fill: 0x9adba2, stroke: 0x3d8b4d },
+      { x: 0, h: 50, fill: 0x67c47b, stroke: 0x2c6f37 },
+      { x: 32, h: 70, fill: 0x3d8b4d, stroke: 0x205a2b },
+    ];
+    for (const col of cols) {
+      bars.beginFill(col.fill);
+      bars.lineStyle(3, col.stroke, 1);
+      bars.drawRoundedRect(col.x - 14, 28 - col.h, 28, col.h, 8);
+      bars.endFill();
+    }
+    root.addChild(bars);
+
+    // 顶部小奖杯（点缀）
+    const star = new PIXI.Graphics();
+    star.beginFill(0xf7c64a);
+    star.lineStyle(2, 0xc88517, 1);
+    this.drawTinyStar(star, 32, 28 - 70 - 12, 5, 9, 4);
+    star.endFill();
+    root.addChild(star);
+
+    return root;
+  }
+
+  /** 排行榜图标顶部的小五角星（点缀） */
+  private drawTinyStar(g: PIXI.Graphics, x: number, y: number, n: number, outer: number, inner: number): void {
+    const step = Math.PI / n;
+    const pts: number[] = [];
+    for (let i = 0; i < n * 2; i += 1) {
+      const r = i % 2 === 0 ? outer : inner;
+      const a = -Math.PI / 2 + i * step;
+      pts.push(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    }
+    g.drawPolygon(pts);
   }
 
   private createCatalogIconLabel(text = '图鉴'): PIXI.Text {

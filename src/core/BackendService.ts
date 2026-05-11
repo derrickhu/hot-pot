@@ -4,6 +4,9 @@ import {
   BACKEND_LOGIN_PATH,
   BACKEND_PULL_PATH,
   BACKEND_PUSH_PATH,
+  BACKEND_RANK_LIST_PATH,
+  BACKEND_RANK_MINE_PATH,
+  BACKEND_RANK_SUBMIT_PATH,
   BACKEND_REQUEST_TIMEOUT_MS,
   BACKEND_TOKEN_KEY,
 } from '@/config/CloudConfig';
@@ -34,6 +37,58 @@ export interface BackendPushResult {
   savedAt: number;
   mode: 'insert' | 'update';
   sizeBytes: number;
+}
+
+export type RankBoard = 'bowl_progress' | 'fruit_best';
+
+export interface BackendRankRecord {
+  rank: number | null;
+  board: RankBoard;
+  displayName: string;
+  /** 玩家授权后的微信头像 URL；未授权时为空字符串 */
+  avatarUrl: string;
+  isMe: boolean;
+  updatedAt: number;
+  level?: number;
+  badgeLevel?: number;
+  score?: number;
+}
+
+export interface BackendRankSubmitPayload {
+  board: RankBoard;
+  level?: number;
+  badgeLevel?: number;
+  score?: number;
+  displayName?: string;
+  /** 玩家授权后的微信头像 URL；后端会做长度 / 协议校验 */
+  avatarUrl?: string;
+}
+
+export interface BackendRankSubmitResult {
+  board: RankBoard;
+  updated: boolean;
+  mode?: 'insert' | 'update';
+  reason?: string;
+  record: BackendRankRecord | null;
+}
+
+export interface BackendRankListPayload {
+  board: RankBoard;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BackendRankListResult {
+  board: RankBoard;
+  limit: number;
+  offset: number;
+  list: BackendRankRecord[];
+  mine: BackendRankRecord | null;
+}
+
+export interface BackendRankMineResult {
+  board: RankBoard;
+  mine: BackendRankRecord | null;
 }
 
 interface StoredToken {
@@ -94,6 +149,18 @@ class BackendServiceClass {
 
   pushSave(snapshot: BackendPushPayload): Promise<BackendPushResult> {
     return this.callWithAuth<BackendPushResult>(BACKEND_PUSH_PATH, snapshot);
+  }
+
+  submitRank(payload: BackendRankSubmitPayload): Promise<BackendRankSubmitResult> {
+    return this.callWithAuth<BackendRankSubmitResult>(BACKEND_RANK_SUBMIT_PATH, payload);
+  }
+
+  listRank(payload: BackendRankListPayload): Promise<BackendRankListResult> {
+    return this.callWithAuth<BackendRankListResult>(BACKEND_RANK_LIST_PATH, payload);
+  }
+
+  mineRank(board: RankBoard): Promise<BackendRankMineResult> {
+    return this.callWithAuth<BackendRankMineResult>(BACKEND_RANK_MINE_PATH, { board });
   }
 
   clearToken(): void {

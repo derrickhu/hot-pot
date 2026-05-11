@@ -8,6 +8,9 @@ export const BACKEND_LOGIN_PATH = `${BACKEND_PATH_PREFIX}/login/`;
 export const BACKEND_PULL_PATH = `${BACKEND_PATH_PREFIX}/save/pull`;
 export const BACKEND_PUSH_PATH = `${BACKEND_PATH_PREFIX}/save/push`;
 export const BACKEND_HEALTH_PATH = `${BACKEND_PATH_PREFIX}/health`;
+export const BACKEND_RANK_SUBMIT_PATH = `${BACKEND_PATH_PREFIX}/rank/submit`;
+export const BACKEND_RANK_LIST_PATH = `${BACKEND_PATH_PREFIX}/rank/list`;
+export const BACKEND_RANK_MINE_PATH = `${BACKEND_PATH_PREFIX}/rank/mine`;
 
 export const BACKEND_REQUEST_TIMEOUT_MS = 10000;
 
@@ -17,6 +20,12 @@ export const BACKEND_ANON_ID_KEY = `${GAME_KEY}_anon_id`;
 export const BOWL_PROGRESS_KEY = `${GAME_KEY}_bowl_progress`;
 export const USER_SETTINGS_KEY = `${GAME_KEY}_settings`;
 export const FRUIT_SLICE_PROGRESS_KEY = `${GAME_KEY}_fruit_slice_progress`;
+/**
+ * 玩家自己授权拿到的微信昵称 + 头像 URL；仅用于排行榜显示。
+ * 不进入 CLOUD_SYNC_ALLOWLIST：用户资料本机敏感，不参与跨设备云端同步，
+ * 换设备时由玩家在新设备上重新点击授权即可。
+ */
+export const USER_PROFILE_KEY = `${GAME_KEY}_user_profile`;
 
 export const CLOUD_SYNC_SCHEMA_VERSION = 1;
 export const CLOUD_SYNC_META_KEY = `${GAME_KEY}_cloud_meta`;

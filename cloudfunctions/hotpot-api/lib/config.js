@@ -1,6 +1,11 @@
 const DEFAULT_GAME_KEY = 'hotpot';
 const DEFAULT_TTL_SEC = 7 * 24 * 3600;
 const DEFAULT_MAX_BYTES = 256 * 1024;
+const DEFAULT_RANK_LIST_LIMIT = 50;
+const DEFAULT_RANK_LIST_MAX_LIMIT = 100;
+const DEFAULT_RANK_MINE_SCAN_LIMIT = 1000;
+const DEFAULT_RANK_BOWL_MAX_LEVEL = 30;
+const DEFAULT_RANK_FRUIT_MAX_SCORE = 9999999;
 
 function getGameKey() {
   const v = String(process.env.GAME_KEY || '').trim().toLowerCase();
@@ -56,6 +61,31 @@ function getPlatformCredential(platform, field) {
   return readEnvPrefer(`${upper}_${platformUpper}_${field}`);
 }
 
+function readPositiveIntEnv(key, fallback) {
+  const v = Number(readEnvPrefer(`${gameKeyUpper()}_${key}`));
+  return Number.isFinite(v) && v > 0 ? Math.floor(v) : fallback;
+}
+
+function getRankListLimit() {
+  return readPositiveIntEnv('RANK_LIST_LIMIT', DEFAULT_RANK_LIST_LIMIT);
+}
+
+function getRankListMaxLimit() {
+  return readPositiveIntEnv('RANK_LIST_MAX_LIMIT', DEFAULT_RANK_LIST_MAX_LIMIT);
+}
+
+function getRankMineScanLimit() {
+  return readPositiveIntEnv('RANK_MINE_SCAN_LIMIT', DEFAULT_RANK_MINE_SCAN_LIMIT);
+}
+
+function getRankBowlMaxLevel() {
+  return readPositiveIntEnv('RANK_BOWL_MAX_LEVEL', DEFAULT_RANK_BOWL_MAX_LEVEL);
+}
+
+function getRankFruitMaxScore() {
+  return readPositiveIntEnv('RANK_FRUIT_MAX_SCORE', DEFAULT_RANK_FRUIT_MAX_SCORE);
+}
+
 module.exports = {
   getGameKey,
   gameKeyUpper,
@@ -64,4 +94,9 @@ module.exports = {
   getTtlSec,
   getMaxBytes,
   getPlatformCredential,
+  getRankListLimit,
+  getRankListMaxLimit,
+  getRankMineScanLimit,
+  getRankBowlMaxLevel,
+  getRankFruitMaxScore,
 };

@@ -22,6 +22,9 @@ import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { BowlTutorialOverlay } from '@/gameobjects/BowlTutorialOverlay';
 import { getFruitSliceBestScore, recordFruitSliceRun } from '@/game/FruitSliceProgress';
+import { submitFruitBestRankIfNeeded } from '@/game/RankUpload';
+import { openLeaderboard } from '@/scenes/LeaderboardScene';
+import { RANK_BOARD_FRUIT } from '@/services/RankService';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
 import { FRUIT_SLICE_REWARDED_AD_UNIT_ID, showRewardedAd } from '@/utils/rewardedAd';
@@ -2276,6 +2279,8 @@ export class FruitSliceEndlessScene implements Scene {
     const isNewBest = this.score > 0 ? recordFruitSliceRun(this.score) : false;
     this.bestScore = getFruitSliceBestScore();
     this.updateHud();
+    // 只有刷新最高分时才上报，避免无意义的 update；后端也会按"非更优记录"二次拦截
+    submitFruitBestRankIfNeeded(isNewBest);
     this.showEndOverlay(isNewBest);
   }
 
@@ -2455,6 +2460,11 @@ export class FruitSliceEndlessScene implements Scene {
         this.startRound();
       }));
     }
+    root.addChild(this.createOverlayTextButton(W / 2, H / 2 + 178, 168, 50, '排行榜', () => {
+      AudioManager.playButtonSound();
+      this.hideEndOverlay();
+      openLeaderboard(RANK_BOARD_FRUIT);
+    }));
     this.overlayLayer.addChild(root);
     this.endOverlay = root;
   }
@@ -2472,6 +2482,34 @@ export class FruitSliceEndlessScene implements Scene {
     root.cursor = 'pointer';
     root.hitArea = new PIXI.Rectangle(-w * 0.5, -h * 0.5, w, h);
     root.on('pointertap', onTap);
+    return root;
+  }
+
+  private createOverlayTextButton(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    label: string,
+    onTap: () => void,
+  ): PIXI.Container {
+    const root = this.createOverlayHitButton(x, y, w, h, onTap);
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0xff8a3d, 0.98);
+    bg.lineStyle(3, 0xffffff, 0.75);
+    bg.drawRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+    bg.endFill();
+    root.addChild(bg);
+    const text = new PIXI.Text(label, {
+      fontSize: 23,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x8b3a12,
+      strokeThickness: 3,
+    });
+    text.anchor.set(0.5);
+    text.resolution = 2;
+    root.addChild(text);
     return root;
   }
 

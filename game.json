@@ -7,6 +7,7 @@
     "uploadFile": 10000,
     "downloadFile": 10000
   },
+  "openDataContext": "openDataContext/",
   "subpackages": [
     {
       "name": "bowl_game",

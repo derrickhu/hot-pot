@@ -19,8 +19,13 @@ function getCollection() {
   return getDb().collection(getCollectionName('playerData'));
 }
 
+function getRankingCollection() {
+  return getDb().collection(getCollectionName('rankings'));
+}
+
 module.exports = {
   getApp,
   getDb,
   getCollection,
+  getRankingCollection,
 };

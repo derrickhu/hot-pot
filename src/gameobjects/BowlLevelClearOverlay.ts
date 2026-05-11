@@ -13,6 +13,7 @@ export interface BowlLevelClearOverlayOptions {
   onHome: () => void;
   onNextLevel: () => void;
   onShare: () => void;
+  onRank?: () => void;
 }
 
 const COLS = 3;
@@ -82,6 +83,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   private readonly shareBtn: PIXI.Container;
   private readonly shareActionBg = new PIXI.Sprite(PIXI.Texture.EMPTY);
   private readonly shareIconHost = new PIXI.Container();
+  private readonly rankBtn: PIXI.Container;
   private readonly homeHint: PIXI.Text;
   private readonly shareHint: PIXI.Text;
 
@@ -96,6 +98,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   private onHome: () => void = () => {};
   private onNextLevel: () => void = () => {};
   private onShare: () => void = () => {};
+  private onRank: () => void = () => {};
 
   constructor(w: number, h: number) {
     super();
@@ -253,6 +256,13 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.shareHint.anchor.set(0.5, 0);
     this.addChild(this.shareHint);
 
+    this.rankBtn = this.createRankButton();
+    this.rankBtn.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      this.onRank();
+    });
+    this.addChild(this.rankBtn);
+
     this.redrawSparkles();
   }
 
@@ -275,6 +285,29 @@ export class BowlLevelClearOverlay extends PIXI.Container {
         sprite.visible = true;
       }
     }
+  }
+
+  private createRankButton(): PIXI.Container {
+    const c = new PIXI.Container();
+    c.eventMode = 'static';
+    c.cursor = 'pointer';
+    c.hitArea = new PIXI.Rectangle(-72, -24, 144, 48);
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0xff8a3d, 0.98);
+    bg.lineStyle(3, 0xffffff, 0.7);
+    bg.drawRoundedRect(-72, -24, 144, 48, 24);
+    bg.endFill();
+    c.addChild(bg);
+    const text = new PIXI.Text('排行榜', {
+      fontSize: 22,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x8b3a12,
+      strokeThickness: 3,
+    });
+    text.anchor.set(0.5);
+    c.addChild(text);
+    return c;
   }
 
   private static makeSquareActionBtn(): PIXI.Container {
@@ -463,6 +496,8 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.onHome = options.onHome;
     this.onNextLevel = options.onNextLevel;
     this.onShare = options.onShare;
+    this.onRank = options.onRank ?? (() => {});
+    this.rankBtn.visible = !!options.onRank;
 
     const w = this.screenW;
     const h = this.screenH;
@@ -532,6 +567,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
 
     this.homeHint.position.set(this.homeBtn.x, this.homeBtn.y + 21);
     this.shareHint.position.set(this.shareBtn.x, this.shareBtn.y + 21);
+    this.rankBtn.position.set(w / 2, footY - 74);
 
     this.nextLabel.position.set(0, -18);
     this.nextSub.position.set(0, 10);

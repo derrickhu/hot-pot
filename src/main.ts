@@ -11,6 +11,7 @@ import { BowlScene } from '@/scenes/BowlScene';
 import { CatalogScene } from '@/scenes/CatalogScene';
 import { FruitSliceEndlessScene } from '@/scenes/FruitSliceEndlessScene';
 import { HomeScene } from '@/scenes/HomeScene';
+import { LeaderboardScene } from '@/scenes/LeaderboardScene';
 import { setupWechatShare } from '@/utils/wechatShare';
 
 async function main(): Promise<void> {
@@ -60,10 +61,12 @@ async function main(): Promise<void> {
     const bowlScene = new BowlScene();
     const fruitSliceScene = new FruitSliceEndlessScene();
     const catalogScene = new CatalogScene();
+    const leaderboardScene = new LeaderboardScene();
     SceneManager.register(homeScene);
     SceneManager.register(bowlScene);
     SceneManager.register(fruitSliceScene);
     SceneManager.register(catalogScene);
+    SceneManager.register(leaderboardScene);
     const shouldEnterFirstLevel = !hasBowlProgressRecord();
     if (shouldEnterFirstLevel) {
       markBowlProgressStarted();

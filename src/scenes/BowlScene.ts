@@ -25,6 +25,9 @@ import {
 import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
 import { FRUIT_MAP, type FruitId } from '@/config/fruits';
 import { getBowlLevelIndex, recordBowlBadgeUnlocked, setBowlLevelIndex } from '@/game/BowlProgress';
+import { submitCurrentBowlProgressRank } from '@/game/RankUpload';
+import { openLeaderboard } from '@/scenes/LeaderboardScene';
+import { RANK_BOARD_BOWL } from '@/services/RankService';
 import { analytics, EVENT_NAMES } from '@/analytics';
 import {
   canClaimDailyShareToolReward,
@@ -528,8 +531,10 @@ export class BowlScene implements Scene {
       },
     });
     this.buildScene();
+    // 构造时的预热失败不致命：onEnter 时还会再 ensureTexturesPreloaded 一次，
+    // 这里 warn 即可，避免日志面板被 Error 栈刷爆。
     void this.ensureTexturesPreloaded().catch((err) => {
-      console.error('Failed to preload bowl textures', err);
+      console.warn('[BowlScene] preload textures failed (will retry on enter):', err?.errMsg || err);
     });
   }
 
@@ -3091,6 +3096,10 @@ export class BowlScene implements Scene {
             this.toast('转发请在微信小游戏中使用');
           }
         },
+        onRank: () => {
+          this.levelClearOverlay.hide();
+          openLeaderboard(RANK_BOARD_BOWL);
+        },
       });
     };
     const badge = getBowlBadgeDef(this.levelDef.levelNumber);
@@ -3098,6 +3107,8 @@ export class BowlScene implements Scene {
       setBowlLevelIndex(idx + 1);
     }
     recordBowlBadgeUnlocked(badge.levelNumber);
+    // 通关一次就上报最新进度；服务端按 (level, badgeLevel) 去重，已存在更高进度则会自动跳过
+    submitCurrentBowlProgressRank();
     this.badgeUnlockOverlay.show({
       badge,
       texture: TextureCache.get(`bowl_badge_${badge.levelNumber}`),
