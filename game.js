@@ -22,6 +22,31 @@ function _showDiag() {
 _diag('game.js start');
 
 try {
+  if (typeof wx !== 'undefined' && typeof wx.createCanvas === 'function' && typeof GameGlobal !== 'undefined') {
+    // 借鉴 xiao_chu 的好友榜方案：第一个 createCanvas 作为真正上屏 Canvas，并锁定 2D context。
+    // 微信开放数据域 sharedCanvas 只能 drawImage 到上屏 Canvas，不能进 WebGL/普通离屏 Canvas。
+    // pixi-adapter 会在后面再创建一个 canvas 给 Pixi/WebGL 使用，Game.ts 每帧把 Pixi 离屏画面
+    // 与 sharedCanvas 合成到这个 2D 上屏 Canvas。
+    var _mainCanvas = wx.createCanvas();
+    var _mainCtx = _mainCanvas.getContext('2d');
+    var _screenInfo = wx.getSystemInfoSync ? wx.getSystemInfoSync() : null;
+    var _dpr = (_screenInfo && _screenInfo.pixelRatio) || 2;
+    var _screenW = (_screenInfo && (_screenInfo.windowWidth || _screenInfo.screenWidth)) || 375;
+    var _screenH = (_screenInfo && (_screenInfo.windowHeight || _screenInfo.screenHeight)) || 667;
+    _mainCanvas.width = _screenW * _dpr;
+    _mainCanvas.height = _screenH * _dpr;
+    if (_mainCtx) {
+      _mainCtx.fillStyle = '#f7e4c4';
+      _mainCtx.fillRect(0, 0, _mainCanvas.width, _mainCanvas.height);
+    }
+    GameGlobal.__mainCanvas = _mainCanvas;
+    _diag('main 2d canvas ready:' + _mainCanvas.width + 'x' + _mainCanvas.height);
+  }
+} catch (e) {
+  _diag('main 2d canvas failed:' + e);
+}
+
+try {
   if (typeof wx !== 'undefined' && wx.getSystemInfoSync) {
     var _info = wx.getSystemInfoSync();
     _diag('platform:' + _info.platform + ' system:' + _info.system);

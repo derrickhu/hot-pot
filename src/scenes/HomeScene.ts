@@ -9,6 +9,7 @@ import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
 import { openLeaderboardWithProfile } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_BOWL } from '@/services/RankService';
 import { UserProfileService } from '@/services/UserProfileService';
+import { warmupFriendRankContext } from '@/utils/friendRanking';
 import { TextureCache } from '@/utils/TextureCache';
 
 /** 首页图鉴入口：独立图标，不带按钮底框 */
@@ -116,6 +117,9 @@ export class HomeScene implements Scene {
     if (!this.unsubRankProfileChange) {
       this.unsubRankProfileChange = UserProfileService.onChange(() => this.syncRankEntryAuthBtn());
     }
+    // 主页空闲时预热好友榜子域沙箱，把 ~100-500ms 的冷启动藏在 home 阶段，
+    // 等玩家点开排行榜并切到好友榜 tab 时少等一截。失败完全静默。
+    warmupFriendRankContext();
   }
 
   /** 保证在底图之上、且盖住同屏其它控件（仍低于设置全屏层） */
@@ -213,8 +217,16 @@ export class HomeScene implements Scene {
     const s = targetW / tex.width;
     this.playEntrySprite.scale.set(s);
     const halfH = (tex.height * s) / 2;
-    /** 文案叠在贴图药丸中心，略上移对齐按钮高光后的视觉中心 */
-    this.playEntryTitle.position.set(0, -3);
+    /**
+     * 贴图 945×390 中，药丸边框水平中心在源图 ~466.5（几何中心 472.5，左偏 ~6 源像素），
+     * 垂直中心在源图 ~208（几何中心 195，下偏 ~13 源像素）。同时左上角柠檬装饰视觉重量
+     * 明显大于右下角小草莓，文字置于贴图几何中心会显得偏左偏上。下面先按几何把文字对齐到
+     * 药丸真实中心，再叠加视觉补偿：X 方向往右多推一点抵消左上柠檬装饰的视觉重量，
+     * Y 方向往上稍稍偏一点匹配药丸顶部高光，让"第N关"看起来稳稳落在按钮正中央。
+     */
+    const titleOffsetX = Math.round((-6 + 22) * s); // 几何 + 柠檬视觉补偿
+    const titleOffsetY = Math.round((13 - 8) * s); // 几何 + 顶部高光视觉补偿
+    this.playEntryTitle.position.set(titleOffsetX, titleOffsetY);
     const hitPadX = 20;
     const hitPadY = 14;
     this.playEntryRoot.hitArea = new PIXI.Rectangle(

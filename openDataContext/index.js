@@ -44,6 +44,7 @@ var state = {
   loading: false,
   avatarImgs: {},
   pendingRender: null,
+  inflight: {},
 };
 
 var CACHE_TTL_MS = 60 * 1000;
@@ -80,6 +81,11 @@ var COLOR = {
 function _safeNum(v) {
   var n = parseInt(v, 10);
   return isNaN(n) ? 0 : n;
+}
+
+function _isCredentialError(err) {
+  var msg = (err && (err.errMsg || err.message)) || '';
+  return (err && err.err_code === 40001) || /invalid credential|access_token/i.test(msg);
 }
 
 /** kvList: [{key, value}]，value 是 JSON 字符串 `{ wxgame: { score, update_time } }` */
@@ -125,22 +131,24 @@ function _ensureAvatar(url) {
 }
 
 // ---------- 数据拉取 ----------
-function _fetchFriendCloudStorage(tab, cb) {
+/**
+ * 拉好友 KV（不含定位自己用的 mine KV）。失败信息原样回传，让上层决定提示文案。
+ * 拆出来是为了让 _getListForTab 能把它和 _fetchMineCloudStorage 并行起来。
+ */
+function _fetchFriendCloudStorageOnly(tab, cb) {
   var meta = TAB_META[tab];
   if (!meta) {
-    cb([]);
+    cb([], null);
     return;
   }
   if (typeof wx === 'undefined' || !wx.getFriendCloudStorage) {
     cb([], { kind: 'unsupported', msg: 'wx.getFriendCloudStorage missing' });
     return;
   }
-  state.loading = true;
   try {
     wx.getFriendCloudStorage({
       keyList: [meta.key],
       success: function (res) {
-        state.loading = false;
         var rows = (res && res.data) || [];
         var list = [];
         for (var i = 0; i < rows.length; i++) {
@@ -155,29 +163,24 @@ function _fetchFriendCloudStorage(tab, cb) {
           });
         }
         list.sort(function (a, b) { return b.value - a.value; });
-        _fetchMineCloudStorage(tab, function (mineValue) {
-          state.listCache[tab] = { ts: Date.now(), list: list, mineValue: mineValue };
-          cb(list, null, mineValue);
-        });
+        cb(list, null);
       },
       fail: function (err) {
-        state.loading = false;
         var errMsg = (err && (err.errMsg || err.message)) || '';
         var kind = 'empty';
-        if (/privacy/i.test(errMsg)) kind = 'privacy';
+        if (_isCredentialError(err)) kind = 'credential';
+        else if (/privacy/i.test(errMsg)) kind = 'privacy';
         else if (/not support|unsupport/i.test(errMsg)) kind = 'unsupported';
         try { console.warn('[openData] getFriendCloudStorage fail', errMsg); } catch (_) {}
-        state.listCache[tab] = { ts: Date.now(), list: [], mineValue: 0, err: { kind: kind, msg: errMsg } };
-        cb([], { kind: kind, msg: errMsg }, 0);
+        cb([], { kind: kind, msg: errMsg });
       },
     });
   } catch (_) {
-    state.loading = false;
-    cb([]);
+    cb([], null);
   }
 }
 
-/** 读取自己的微信 KV，用来在好友列表中定位“我”，并绘制底部固定个人信息行 */
+/** 读取自己的微信 KV，用来在好友列表中定位"我"，并绘制底部固定个人信息行 */
 function _fetchMineCloudStorage(tab, cb) {
   var meta = TAB_META[tab];
   if (!meta || typeof wx === 'undefined' || !wx.getUserCloudStorage) {
@@ -191,7 +194,9 @@ function _fetchMineCloudStorage(tab, cb) {
         cb(_parseWxgameData((res && res.KVDataList) || [], meta.key));
       },
       fail: function (err) {
-        try { console.warn('[openData] getUserCloudStorage fail', err && (err.errMsg || err)); } catch (_) {}
+        if (!_isCredentialError(err)) {
+          try { console.warn('[openData] getUserCloudStorage fail', err && (err.errMsg || err)); } catch (_) {}
+        }
         cb(0);
       },
     });
@@ -200,15 +205,87 @@ function _fetchMineCloudStorage(tab, cb) {
   }
 }
 
+/**
+ * 并行拉好友 KV + 自己 KV，并尽量"先来先用"地驱动渲染：
+ *  - 任一端先回 → 立即触发一次 cb（partial=true，主域已经能开始画骨架/局部内容）
+ *  - 两端都回 → 再 cb 一次（final，写入缓存）
+ *
+ * 这样首屏体感会比"两端都到齐再画"快几百毫秒，
+ * 且兜底失败处理跟原先一致（credential / privacy / unsupported 仍能透出）。
+ *
+ * 通过 state.inflight[tab] 合并并发请求：prefetch + render 同时来时只发一组 wx 请求，
+ * 多个 cb 都会在 partial / final 时被依次触发。
+ */
+function _fetchFriendAndMineParallel(tab, cb) {
+  if (!state.inflight) state.inflight = {};
+  var running = state.inflight[tab];
+  if (running) {
+    running.cbs.push(cb);
+    return;
+  }
+  state.loading = true;
+  running = {
+    friendDone: false,
+    mineDone: false,
+    friendList: [],
+    friendErr: null,
+    mineValue: 0,
+    firedPartial: false,
+    cbs: [cb],
+  };
+  state.inflight[tab] = running;
+
+  function fireAll(list, err, mineV, isFinal) {
+    var snapshot = running.cbs.slice();
+    for (var i = 0; i < snapshot.length; i++) {
+      try {
+        snapshot[i](list, err, mineV, isFinal);
+      } catch (e) {
+        try { console.warn('[openData] cb throw', e); } catch (_) {}
+      }
+    }
+  }
+
+  function tryFire() {
+    var allDone = running.friendDone && running.mineDone;
+    if (!allDone && (running.friendDone || running.mineDone) && !running.firedPartial) {
+      running.firedPartial = true;
+      fireAll(running.friendList, running.friendErr, running.mineValue, /*final*/ false);
+      return;
+    }
+    if (allDone) {
+      state.loading = false;
+      state.listCache[tab] = {
+        ts: Date.now(),
+        list: running.friendList,
+        mineValue: running.mineValue,
+        err: running.friendErr || undefined,
+      };
+      fireAll(running.friendList, running.friendErr, running.mineValue, /*final*/ true);
+      delete state.inflight[tab];
+    }
+  }
+
+  _fetchFriendCloudStorageOnly(tab, function (list, err) {
+    running.friendDone = true;
+    running.friendList = list || [];
+    running.friendErr = err || null;
+    tryFire();
+  });
+  _fetchMineCloudStorage(tab, function (v) {
+    running.mineDone = true;
+    running.mineValue = v || 0;
+    tryFire();
+  });
+}
+
 function _getListForTab(tab, forceRefresh, cb) {
   var cached = state.listCache[tab];
   if (!forceRefresh && cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-    cb(cached.list, cached.err, cached.mineValue || 0);
+    cb(cached.list, cached.err, cached.mineValue || 0, /*final*/ true);
     return;
   }
-  _fetchFriendCloudStorage(tab, function (list, err, mineValue) {
-    cb(list, err, mineValue || 0);
-  });
+  _fetchFriendAndMineParallel(tab, cb);
 }
 
 // ---------- 通用绘图 ----------
@@ -524,9 +601,40 @@ function _drawBoard(list, mineValue) {
   _drawRow(0, h - rowH, w, rowH, S, meta, mine.item, mine.rank, true);
 }
 
+/**
+ * 把"拿到的数据状态"翻成一次具体的绘制。
+ * 拆开是因为并行拉取时会被回调两次（partial + final），两次都要走同一套画法。
+ */
+function _paintResult(list, err, mineValue) {
+  if (err && err.kind === 'privacy') {
+    _drawHint('好友榜暂不可用', '请检查小程序后台隐私协议配置');
+    return;
+  }
+  if (err && err.kind === 'credential') {
+    _drawHint('好友榜暂不可用', '微信凭证异常，重进小程序后再试');
+    return;
+  }
+  if (err && err.kind === 'unsupported') {
+    _drawHint('好友榜暂不可用', '请升级微信到最新版本重试');
+    return;
+  }
+  if (!list || !list.length) {
+    if (mineValue > 0) {
+      _drawBoard([], mineValue);
+    } else {
+      _drawHint('暂无好友上榜', '邀请微信好友一起来玩即可上榜');
+    }
+    return;
+  }
+  _drawBoard(list, mineValue || 0);
+}
+
 function _render(msg) {
   state.pendingRender = msg;
-  if (!CTX || !CANVAS) return;
+  if (!CTX || !CANVAS) {
+    try { console.warn('[openData] render skipped: no CTX/CANVAS'); } catch (_) {}
+    return;
+  }
 
   state.tab = msg.tab || state.tab;
   state.pixelRatio = msg.pixelRatio || state.pixelRatio;
@@ -535,35 +643,79 @@ function _render(msg) {
   // 新基础库下 sharedCanvas 的 width/height 在 openDataContext 内只读，
   // 必须由主域写入（见 src/utils/friendRanking.ts:ensureSharedCanvasSize）。
 
-  _getListForTab(state.tab, !!msg.force, function (list, err, mineValue) {
-    if (err && err.kind === 'privacy') {
-      _drawHint('好友榜暂不可用', '请检查小程序后台隐私协议配置');
+  // 进入这一帧能拿到啥就先画啥，绝不留白屏：
+  //  - 有缓存 → 直接用缓存数据画一份（不管 force，避免 force 重拉时白屏空等）；
+  //  - 无缓存 → 画一个 loading 骨架占位。
+  // 后续 _getListForTab 拉到新数据时会再覆盖一次（partial / final 两次都会刷）。
+  var cached = state.listCache[state.tab];
+  var hasFresh = cached && Date.now() - cached.ts < CACHE_TTL_MS;
+  try {
+    console.log(
+      '[openData] render tab=' + state.tab + ' force=' + !!msg.force
+        + ' hasFreshCache=' + !!hasFresh
+        + ' canvas=' + (CANVAS.width + 'x' + CANVAS.height)
+    );
+  } catch (_) {}
+  if (hasFresh) {
+    _paintResult(cached.list, cached.err, cached.mineValue || 0);
+  } else if (!msg.silent) {
+    _drawHint('正在加载好友榜…', '正在向微信请求好友数据');
+  }
+
+  _getListForTab(state.tab, !!msg.force, function (list, err, mineValue, isFinal) {
+    if (!isFinal && (!list || !list.length) && !err && !(mineValue > 0)) {
       return;
     }
-    if (err && err.kind === 'unsupported') {
-      _drawHint('好友榜暂不可用', '请升级微信到最新版本重试');
-      return;
-    }
-    if (!list || !list.length) {
-      if (mineValue > 0) {
-        _drawBoard([], mineValue);
-      } else {
-        _drawHint('暂无好友上榜', '邀请微信好友一起来玩即可上榜');
-      }
-      return;
-    }
-    _drawBoard(list, mineValue || 0);
+    try {
+      console.log(
+        '[openData] paint tab=' + state.tab
+          + ' isFinal=' + isFinal
+          + ' listLen=' + ((list && list.length) || 0)
+          + ' mineValue=' + (mineValue || 0)
+          + ' err=' + (err ? err.kind : 'none')
+      );
+    } catch (_) {}
+    _paintResult(list, err, mineValue);
+  });
+}
+
+/**
+ * 静默预拉：把当前 tab 的好友/自己 KV 拉到子域 60s 缓存里，但不画任何东西。
+ *
+ * 主域 LeaderboardScene 在还停留在世界榜时调用，等用户切到好友榜时直接命中缓存，
+ * 跳过整段 wx 网络往返。如果用户从不切到好友榜，多出来的两次 KV 网络也只是一次性的，
+ * 不会持续刷。
+ */
+function _prefetch(tab) {
+  if (!tab) tab = state.tab;
+  state.tab = tab || state.tab;
+  var cached = state.listCache[state.tab];
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return;
+  _fetchFriendAndMineParallel(state.tab, function () {
+    // 结果已经写进 state.listCache 由 _fetchFriendAndMineParallel 负责，无需绘制
   });
 }
 
 // ---------- 消息入口 ----------
+try {
+  console.log(
+    '[openData] subdomain boot, hasCANVAS=' + !!CANVAS + ' hasCTX=' + !!CTX
+      + ' wx=' + (typeof wx !== 'undefined')
+      + ' wxOnMessage=' + (typeof wx !== 'undefined' && typeof wx.onMessage === 'function')
+  );
+} catch (_) {}
+
 if (typeof wx !== 'undefined' && wx.onMessage) {
   wx.onMessage(function (data) {
+    try { console.log('[openData] onMessage action=' + (data && data.action)); } catch (_) {}
     if (!data || !data.action) return;
     if (data.action === 'render' || data.action === 'refresh') {
       _render(data);
+    } else if (data.action === 'prefetch') {
+      _prefetch(data.tab);
     } else if (data.action === 'invalidate') {
-      // 主域刚 setUserCloudStorage 完，下次 render 时强制重新拉
+      // 主域刚 setUserCloudStorage 完，下次 render 时强制重新拉。
+      // 在飞的请求已经发出了，让它完成并写入新缓存即可；这里只清旧缓存。
       state.listCache = {};
     }
   });

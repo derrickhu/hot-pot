@@ -27,9 +27,15 @@ const KV_KEY: Record<FriendRankTab, string> = {
 const MIN_UPLOAD_GAP_MS = 10 * 1000;
 let lastUploadTs = 0;
 const lastVals: Record<FriendRankTab, number> = { bowl: 0, fruit: 0 };
+let friendRankUploadDisabledReason = '';
 
 let lastCanvasW = 0;
 let lastCanvasH = 0;
+
+function isCredentialError(err: { errMsg?: string; err_code?: number } | undefined): boolean {
+  const msg = err?.errMsg || '';
+  return err?.err_code === 40001 || /invalid credential|access_token/i.test(msg);
+}
 
 /** 当前环境是否支持好友榜：必须是微信小游戏且具备 openDataContext */
 export function isFriendRankSupported(): boolean {
@@ -86,6 +92,69 @@ export function postMessage(msg: Record<string, unknown>): void {
   }
 }
 
+let warmupDone = false;
+let prefetchedTabs: Partial<Record<FriendRankTab, number>> = {};
+const PREFETCH_TTL_MS = 30 * 1000;
+
+/**
+ * 预热 openDataContext 子上下文：
+ *  - 第一次 `wx.getOpenDataContext()` 调用会让微信冷启动一个独立 JS 沙箱并加载 openDataContext/ 内的代码，
+ *    冷启动本身就有 ~100-500ms。提前在 HomeScene 触发，可以把这段时间藏到玩家进入主页之后、
+ *    点开排行榜之前，让首次点击"好友榜" tab 时少等一截。
+ *  - 只触发一次，重复调用是 no-op。
+ *  - 失败完全静默：好友榜不可用本来也只是降级。
+ */
+export function warmupFriendRankContext(): void {
+  if (warmupDone) return;
+  if (!isFriendRankSupported()) {
+    warmupDone = true;
+    return;
+  }
+  try {
+    // 仅 spawn 子上下文 + 拿一次 canvas 句柄，触发 JS 加载。
+    // 不传任何 message，子域内部除了注册 wx.onMessage 不会再做别的事。
+    const odc = getOpenDataContext();
+    if (odc) {
+      try {
+        odc.canvas;
+      } catch (_) {
+        // 忽略：部分基础库版本下 canvas getter 还没就绪也无所谓，
+        // 真正用的时候 getSharedCanvas() 会再取一次
+      }
+    }
+  } catch (e) {
+    console.warn('[FriendRank] warmup failed', e);
+  } finally {
+    warmupDone = true;
+  }
+}
+
+/**
+ * 提前在后台让子域去拉 KV，把结果填到子域 60s 缓存里。
+ * 用户随后点开"好友榜" tab 时，子域命中缓存直接绘制，可省掉一次完整网络等待。
+ *
+ * - 默认 30s 节流（同一 tab）避免反复触发 wx 网络
+ * - 不会绘制任何东西（postMessage 走 silent prefetch 通道）
+ * - 完全静默，失败也不会影响主域
+ */
+export function prefetchFriendRank(
+  tab: FriendRankTab,
+  opts?: { force?: boolean }
+): void {
+  if (!isFriendRankSupported()) return;
+  warmupFriendRankContext();
+  const now = Date.now();
+  const last = prefetchedTabs[tab] || 0;
+  if (!opts?.force && now - last < PREFETCH_TTL_MS) return;
+  prefetchedTabs[tab] = now;
+  postMessage({ action: 'prefetch', tab });
+}
+
+/** 调试 / 测试用：清掉本次会话的预拉节流缓存 */
+export function resetFriendRankPrefetchThrottle(): void {
+  prefetchedTabs = {};
+}
+
 /**
  * 上报当前用户的好友榜分数到 wx.setUserCloudStorage
  * - 同时支持 bowl（通关进度）与 fruit（最佳分数），各自独立校验
@@ -101,6 +170,7 @@ export function uploadFriendScores(
 ): void {
   if (!isFriendRankSupported()) return;
   if (typeof wx.setUserCloudStorage !== 'function') return;
+  if (friendRankUploadDisabledReason) return;
 
   const force = !!opts?.force;
   const now = Date.now();
@@ -144,6 +214,12 @@ export function uploadFriendScores(
         );
       },
       fail: (err) => {
+        if (isCredentialError(err)) {
+          // 微信开放数据域凭证异常时，本会话继续重试只会刷屏；重进小程序/刷新微信态后再尝试。
+          friendRankUploadDisabledReason = 'credential';
+          console.warn('[FriendRank] setUserCloudStorage credential invalid, disabled this session', err);
+          return;
+        }
         console.warn('[FriendRank] setUserCloudStorage fail', err);
       },
     });

@@ -19,7 +19,9 @@ import {
   ensureSharedCanvasSize,
   getSharedCanvas,
   isFriendRankSupported,
+  prefetchFriendRank,
   renderFriendBoard,
+  warmupFriendRankContext,
   type FriendRankTab,
 } from '@/utils/friendRanking';
 import { TextureCache } from '@/utils/TextureCache';
@@ -28,6 +30,31 @@ import { TextureCache } from '@/utils/TextureCache';
 type BoardTab = 'world' | 'friend';
 
 let nextInitialBoard: RankBoard = RANK_BOARD_BOWL;
+
+class WxSharedCanvasResource extends PIXI.Resource {
+  private readonly source: HTMLCanvasElement & { width: number; height: number };
+
+  constructor(source: HTMLCanvasElement & { width: number; height: number }) {
+    super(Math.max(1, source.width | 0), Math.max(1, source.height | 0));
+    this.source = source;
+  }
+
+  upload(renderer: PIXI.Renderer, baseTexture: PIXI.BaseTexture, glTexture: any): boolean {
+    const gl = renderer.gl as any;
+    if (!gl || typeof gl.wxBindCanvasTexture !== 'function') {
+      return false;
+    }
+    gl.wxBindCanvasTexture(gl.TEXTURE_2D, this.source);
+    glTexture.width = baseTexture.realWidth;
+    glTexture.height = baseTexture.realHeight;
+    return true;
+  }
+
+  update(): void {
+    this.resize(Math.max(1, this.source.width | 0), Math.max(1, this.source.height | 0));
+    super.update();
+  }
+}
 
 /**
  * 外部仍按场景方式打开排行榜，参数透传给世界榜数据源。
@@ -126,7 +153,9 @@ export class LeaderboardScene implements Scene {
   private readonly avatarKeyByUrl = new Map<string, string>();
   /** 上次重画时是否处于"加载头像"中的标记，用于头像 onload 时局部刷新 */
   private avatarLoadGeneration = 0;
-  /** 好友榜 sharedCanvas 显示精灵（仅在 friend tab + 微信小游戏环境下创建） */
+  /** 当前是否正在通过 Game 的 2D 合成层显示好友榜 sharedCanvas */
+  private friendBoardOverlayActive = false;
+  /** iOS 微信 wxBindCanvasTexture 兜底：direct-webgl 下直接绑定 sharedCanvas 纹理 */
   private friendBoardSprite: PIXI.Sprite | null = null;
 
   constructor() {
@@ -142,6 +171,13 @@ export class LeaderboardScene implements Scene {
     // 进入时先等待"当前进度上报"落库再拉列表，避免玩家自己看不到自己；
     // 上报失败也继续 list（不阻塞看其他玩家成绩）
     void this.loadWorldBoardWithFlush(this.worldBoard);
+    // 预热好友榜：玩家正在看世界榜的几百毫秒里，让子域沙箱起来并把好友 KV 拉好，
+    // 等他切到好友榜 tab 时直接命中缓存，省掉一整段网络等待。
+    if (isFriendRankSupported()) {
+      warmupFriendRankContext();
+      const tabKey: FriendRankTab = this.worldBoard === RANK_BOARD_FRUIT ? 'fruit' : 'bowl';
+      prefetchFriendRank(tabKey);
+    }
     // 资料变化时（拿到真实昵称 / 头像后）立即重画并清空旧的覆盖按钮
     if (!this.unsubProfileChange) {
       this.unsubProfileChange = UserProfileService.onChange(() => {
@@ -170,10 +206,10 @@ export class LeaderboardScene implements Scene {
     //    基础库 3.15+ 上每帧 Object.assign(style, ...) 都会触发
     //    `updateTextView:fail` SystemError 日志，把面板刷爆。
 
-    // 好友榜：sharedCanvas 的像素内容是由子域异步绘制的，GPU 纹理需要每帧主动 update
-    // 才能把最新位图上传上来；其余 tab 下我们已经销毁了 sprite，这里直接跳过。
-    if (this.friendBoardSprite && this.friendBoardSprite.texture) {
-      this.friendBoardSprite.texture.baseTexture.update();
+    // 好友榜优先由 Game 的上屏 2D 合成层直接绘制 sharedCanvas；
+    // iOS direct-webgl 兜底则通过 wxBindCanvasTexture 每帧刷新纹理。
+    if (this.friendBoardSprite?.texture) {
+      this.friendBoardSprite.texture.update();
     }
   }
 
@@ -464,7 +500,7 @@ export class LeaderboardScene implements Scene {
     AudioManager.playButtonSound();
     this.activeTab = tab;
     if (tab !== 'friend') {
-      // 切回世界榜：拆掉 sharedCanvas sprite，避免它继续在更新纹理
+      // 切回世界榜：关闭上屏 2D 合成层，避免 sharedCanvas 残留
       this.destroyFriendBoardSprite();
     }
     this.redraw();
@@ -481,7 +517,7 @@ export class LeaderboardScene implements Scene {
       return;
     }
     // 离开好友榜的兜底清理：上一次 redraw 在 friend 时挂的 sprite 需要回收
-    if (this.friendBoardSprite) {
+    if (this.friendBoardOverlayActive) {
       this.destroyFriendBoardSprite();
     }
 
@@ -1222,9 +1258,8 @@ export class LeaderboardScene implements Scene {
     const physH = Math.max(1, Math.round(area.h * pixelRatio));
     ensureSharedCanvasSize(physW, physH);
 
-    // sharedCanvas size 可能在 ensureSharedCanvasSize 时变了，旧 baseTexture 会跟错；
-    // 直接把上次的 sprite 销毁重建最稳，redraw 频率不高，性能可接受。
-    if (this.friendBoardSprite) {
+    // sharedCanvas size 或绘制区域变化时，先清掉旧合成区域再设置新的。
+    if (this.friendBoardOverlayActive) {
       this.destroyFriendBoardSprite();
     }
     const canvas = getSharedCanvas();
@@ -1232,24 +1267,19 @@ export class LeaderboardScene implements Scene {
       this.drawFriendPlaceholder();
       return;
     }
-    try {
-      const tex = PIXI.Texture.from(canvas as any);
-      tex.baseTexture.mipmap = PIXI.MIPMAP_MODES.OFF;
-      this.friendBoardSprite = new PIXI.Sprite(tex);
-    } catch (error) {
-      console.warn('[LeaderboardScene] create sharedCanvas sprite failed', error);
-      this.drawFriendPlaceholder();
-      return;
-    }
-
-    const sprite = this.friendBoardSprite!;
-    sprite.width = area.w;
-    sprite.height = area.h;
-    sprite.position.set(W / 2 - area.w / 2, area.y);
-    this.cardContent.addChild(sprite);
-
-    // 触发子域绘制；子域内部 60s 缓存命中时直接重绘，不会反复调 wx.getFriendCloudStorage
+    // 触发子域绘制：
+    //  - 始终 force=true，与历史行为一致。即便 LeaderboardScene.onEnter 阶段 prefetch
+    //    已经把数据填进 60s 缓存，子域里的 inflight 合并层也会把两次请求合成一次 wx 网络调用，
+    //    不会因此多刷一份接口。force=true 主要保证在真机上 prefetch postMessage 漏掉时，
+    //    render 路径仍然会触发实际的数据拉取，避免出现"白屏不刷新"。
     const tabKey: FriendRankTab = this.worldBoard === RANK_BOARD_FRUIT ? 'fruit' : 'bowl';
+    console.log(
+      '[LeaderboardScene] drawFriendBoard tab=' + tabKey
+        + ' area=' + Math.round(area.w) + 'x' + Math.round(area.h)
+        + ' phys=' + physW + 'x' + physH
+        + ' canvas=' + (canvas as any).width + 'x' + (canvas as any).height
+        + ' selfOpenId=' + (this.resolveWechatOpenId() ? 'yes' : 'no')
+    );
     renderFriendBoard({
       tab: tabKey,
       width: physW,
@@ -1258,6 +1288,24 @@ export class LeaderboardScene implements Scene {
       selfOpenId: this.resolveWechatOpenId(),
       force: true,
     });
+    const overlayOk = Game.setOpenDataOverlay({
+      canvas,
+      x: area.x,
+      y: area.y,
+      width: area.w,
+      height: area.h,
+    });
+    this.friendBoardOverlayActive = overlayOk;
+    if (!overlayOk) {
+      if (this.tryDrawFriendBoardWithWxBindTexture(canvas, area)) {
+        this.friendBoardOverlayActive = true;
+      } else {
+        this.drawFriendPlaceholder(
+          '当前渲染模式无法显示好友榜',
+          '微信开放数据域需要 2D 上屏合成；当前 Pixi 已回退为 WebGL 直出，且本环境不支持 iOS 纹理绑定'
+        );
+      }
+    }
 
     // 好友榜内容完全由子域渲染：列表与底部自己行都在 sharedCanvas 中绘制，
     // 把上一次可能残留的 wx 原生授权按钮拆掉。
@@ -1271,23 +1319,57 @@ export class LeaderboardScene implements Scene {
     return userId.startsWith('wx:') ? userId.slice(3) : '';
   }
 
-  /** 离开好友榜时回收 sharedCanvas Sprite，避免在其他 tab/场景下还在每帧 update 纹理 */
-  private destroyFriendBoardSprite(): void {
-    if (!this.friendBoardSprite) {
-      return;
+  /** direct-webgl 下的 iOS 官方兜底：gl.wxBindCanvasTexture，仅 iOS 支持 */
+  private tryDrawFriendBoardWithWxBindTexture(
+    canvas: HTMLCanvasElement & { width: number; height: number },
+    area: { x: number; y: number; w: number; h: number }
+  ): boolean {
+    if (!Game.canBindCanvasTexture()) {
+      return false;
     }
     try {
-      this.friendBoardSprite.parent?.removeChild(this.friendBoardSprite);
-      // 不销毁 baseTexture（sharedCanvas 是单例资源），只销毁 sprite 实例
-      this.friendBoardSprite.destroy({ children: false, texture: false, baseTexture: false });
+      const resource = new WxSharedCanvasResource(canvas);
+      const baseTexture = new PIXI.BaseTexture(resource, {
+        mipmap: PIXI.MIPMAP_MODES.OFF,
+        scaleMode: PIXI.SCALE_MODES.LINEAR,
+        wrapMode: PIXI.WRAP_MODES.CLAMP,
+      });
+      baseTexture.setRealSize(canvas.width, canvas.height);
+      const texture = new PIXI.Texture(baseTexture);
+      const sprite = new PIXI.Sprite(texture);
+      sprite.position.set(area.x, area.y);
+      sprite.width = area.w;
+      sprite.height = area.h;
+      this.friendBoardSprite = sprite;
+      this.cardContent.addChild(sprite);
+      console.log('[LeaderboardScene] use wxBindCanvasTexture fallback for friendBoard');
+      return true;
     } catch (error) {
-      console.warn('[LeaderboardScene] destroy friendBoardSprite failed', error);
+      console.warn('[LeaderboardScene] wxBindCanvasTexture fallback failed', error);
+      return false;
     }
-    this.friendBoardSprite = null;
+  }
+
+  /** 离开好友榜时关闭 sharedCanvas 上屏合成，避免在其他 tab/场景下残留 */
+  private destroyFriendBoardSprite(): void {
+    Game.clearOpenDataOverlay();
+    if (this.friendBoardSprite) {
+      try {
+        this.friendBoardSprite.parent?.removeChild(this.friendBoardSprite);
+        this.friendBoardSprite.destroy({ children: false, texture: true, baseTexture: true });
+      } catch (error) {
+        console.warn('[LeaderboardScene] destroy friendBoardSprite failed', error);
+      }
+      this.friendBoardSprite = null;
+    }
+    this.friendBoardOverlayActive = false;
   }
 
   /** 好友榜占位：非微信小游戏环境（开发预览等）下，给出引导文案与分享入口 */
-  private drawFriendPlaceholder(): void {
+  private drawFriendPlaceholder(
+    titleText = '好友榜即将开放',
+    descText = '邀请微信好友一起来挑战吧\n好友越多，你的排名越精彩'
+  ): void {
     const W = Game.logicWidth;
     const y = this.cardY + 332;
     const card = new PIXI.Container();
@@ -1310,7 +1392,7 @@ export class LeaderboardScene implements Scene {
     icon.position.set(0, -h / 2 + 60);
     card.addChild(icon);
 
-    const title = new PIXI.Text('好友榜即将开放', {
+    const title = new PIXI.Text(titleText, {
       fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
       fontSize: 30,
       fill: 0x5a3318,
@@ -1324,7 +1406,7 @@ export class LeaderboardScene implements Scene {
     title.position.set(0, -h / 2 + 130);
     card.addChild(title);
 
-    const desc = new PIXI.Text('邀请微信好友一起来挑战吧\n好友越多，你的排名越精彩', {
+    const desc = new PIXI.Text(descText, {
       fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
       fontSize: 22,
       fill: 0x8a5a2b,
