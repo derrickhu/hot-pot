@@ -31,6 +31,17 @@ type BoardTab = 'world' | 'friend';
 
 let nextInitialBoard: RankBoard = RANK_BOARD_BOWL;
 
+const BOARD_TAB_META: Record<RankBoard, { label: string; shortLabel: string; icon: string }> = {
+  [RANK_BOARD_BOWL]: { label: '叠碗闯关', shortLabel: '叠碗', icon: '🍲' },
+  [RANK_BOARD_FRUIT]: { label: '果切挑战', shortLabel: '果切', icon: '🍉' },
+};
+
+const LEADERBOARD_MEDAL_ASSETS: Record<number, string> = {
+  1: 'assets/images/leaderboard_medal_1.png',
+  2: 'assets/images/leaderboard_medal_2.png',
+  3: 'assets/images/leaderboard_medal_3.png',
+};
+
 class WxSharedCanvasResource extends PIXI.Resource {
   private readonly source: HTMLCanvasElement & { width: number; height: number };
 
@@ -98,7 +109,6 @@ const COLOR_ROW_BG = 0xfff9ee;
 const COLOR_ROW_STROKE = 0xe9d8b9;
 const COLOR_ME_BG = 0xffa743;
 const COLOR_ME_STROKE = 0xd6791f;
-const COLOR_PILL_PURPLE = 0xb086e1;
 const COLOR_TAB_INACTIVE_BG = 0xf3eadb;
 const COLOR_TAB_INACTIVE_STROKE = 0xd9c8a8;
 const COLOR_TAB_INACTIVE_TEXT = 0x9b8268;
@@ -108,6 +118,36 @@ const COLOR_TAB_ACTIVE_TEXT = 0xffffff;
 const COLOR_CLOSE_RED = 0xe85a5a;
 const COLOR_TITLE_TEXT = 0xffffff;
 const COLOR_TITLE_STROKE = 0x5a3a90;
+
+const TOP_RANK_ROW_STYLE: Record<number, {
+  fill: number;
+  stroke: number;
+  medalCore: number;
+  medalEdge: number;
+  ribbon: number;
+}> = {
+  1: {
+    fill: 0xfff3cf,
+    stroke: 0xefbd48,
+    medalCore: 0xf8c84f,
+    medalEdge: 0xc88517,
+    ribbon: 0xe84848,
+  },
+  2: {
+    fill: 0xeaf4ff,
+    stroke: 0xb5cbe0,
+    medalCore: 0xd8e2ec,
+    medalEdge: 0x8aa3b9,
+    ribbon: 0x5f8fc1,
+  },
+  3: {
+    fill: 0xffeadb,
+    stroke: 0xe1a078,
+    medalCore: 0xe79768,
+    medalEdge: 0xa15a2a,
+    ribbon: 0xc56a38,
+  },
+};
 
 export class LeaderboardScene implements Scene {
   readonly name = 'leaderboard';
@@ -151,6 +191,8 @@ export class LeaderboardScene implements Scene {
   private unsubProfileChange: (() => void) | null = null;
   /** 已经发起加载的远程头像 URL → 缓存 key，避免重复发请求 */
   private readonly avatarKeyByUrl = new Map<string, string>();
+  /** 前三名奖牌贴图加载标记，避免 redraw 时重复创建 image 请求 */
+  private readonly rankMedalLoadRequested = new Set<number>();
   /** 上次重画时是否处于"加载头像"中的标记，用于头像 onload 时局部刷新 */
   private avatarLoadGeneration = 0;
   /** 当前是否正在通过 Game 的 2D 合成层显示好友榜 sharedCanvas */
@@ -163,6 +205,10 @@ export class LeaderboardScene implements Scene {
   private friendScrollY = 0;
   /** 当前世界榜列表内容层，拖动时只移动该层，避免每帧重建所有行 */
   private worldListContent: PIXI.Container | null = null;
+  /** 世界榜当前列表数据，滚动虚拟列表时复用 */
+  private worldListRecords: RankRecord[] = [];
+  private worldVisibleStart = -1;
+  private worldVisibleEnd = -1;
   /** 好友榜最近一次 render 参数，拖动时复用它只更新 scrollY */
   private friendRenderState: {
     tab: FriendRankTab;
@@ -192,6 +238,7 @@ export class LeaderboardScene implements Scene {
     this.worldScrollY = 0;
     this.friendScrollY = 0;
     this.buildLayout();
+    this.preloadRankMedals();
     // 进入时先等待"当前进度上报"落库再拉列表，避免玩家自己看不到自己；
     // 上报失败也继续 list（不阻塞看其他玩家成绩）
     void this.loadWorldBoardWithFlush(this.worldBoard);
@@ -498,7 +545,7 @@ export class LeaderboardScene implements Scene {
     this.errorText = '';
     this.redraw();
     try {
-      const result = await RankService.list(board, 100, 0);
+      const result = await RankService.list(board, 50, 0);
       if (seq !== this.requestSeq) {
         return;
       }
@@ -529,14 +576,47 @@ export class LeaderboardScene implements Scene {
     if (tab !== 'friend') {
       // 切回世界榜：关闭上屏 2D 合成层，避免 sharedCanvas 残留
       this.destroyFriendBoardSprite();
+      if (!this.worldResult && !this.loading) {
+        void this.loadWorldBoardWithFlush(this.worldBoard);
+        return;
+      }
     }
     this.redraw();
+  }
+
+  /** 顶部玩法切换：叠碗 / 果切。切玩法时保留世界/好友榜这个范围 Tab。 */
+  private switchBoard(board: RankBoard): void {
+    if (this.worldBoard === board) {
+      return;
+    }
+    AudioManager.playButtonSound();
+    this.worldBoard = board;
+    this.worldResult = null;
+    this.errorText = '';
+    this.worldScrollY = 0;
+    this.friendScrollY = 0;
+    this.friendRenderState = null;
+    this.dragListKind = null;
+    this.destroyFriendBoardSprite();
+
+    if (isFriendRankSupported()) {
+      prefetchFriendRank(board === RANK_BOARD_FRUIT ? 'fruit' : 'bowl', { force: true });
+    }
+
+    if (this.activeTab === 'world') {
+      void this.loadWorldBoardWithFlush(board);
+    } else {
+      this.redraw();
+    }
   }
 
   private redraw(): void {
     this.cardContent.removeChildren();
     this.mineLayer.removeChildren();
     this.worldListContent = null;
+    this.worldListRecords = [];
+    this.worldVisibleStart = -1;
+    this.worldVisibleEnd = -1;
 
     this.drawTabs();
 
@@ -560,7 +640,10 @@ export class LeaderboardScene implements Scene {
 
     const list = this.worldResult?.list ?? [];
     if (list.length === 0) {
-      this.drawState('还没有玩家上榜\n通关后抢占第一名');
+      const hint = this.worldBoard === RANK_BOARD_FRUIT
+        ? '还没有玩家上榜\n去果切挑战刷新高分'
+        : '还没有玩家上榜\n通关后抢占第一名';
+      this.drawState(hint);
       this.drawMineRow(null);
       return;
     }
@@ -569,17 +652,119 @@ export class LeaderboardScene implements Scene {
     this.drawMineRow(this.worldResult?.mine ?? null, list);
   }
 
-  /** 两个 Tab：世界榜（橙黄选中）/ 好友榜（米色描边） */
+  /** 两级 Tab：上方玩法（叠碗/果切），下方范围（世界/好友） */
   private drawTabs(): void {
-    const W = Game.logicWidth;
-    const tabY = this.cardY + 124;
-    const tabW = Math.min(220, (this.cardW - 80) / 2);
-    const gap = 16;
-    const totalW = tabW * 2 + gap;
-    const startX = (W - totalW) / 2;
+    this.drawBoardTabs();
+    this.drawRankSourceTabs();
+  }
 
-    this.cardContent.addChild(this.createTab(startX + tabW / 2, tabY, tabW, '世界榜', 'world'));
-    this.cardContent.addChild(this.createTab(startX + tabW * 1.5 + gap, tabY, tabW, '好友榜', 'friend'));
+  private drawBoardTabs(): void {
+    const W = Game.logicWidth;
+    const tabY = this.cardY + 76;
+    const tabH = 54;
+    const bowlW = Math.min(250, this.cardW * 0.37);
+    const fruitW = Math.min(226, this.cardW * 0.33);
+    const gap = 30;
+    const totalW = bowlW + fruitW + gap;
+    const startX = (W - totalW) / 2;
+    this.cardContent.addChild(
+      this.createBoardTab(startX + bowlW / 2, tabY, bowlW, tabH, RANK_BOARD_BOWL)
+    );
+    this.cardContent.addChild(
+      this.createBoardTab(startX + bowlW + gap + fruitW / 2, tabY, fruitW, tabH, RANK_BOARD_FRUIT)
+    );
+  }
+
+  private drawRankSourceTabs(): void {
+    const W = Game.logicWidth;
+    const tabY = this.cardY + 150;
+    const tabW = this.cardW - 62;
+    const tabH = 62;
+    const root = new PIXI.Container();
+    root.position.set(W / 2, tabY);
+
+    const base = new PIXI.Graphics();
+    base.beginFill(0xfffaf4);
+    base.lineStyle(3, 0xe2d3bd, 1);
+    base.drawRoundedRect(-tabW / 2, -tabH / 2, tabW, tabH, tabH / 2);
+    base.endFill();
+    root.addChild(base);
+
+    const selectedX = this.activeTab === 'world' ? -tabW / 4 : tabW / 4;
+    const active = new PIXI.Graphics();
+    active.beginFill(0xffc75a);
+    active.lineStyle(3, 0xd89525, 1);
+    active.drawRoundedRect(selectedX - tabW / 4 + 5, -tabH / 2 + 5, tabW / 2 - 10, tabH - 10, (tabH - 10) / 2);
+    active.endFill();
+    root.addChild(active);
+
+    root.addChild(this.createRankSourceSegment(-tabW / 4, 0, tabW / 2, tabH, '世界榜', 'world'));
+    root.addChild(this.createRankSourceSegment(tabW / 4, 0, tabW / 2, tabH, '好友榜', 'friend'));
+    this.cardContent.addChild(root);
+  }
+
+  private createBoardTab(cx: number, cy: number, w: number, h: number, board: RankBoard): PIXI.Container {
+    const selected = this.worldBoard === board;
+    const meta = BOARD_TAB_META[board];
+    const root = new PIXI.Container();
+    root.position.set(cx, cy);
+    root.eventMode = 'static';
+    root.cursor = 'pointer';
+    root.hitArea = new PIXI.Rectangle(-w / 2 - 6, -h / 2 - 6, w + 12, h + 12);
+
+    const bg = new PIXI.Graphics();
+    bg.beginFill(selected ? 0x86cf69 : 0xfffaf4);
+    bg.lineStyle(4, selected ? 0x3d9635 : 0xe3d4bd, 1);
+    bg.drawRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+    bg.endFill();
+    root.addChild(bg);
+
+    const label = new PIXI.Text(`${meta.icon} ${meta.label}`, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 24,
+      fill: selected ? 0xffffff : COLOR_TAB_INACTIVE_TEXT,
+      fontWeight: '900',
+      stroke: selected ? 0x35732b : 0xffffff,
+      strokeThickness: selected ? 5 : 2,
+      lineJoin: 'round',
+    });
+    label.anchor.set(0.5);
+    label.resolution = 2;
+    root.addChild(label);
+    root.on('pointertap', () => this.switchBoard(board));
+    return root;
+  }
+
+  private createRankSourceSegment(
+    cx: number,
+    cy: number,
+    w: number,
+    h: number,
+    label: string,
+    tab: BoardTab,
+  ): PIXI.Container {
+    const selected = this.activeTab === tab;
+    const color = selected ? 0x7a5425 : 0xa89684;
+    const root = new PIXI.Container();
+    root.position.set(cx, cy);
+    root.eventMode = 'static';
+    root.cursor = 'pointer';
+    root.hitArea = new PIXI.Rectangle(-w / 2, -h / 2, w, h);
+
+    const text = new PIXI.Text(label, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 30,
+      fill: color,
+      fontWeight: '900',
+      stroke: selected ? 0xffffff : 0xfffbf5,
+      strokeThickness: selected ? 2 : 1,
+      lineJoin: 'round',
+    });
+    text.anchor.set(0.5);
+    text.resolution = 2;
+    root.addChild(text);
+    root.on('pointertap', () => this.switchTab(tab));
+    return root;
   }
 
   private createTab(cx: number, cy: number, w: number, label: string, tab: BoardTab): PIXI.Container {
@@ -630,7 +815,7 @@ export class LeaderboardScene implements Scene {
   /** 排行榜列表可视区域：底部固定自己行，列表在上方可滚动 */
   private getListArea(): { x: number; y: number; w: number; h: number } {
     const rowH = 84;
-    const startY = this.cardY + 196;
+    const startY = this.cardY + 226;
     const ctaReserve = UserProfileService.hasRealProfile() ? 0 : 84;
     const reservedForMine = 110 + ctaReserve;
     return {
@@ -643,7 +828,7 @@ export class LeaderboardScene implements Scene {
 
   /** 好友榜 sharedCanvas 可视区域：与 drawFriendBoard 保持一致 */
   private getFriendListArea(): { x: number; y: number; w: number; h: number } {
-    const topY = this.cardY + 196;
+    const topY = this.cardY + 226;
     const bottomY = this.cardY + this.cardH - 26;
     const sidePad = 28;
     return {
@@ -659,6 +844,7 @@ export class LeaderboardScene implements Scene {
     const rowH = 84;
     const gap = 10;
     const area = this.getListArea();
+    this.worldListRecords = records;
     this.worldScrollY = this.clampScrollY(this.worldScrollY, records.length, area.h, rowH, gap);
 
     const mask = new PIXI.Graphics();
@@ -676,15 +862,47 @@ export class LeaderboardScene implements Scene {
     content.y = this.worldScrollY;
     viewport.addChild(content);
     this.worldListContent = content;
-
-    for (let i = 0; i < records.length; i += 1) {
-      const rec = records[i]!;
-      const row = this.createRankRow(rec, i);
-      row.position.set(Game.logicWidth / 2, area.y + i * (rowH + gap) + rowH / 2);
-      content.addChild(row);
-    }
+    this.renderWorldVisibleRows();
 
     this.addListDragLayer(area, 'world');
+  }
+
+  /**
+   * 世界榜虚拟列表：100 名只渲染当前窗口附近的行。
+   * Pixi 真机上保留 100 行 Text/Graphics/头像节点会明显卡顿；Canvas 2D 项目 xiao_chu 没这个节点成本。
+   */
+  private renderWorldVisibleRows(): void {
+    const content = this.worldListContent;
+    const records = this.worldListRecords;
+    if (!content) return;
+
+    const rowH = 84;
+    const gap = 10;
+    const step = rowH + gap;
+    const area = this.getListArea();
+    const startIndex = Math.max(0, Math.floor(-this.worldScrollY / step) - 1);
+    const endIndex = Math.min(
+      records.length,
+      Math.ceil((-this.worldScrollY + area.h) / step) + 1
+    );
+
+    content.y = this.worldScrollY;
+    if (startIndex === this.worldVisibleStart && endIndex === this.worldVisibleEnd) {
+      return;
+    }
+    this.worldVisibleStart = startIndex;
+    this.worldVisibleEnd = endIndex;
+    const old = content.removeChildren();
+    for (const child of old) {
+      child.destroy({ children: true, texture: false, baseTexture: false } as any);
+    }
+
+    for (let i = startIndex; i < endIndex; i += 1) {
+      const rec = records[i]!;
+      const row = this.createRankRow(rec, i);
+      row.position.set(Game.logicWidth / 2, area.y + i * step + rowH / 2);
+      content.addChild(row);
+    }
   }
 
   private createRankRow(record: RankRecord, listIndex: number): PIXI.Container {
@@ -692,49 +910,55 @@ export class LeaderboardScene implements Scene {
     const w = this.cardW - 56;
     const h = 84;
     const rank = record.rank ?? listIndex + 1;
+    const topStyle = TOP_RANK_ROW_STYLE[rank];
 
     const bg = new PIXI.Graphics();
-    if (record.isMe) {
-      bg.beginFill(COLOR_ME_BG);
-      bg.lineStyle(3, COLOR_ME_STROKE, 1);
+    if (topStyle) {
+      bg.beginFill(topStyle.fill);
+      bg.lineStyle(3, topStyle.stroke, 1);
+      bg.drawRoundedRect(-w / 2, -h / 2, w, h, 16);
+      bg.endFill();
+    } else if (record.isMe) {
+      bg.beginFill(0xffedb0);
+      bg.lineStyle(3, 0xefbd48, 1);
+      bg.drawRoundedRect(-w / 2, -h / 2, w, h, 16);
+      bg.endFill();
     } else {
-      bg.beginFill(COLOR_ROW_BG);
-      bg.lineStyle(2, COLOR_ROW_STROKE, 1);
+      bg.lineStyle(1, COLOR_ROW_STROKE, 0.75);
+      bg.moveTo(-w / 2 + 18, h / 2);
+      bg.lineTo(w / 2 - 18, h / 2);
     }
-    bg.drawRoundedRect(-w / 2, -h / 2, w, h, 20);
-    bg.endFill();
     root.addChild(bg);
 
     // 左侧：奖牌徽章 / 序号
     const badge = this.createRankBadge(rank, record.isMe);
-    badge.position.set(-w / 2 + 50, 0);
+    badge.position.set(-w / 2 + 36, topStyle ? -2 : 0);
     root.addChild(badge);
 
     // 圆形头像（优先远程头像，回退到水果 emoji）
     const avatar = this.createAvatar(record, rank);
-    avatar.position.set(-w / 2 + 124, 0);
+    avatar.position.set(-w / 2 + 112, 0);
     root.addChild(avatar);
 
     // 名字
     const displayName = this.resolveDisplayName(record);
     const name = new PIXI.Text(displayName, {
       fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
-      fontSize: 26,
-      fill: record.isMe ? 0xffffff : 0x5a3318,
+      fontSize: topStyle ? 28 : 25,
+      fill: 0x5a3318,
       fontWeight: '900',
-      stroke: record.isMe ? 0xa14400 : 0xffffff,
-      strokeThickness: record.isMe ? 4 : 3,
+      stroke: 0xffffff,
+      strokeThickness: topStyle ? 2 : 1,
       lineJoin: 'round',
     });
     name.anchor.set(0, 0.5);
     name.resolution = 2;
-    name.position.set(-w / 2 + 178, 0);
+    name.position.set(-w / 2 + 170, 0);
     root.addChild(name);
 
-    // 右侧紫色 pill：关卡数 / 分数
-    const pill = this.createValuePill(record, record.isMe);
-    pill.position.set(w / 2 - 8, 0);
-    root.addChild(pill);
+    const value = this.createValueText(record);
+    value.position.set(w / 2 - 32, 0);
+    root.addChild(value);
 
     return root;
   }
@@ -851,9 +1075,7 @@ export class LeaderboardScene implements Scene {
     const list = this.worldResult?.list ?? [];
     const area = this.getListArea();
     this.worldScrollY = this.clampScrollY(this.dragStartScrollY + dy, list.length, area.h, 84, 10);
-    if (this.worldListContent) {
-      this.worldListContent.y = this.worldScrollY;
-    }
+    this.renderWorldVisibleRows();
   }
 
   private onListDragEnd(): void {
@@ -964,36 +1186,66 @@ export class LeaderboardScene implements Scene {
     return null;
   }
 
+  private preloadRankMedals(): void {
+    ([1, 2, 3] as const).forEach((rank) => {
+      this.ensureRankMedalTexture(rank);
+    });
+  }
+
+  private ensureRankMedalTexture(rank: number): PIXI.Texture | null {
+    const src = LEADERBOARD_MEDAL_ASSETS[rank];
+    if (!src) return null;
+    const key = `leaderboard_medal_v2_${rank}`;
+    const cached = TextureCache.get(key);
+    if (cached) return cached;
+    if (this.rankMedalLoadRequested.has(rank)) return null;
+    this.rankMedalLoadRequested.add(rank);
+    void TextureCache.load(key, src).then((tex) => {
+      if (tex && this.sceneActive) {
+        this.redraw();
+      }
+    }).catch((error) => {
+      console.warn('[LeaderboardScene] load rank medal failed', rank, error);
+    });
+    return null;
+  }
+
   /** 奖牌徽章：前 3 名金/银/铜 + 丝带，4+ 显示数字（自己行另用 99+ 兜底） */
   private createRankBadge(rank: number, isMe: boolean): PIXI.Container {
     const root = new PIXI.Container();
     if (rank <= 3) {
-      const palette = rank === 1
-        ? { core: 0xf7c64a, edge: 0xc88517, ribbon: 0xd94b4b }
-        : rank === 2
-          ? { core: 0xd8e2ec, edge: 0x8aa3b9, ribbon: 0xd94b4b }
-          : { core: 0xe79768, edge: 0xa15a2a, ribbon: 0xd94b4b };
+      const palette = TOP_RANK_ROW_STYLE[rank]!;
+      const medalTex = this.ensureRankMedalTexture(rank);
+      if (medalTex) {
+        const medal = new PIXI.Sprite(medalTex);
+        medal.anchor.set(0.5);
+        medal.width = 82;
+        medal.height = 82;
+        root.addChild(medal);
+        return root;
+      }
 
-      // 丝带（两条三角形）
       const ribbon = new PIXI.Graphics();
       ribbon.beginFill(palette.ribbon);
-      ribbon.drawPolygon([-18, -24, -6, -24, -2, 10, -14, 6]);
-      ribbon.drawPolygon([18, -24, 6, -24, 2, 10, 14, 6]);
+      ribbon.drawPolygon([-14, -8, -2, -8, -2, 28, -9, 22, -16, 28]);
+      ribbon.drawPolygon([14, -8, 2, -8, 2, 28, 9, 22, 16, 28]);
       ribbon.endFill();
       root.addChild(ribbon);
 
-      // 圆盘
       const disk = new PIXI.Graphics();
-      disk.beginFill(palette.edge);
-      disk.drawCircle(0, 10, 26);
+      disk.beginFill(palette.medalEdge);
+      disk.drawCircle(0, 0, 30);
       disk.endFill();
-      disk.beginFill(palette.core);
-      disk.drawCircle(0, 10, 22);
+      disk.beginFill(palette.medalCore);
+      disk.drawCircle(0, 0, 25);
+      disk.endFill();
+      disk.beginFill(0xffffff, 0.35);
+      disk.drawCircle(-8, -9, 8);
       disk.endFill();
       root.addChild(disk);
 
       const numText = new PIXI.Text(String(rank), {
-        fontSize: 26,
+        fontSize: 28,
         fill: 0x5a3318,
         fontWeight: '900',
         stroke: 0xffffff,
@@ -1002,7 +1254,6 @@ export class LeaderboardScene implements Scene {
       });
       numText.anchor.set(0.5);
       numText.resolution = 2;
-      numText.position.set(0, 10);
       root.addChild(numText);
       return root;
     }
@@ -1013,10 +1264,10 @@ export class LeaderboardScene implements Scene {
     const label = new PIXI.Text(display, {
       fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
       fontSize: sizeMap[display] ?? 32,
-      fill: isMe ? 0xffffff : 0x9b8268,
+      fill: 0x9b8268,
       fontWeight: '900',
-      stroke: isMe ? 0xa14400 : 0xffffff,
-      strokeThickness: isMe ? 4 : 3,
+      stroke: 0xffffff,
+      strokeThickness: 2,
       lineJoin: 'round',
     });
     label.anchor.set(0.5);
@@ -1049,32 +1300,19 @@ export class LeaderboardScene implements Scene {
     return root;
   }
 
-  /** 关卡/分数 pill：右侧紫色长方形，白字 */
-  private createValuePill(record: RankRecord, isMe: boolean): PIXI.Container {
-    const root = new PIXI.Container();
-    const w = 132;
-    const h = 64;
-    const bg = new PIXI.Graphics();
-    bg.beginFill(isMe ? 0xf9852c : COLOR_PILL_PURPLE);
-    bg.lineStyle(2, isMe ? 0xb35a1a : 0x7c5bb0, 1);
-    bg.drawRoundedRect(-w, -h / 2, w, h, 18);
-    bg.endFill();
-    root.addChild(bg);
-
+  private createValueText(record: RankRecord): PIXI.Text {
     const text = new PIXI.Text(this.formatRecordValue(record), {
       fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
       fontSize: 26,
-      fill: 0xffffff,
+      fill: 0xd25a36,
       fontWeight: '900',
-      stroke: isMe ? 0xa14400 : 0x6a4a99,
-      strokeThickness: 3,
+      stroke: 0xffffff,
+      strokeThickness: 2,
       lineJoin: 'round',
     });
-    text.anchor.set(0.5);
+    text.anchor.set(1, 0.5);
     text.resolution = 2;
-    text.position.set(-w / 2, 0);
-    root.addChild(text);
-    return root;
+    return text;
   }
 
   /** 卡片底部固定的自己一行（已上榜时也会重复显示，便于快速定位） */

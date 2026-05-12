@@ -35,6 +35,12 @@ var TAB_META = {
   fruit: { key: 'hotpot_fruit_score', unit: '分' },
 };
 
+var MEDAL_ASSETS = {
+  1: 'assets/images/leaderboard_medal_1.png',
+  2: 'assets/images/leaderboard_medal_2.png',
+  3: 'assets/images/leaderboard_medal_3.png',
+};
+
 var state = {
   tab: 'bowl',
   pixelRatio: 2,
@@ -43,6 +49,7 @@ var state = {
   listCache: {},
   loading: false,
   avatarImgs: {},
+  medalImgs: {},
   pendingRender: null,
   inflight: {},
 };
@@ -58,11 +65,6 @@ var COLOR = {
   ROW_STROKE: '#e9d8b9',
   ME_BG: '#ffa743',
   ME_STROKE: '#d6791f',
-  PILL_PURPLE: '#b086e1',
-  PILL_PURPLE_STROKE: '#7c5bb0',
-  PILL_PURPLE_TEXT_STROKE: '#6a4a99',
-  PILL_ORANGE: '#f9852c',
-  PILL_ORANGE_STROKE: '#b35a1a',
   TEXT_DARK: '#5a3318',
   TEXT_LIGHT: '#ffffff',
   TEXT_ME_STROKE: '#a14400',
@@ -76,6 +78,30 @@ var COLOR = {
   MEDAL_RIBBON: '#d94b4b',
   HINT_TEXT: '#8a5a2b',
   HINT_SUB: '#b09060',
+};
+
+var TOP_RANK_ROW_STYLE = {
+  1: {
+    fill: '#fff3cf',
+    stroke: '#efbd48',
+    medalCore: '#f8c84f',
+    medalEdge: '#c88517',
+    ribbon: '#e84848',
+  },
+  2: {
+    fill: '#eaf2ff',
+    stroke: '#b5cbe0',
+    medalCore: '#d8e2ec',
+    medalEdge: '#8aa3b9',
+    ribbon: '#5f8fc1',
+  },
+  3: {
+    fill: '#ffeadb',
+    stroke: '#e1a078',
+    medalCore: '#e79768',
+    medalEdge: '#a15a2a',
+    ribbon: '#c56a38',
+  },
 };
 
 function _safeNum(v) {
@@ -124,6 +150,28 @@ function _ensureAvatar(url) {
     };
     img.src = url;
     state.avatarImgs[url] = img;
+    return img;
+  } catch (_) {
+    return null;
+  }
+}
+
+function _ensureMedal(rank) {
+  var src = MEDAL_ASSETS[rank];
+  if (!src) return null;
+  var cached = state.medalImgs[src];
+  if (cached) return cached;
+  try {
+    var img = wx.createImage();
+    img.onload = function () {
+      state.medalImgs[src] = img;
+      _renderIfReady();
+    };
+    img.onerror = function () {
+      state.medalImgs[src] = null;
+    };
+    img.src = src;
+    state.medalImgs[src] = img;
     return img;
   } catch (_) {
     return null;
@@ -350,7 +398,7 @@ function _drawHint(text, sub) {
   CTX.restore();
 }
 
-// ---------- 主行渲染：对齐主域 createRankRow / createRankBadge / createValuePill ----------
+// ---------- 主行渲染：对齐主域 createRankRow / createRankBadge / createValueText ----------
 
 /** 圆形头像：白色底盘 + 描边，未加载时只剩底盘（自动 emoji 兜底放主域，子域只画图） */
 function _drawAvatar(cx, cy, S, url, isSelf) {
@@ -388,38 +436,46 @@ function _drawAvatar(cx, cy, S, url, isSelf) {
 /** 名次徽章：前 3 名画"丝带 + 圆盘 + 数字"；4+ 名显示纯数字 */
 function _drawBadge(cx, cy, S, rank, isSelf) {
   if (rank <= 3) {
-    var palette = rank === 1
-      ? { core: COLOR.MEDAL_GOLD_CORE, edge: COLOR.MEDAL_GOLD_EDGE }
-      : rank === 2
-        ? { core: COLOR.MEDAL_SILVER_CORE, edge: COLOR.MEDAL_SILVER_EDGE }
-        : { core: COLOR.MEDAL_BRONZE_CORE, edge: COLOR.MEDAL_BRONZE_EDGE };
+    var palette = TOP_RANK_ROW_STYLE[rank];
+    var medalImg = _ensureMedal(rank);
+    if (medalImg && medalImg.width > 0) {
+      try {
+        CTX.drawImage(medalImg, cx - 41 * S, cy - 41 * S, 82 * S, 82 * S);
+        return;
+      } catch (_) {}
+    }
 
     // 丝带（两条三角形），跟主域 createRankBadge 内坐标比例对齐
-    CTX.fillStyle = COLOR.MEDAL_RIBBON;
+    CTX.fillStyle = palette.ribbon;
     CTX.beginPath();
-    CTX.moveTo(cx - 18 * S, cy - 24 * S);
-    CTX.lineTo(cx - 6 * S, cy - 24 * S);
-    CTX.lineTo(cx - 2 * S, cy + 10 * S);
-    CTX.lineTo(cx - 14 * S, cy + 6 * S);
+    CTX.moveTo(cx - 14 * S, cy - 8 * S);
+    CTX.lineTo(cx - 2 * S, cy - 8 * S);
+    CTX.lineTo(cx - 2 * S, cy + 28 * S);
+    CTX.lineTo(cx - 9 * S, cy + 22 * S);
+    CTX.lineTo(cx - 16 * S, cy + 28 * S);
     CTX.closePath();
     CTX.fill();
     CTX.beginPath();
-    CTX.moveTo(cx + 18 * S, cy - 24 * S);
-    CTX.lineTo(cx + 6 * S, cy - 24 * S);
-    CTX.lineTo(cx + 2 * S, cy + 10 * S);
-    CTX.lineTo(cx + 14 * S, cy + 6 * S);
+    CTX.moveTo(cx + 14 * S, cy - 8 * S);
+    CTX.lineTo(cx + 2 * S, cy - 8 * S);
+    CTX.lineTo(cx + 2 * S, cy + 28 * S);
+    CTX.lineTo(cx + 9 * S, cy + 22 * S);
+    CTX.lineTo(cx + 16 * S, cy + 28 * S);
     CTX.closePath();
     CTX.fill();
 
     // 圆盘：外圈 + 内圈
-    var diskCy = cy + 10 * S;
     CTX.beginPath();
-    CTX.arc(cx, diskCy, 26 * S, 0, Math.PI * 2);
-    CTX.fillStyle = palette.edge;
+    CTX.arc(cx, cy, 30 * S, 0, Math.PI * 2);
+    CTX.fillStyle = palette.medalEdge;
     CTX.fill();
     CTX.beginPath();
-    CTX.arc(cx, diskCy, 22 * S, 0, Math.PI * 2);
-    CTX.fillStyle = palette.core;
+    CTX.arc(cx, cy, 25 * S, 0, Math.PI * 2);
+    CTX.fillStyle = palette.medalCore;
+    CTX.fill();
+    CTX.beginPath();
+    CTX.arc(cx - 8 * S, cy - 9 * S, 8 * S, 0, Math.PI * 2);
+    CTX.fillStyle = 'rgba(255,255,255,0.35)';
     CTX.fill();
 
     // 名次数字
@@ -428,8 +484,8 @@ function _drawBadge(cx, cy, S, rank, isSelf) {
     _drawStrokedText(
       String(rank),
       cx,
-      diskCy,
-      26 * S,
+      cy,
+      28 * S,
       '900',
       COLOR.TEXT_DARK,
       COLOR.TEXT_LIGHT,
@@ -448,36 +504,52 @@ function _drawBadge(cx, cy, S, rank, isSelf) {
     cy,
     (display === '99+' ? 26 : 32) * S,
     '900',
-    isSelf ? COLOR.TEXT_LIGHT : COLOR.TEXT_RANK_NUM,
-    isSelf ? COLOR.TEXT_ME_STROKE : COLOR.TEXT_LIGHT,
-    (isSelf ? 4 : 3) * S
+    COLOR.TEXT_RANK_NUM,
+    COLOR.TEXT_LIGHT,
+    2 * S
   );
 }
 
 /** 单行：跟世界榜风格完全一致 */
 function _drawRow(rowX, rowY, rowW, rowH, S, meta, item, rank, isSelf) {
-  var rowR = 20 * S;
+  var rowR = 16 * S;
+  var topStyle = TOP_RANK_ROW_STYLE[rank];
 
   // 行底色 + 描边
-  _roundRect(rowX, rowY, rowW, rowH, rowR);
-  CTX.fillStyle = isSelf ? COLOR.ME_BG : COLOR.ROW_BG;
-  CTX.fill();
-  CTX.lineWidth = (isSelf ? 3 : 2) * S;
-  CTX.strokeStyle = isSelf ? COLOR.ME_STROKE : COLOR.ROW_STROKE;
-  CTX.stroke();
+  if (topStyle) {
+    _roundRect(rowX, rowY, rowW, rowH, rowR);
+    CTX.fillStyle = topStyle.fill;
+    CTX.fill();
+    CTX.lineWidth = 3 * S;
+    CTX.strokeStyle = topStyle.stroke;
+    CTX.stroke();
+  } else if (isSelf) {
+    _roundRect(rowX, rowY, rowW, rowH, rowR);
+    CTX.fillStyle = '#ffedb0';
+    CTX.fill();
+    CTX.lineWidth = 3 * S;
+    CTX.strokeStyle = '#efbd48';
+    CTX.stroke();
+  } else {
+    CTX.beginPath();
+    CTX.moveTo(rowX + 18 * S, rowY + rowH);
+    CTX.lineTo(rowX + rowW - 18 * S, rowY + rowH);
+    CTX.lineWidth = 1 * S;
+    CTX.strokeStyle = 'rgba(233,216,185,0.75)';
+    CTX.stroke();
+  }
 
-  // 名次徽章 / 圆形头像 / 名字 / 分数 pill 的水平偏移：
+  // 名次徽章 / 圆形头像 / 名字 / 分数 的水平偏移：
   // 主域 createRankRow 内左基 = -w/2 + offset；下面把它转成行左边距 + offset
-  var badgeCx = rowX + 50 * S;
-  var badgeCy = rowY + rowH / 2;
+  var badgeCx = rowX + 36 * S;
+  var badgeCy = rowY + rowH / 2 + (topStyle ? -2 * S : 0);
   _drawBadge(badgeCx, badgeCy, S, rank, isSelf);
 
-  var avatarCx = rowX + 124 * S;
+  var avatarCx = rowX + 112 * S;
   var avatarCy = rowY + rowH / 2;
   _drawAvatar(avatarCx, avatarCy, S, item.avatarUrl, isSelf);
 
-  // 昵称 —— 主域 fontSize 26, 自己行白字 + 深橙描边，其他黑棕字 + 白描边
-  var nameX = rowX + 178 * S;
+  var nameX = rowX + 170 * S;
   var nameY = rowY + rowH / 2;
   CTX.textAlign = 'left';
   CTX.textBaseline = 'middle';
@@ -486,39 +558,27 @@ function _drawRow(rowX, rowY, rowW, rowH, S, meta, item, rank, isSelf) {
     nick,
     nameX,
     nameY,
-    26 * S,
+    (topStyle ? 28 : 25) * S,
     '900',
-    isSelf ? COLOR.TEXT_LIGHT : COLOR.TEXT_DARK,
-    isSelf ? COLOR.TEXT_ME_STROKE : COLOR.TEXT_LIGHT,
-    (isSelf ? 4 : 3) * S
+    COLOR.TEXT_DARK,
+    COLOR.TEXT_LIGHT,
+    (topStyle ? 2 : 1) * S
   );
-
-  // 分数 pill —— 主域 132x64 圆角 18，紫色 / 自己行橙色
-  var pillW = 132 * S;
-  var pillH = 64 * S;
-  var pillRight = rowX + rowW - 8 * S;
-  var pillX = pillRight - pillW;
-  var pillY = rowY + rowH / 2 - pillH / 2;
-  _roundRect(pillX, pillY, pillW, pillH, 18 * S);
-  CTX.fillStyle = isSelf ? COLOR.PILL_ORANGE : COLOR.PILL_PURPLE;
-  CTX.fill();
-  CTX.lineWidth = 2 * S;
-  CTX.strokeStyle = isSelf ? COLOR.PILL_ORANGE_STROKE : COLOR.PILL_PURPLE_STROKE;
-  CTX.stroke();
 
   var unit = meta.unit || '';
   var valText = item.value + unit;
-  CTX.textAlign = 'center';
+
+  CTX.textAlign = 'right';
   CTX.textBaseline = 'middle';
   _drawStrokedText(
     valText,
-    pillX + pillW / 2,
-    pillY + pillH / 2,
+    rowX + rowW - 32 * S,
+    rowY + rowH / 2,
     26 * S,
     '900',
+    '#d25a36',
     COLOR.TEXT_LIGHT,
-    isSelf ? COLOR.TEXT_ME_STROKE : COLOR.PILL_PURPLE_TEXT_STROKE,
-    3 * S
+    2 * S
   );
 }
 
