@@ -157,16 +157,40 @@ export class LeaderboardScene implements Scene {
   private friendBoardOverlayActive = false;
   /** iOS 微信 wxBindCanvasTexture 兜底：direct-webgl 下直接绑定 sharedCanvas 纹理 */
   private friendBoardSprite: PIXI.Sprite | null = null;
+  /** 世界榜列表滚动偏移（设计像素，<=0） */
+  private worldScrollY = 0;
+  /** 好友榜列表滚动偏移（设计像素，<=0，传给开放数据域） */
+  private friendScrollY = 0;
+  /** 当前世界榜列表内容层，拖动时只移动该层，避免每帧重建所有行 */
+  private worldListContent: PIXI.Container | null = null;
+  /** 好友榜最近一次 render 参数，拖动时复用它只更新 scrollY */
+  private friendRenderState: {
+    tab: FriendRankTab;
+    width: number;
+    height: number;
+    pixelRatio: number;
+    selfOpenId: string;
+  } | null = null;
+  private dragListKind: BoardTab | null = null;
+  private dragStartY = 0;
+  private dragStartScrollY = 0;
+  private dragMoved = false;
+  private sceneActive = false;
+  private nativeTouchHandlersInstalled = false;
 
   constructor() {
     this.container.addChild(this.backdrop, this.trophyDeco, this.cardChrome, this.cardContent, this.mineLayer);
+    this.installNativeListDragHandlers();
   }
 
   onEnter(): void {
+    this.sceneActive = true;
     this.worldBoard = nextInitialBoard;
     this.activeTab = 'world';
     this.worldResult = null;
     this.errorText = '';
+    this.worldScrollY = 0;
+    this.friendScrollY = 0;
     this.buildLayout();
     // 进入时先等待"当前进度上报"落库再拉列表，避免玩家自己看不到自己；
     // 上报失败也继续 list（不阻塞看其他玩家成绩）
@@ -187,6 +211,8 @@ export class LeaderboardScene implements Scene {
   }
 
   onExit(): void {
+    this.sceneActive = false;
+    this.dragListKind = null;
     // 离开榜单时拆掉 wx 原生按钮，避免继续盖在其他场景的画布上
     this.destroyWeChatProfileNativeBtn();
     this.weChatProfileButtonRect = { x: 0, y: 0, w: 0, h: 0 };
@@ -472,7 +498,7 @@ export class LeaderboardScene implements Scene {
     this.errorText = '';
     this.redraw();
     try {
-      const result = await RankService.list(board, 50, 0);
+      const result = await RankService.list(board, 100, 0);
       if (seq !== this.requestSeq) {
         return;
       }
@@ -499,6 +525,7 @@ export class LeaderboardScene implements Scene {
     }
     AudioManager.playButtonSound();
     this.activeTab = tab;
+    this.dragListKind = null;
     if (tab !== 'friend') {
       // 切回世界榜：关闭上屏 2D 合成层，避免 sharedCanvas 残留
       this.destroyFriendBoardSprite();
@@ -509,6 +536,7 @@ export class LeaderboardScene implements Scene {
   private redraw(): void {
     this.cardContent.removeChildren();
     this.mineLayer.removeChildren();
+    this.worldListContent = null;
 
     this.drawTabs();
 
@@ -599,25 +627,64 @@ export class LeaderboardScene implements Scene {
     return root;
   }
 
-  /** 列表区域：顶部 8 行外加自己行（自己行另行渲染） */
+  /** 排行榜列表可视区域：底部固定自己行，列表在上方可滚动 */
+  private getListArea(): { x: number; y: number; w: number; h: number } {
+    const rowH = 84;
+    const startY = this.cardY + 196;
+    const ctaReserve = UserProfileService.hasRealProfile() ? 0 : 84;
+    const reservedForMine = 110 + ctaReserve;
+    return {
+      x: this.cardX + 28,
+      y: startY,
+      w: this.cardW - 56,
+      h: Math.max(120, this.cardY + this.cardH - reservedForMine - startY),
+    };
+  }
+
+  /** 好友榜 sharedCanvas 可视区域：与 drawFriendBoard 保持一致 */
+  private getFriendListArea(): { x: number; y: number; w: number; h: number } {
+    const topY = this.cardY + 196;
+    const bottomY = this.cardY + this.cardH - 26;
+    const sidePad = 28;
+    return {
+      x: this.cardX + sidePad,
+      y: topY,
+      w: this.cardW - sidePad * 2,
+      h: Math.max(120, bottomY - topY),
+    };
+  }
+
+  /** 列表区域：底部自己行固定，上方 records 可拖动滚动 */
   private drawList(records: RankRecord[]): void {
     const rowH = 84;
     const gap = 10;
-    const startY = this.cardY + 196;
-    // 自己行高 84 + 底距 26；未授权时上方还多挂一条 56 高的 CTA + 28 间隔。
-    // 列表为了不和这两者重叠，按"未授权"的最大占用预留底部空间。
-    const ctaReserve = UserProfileService.hasRealProfile() ? 0 : 84;
-    const reservedForMine = 110 + ctaReserve;
-    const available = this.cardY + this.cardH - reservedForMine - startY;
-    const maxRows = Math.max(3, Math.floor((available + gap) / (rowH + gap)));
-    const visible = records.slice(0, maxRows);
+    const area = this.getListArea();
+    this.worldScrollY = this.clampScrollY(this.worldScrollY, records.length, area.h, rowH, gap);
 
-    for (let i = 0; i < visible.length; i += 1) {
-      const rec = visible[i]!;
+    const mask = new PIXI.Graphics();
+    mask.beginFill(0xffffff);
+    mask.drawRect(area.x - 8, area.y - 4, area.w + 16, area.h + 8);
+    mask.endFill();
+    mask.renderable = false;
+    this.cardContent.addChild(mask);
+
+    const viewport = new PIXI.Container();
+    viewport.mask = mask;
+    this.cardContent.addChild(viewport);
+
+    const content = new PIXI.Container();
+    content.y = this.worldScrollY;
+    viewport.addChild(content);
+    this.worldListContent = content;
+
+    for (let i = 0; i < records.length; i += 1) {
+      const rec = records[i]!;
       const row = this.createRankRow(rec, i);
-      row.position.set(Game.logicWidth / 2, startY + i * (rowH + gap) + rowH / 2);
-      this.cardContent.addChild(row);
+      row.position.set(Game.logicWidth / 2, area.y + i * (rowH + gap) + rowH / 2);
+      content.addChild(row);
     }
+
+    this.addListDragLayer(area, 'world');
   }
 
   private createRankRow(record: RankRecord, listIndex: number): PIXI.Container {
@@ -670,6 +737,128 @@ export class LeaderboardScene implements Scene {
     root.addChild(pill);
 
     return root;
+  }
+
+  private clampScrollY(scrollY: number, itemCount: number, viewportH: number, rowH: number, gap: number): number {
+    const contentH = itemCount > 0 ? itemCount * rowH + Math.max(0, itemCount - 1) * gap : 0;
+    const minScrollY = Math.min(0, viewportH - contentH);
+    return Math.max(minScrollY, Math.min(0, scrollY));
+  }
+
+  /** 在列表上方盖一层透明触摸区，世界榜移动 Pixi 列表，好友榜下发 scrollY 给子域 */
+  private addListDragLayer(area: { x: number; y: number; w: number; h: number }, kind: BoardTab): void {
+    const hit = new PIXI.Graphics();
+    hit.beginFill(0xffffff, 0.001);
+    hit.drawRect(area.x, area.y, area.w, area.h);
+    hit.endFill();
+    hit.eventMode = 'static';
+    hit.cursor = 'pointer';
+    hit.on('pointerdown', (event) => this.onListDragStart(kind, event));
+    hit.on('pointermove', (event) => this.onListDragMove(event));
+    hit.on('pointerup', () => this.onListDragEnd());
+    hit.on('pointerupoutside', () => this.onListDragEnd());
+    hit.on('pointercancel', () => this.onListDragEnd());
+    this.cardContent.addChild(hit);
+  }
+
+  /** 微信小游戏里好友榜是 2D 合成层，Pixi 透明 hit layer 可能收不到 move，直接监听原生触摸更稳 */
+  private installNativeListDragHandlers(): void {
+    if (this.nativeTouchHandlersInstalled) return;
+    this.nativeTouchHandlersInstalled = true;
+    const api = typeof wx !== 'undefined' ? wx : null;
+    if (!api?.onTouchStart || !api?.onTouchMove || !api?.onTouchEnd) return;
+    try {
+      api.onTouchStart((event: any) => this.onNativeTouchStart(event));
+      api.onTouchMove((event: any) => this.onNativeTouchMove(event));
+      api.onTouchEnd(() => this.onListDragEnd());
+      api.onTouchCancel?.(() => this.onListDragEnd());
+    } catch (error) {
+      console.warn('[LeaderboardScene] install native list drag handlers failed', error);
+    }
+  }
+
+  private firstTouch(event: any): { clientX: number; clientY: number } | null {
+    const touches = event?.touches || event?.changedTouches;
+    const t = touches && touches[0];
+    if (!t || !Number.isFinite(t.clientX) || !Number.isFinite(t.clientY)) return null;
+    return { clientX: t.clientX, clientY: t.clientY };
+  }
+
+  private cssToDesignPoint(touch: { clientX: number; clientY: number }): { x: number; y: number } {
+    const designW = Game.designWidth || 750;
+    const screenW = Game.screenWidth || designW;
+    const scale = designW / Math.max(1, screenW);
+    return {
+      x: touch.clientX * scale,
+      y: touch.clientY * scale,
+    };
+  }
+
+  private onNativeTouchStart(event: any): void {
+    if (!this.sceneActive) return;
+    const touch = this.firstTouch(event);
+    if (!touch) return;
+    const p = this.cssToDesignPoint(touch);
+    const area = this.activeTab === 'friend' ? this.getFriendListArea() : this.getListArea();
+    if (p.x < area.x || p.x > area.x + area.w || p.y < area.y || p.y > area.y + area.h) {
+      return;
+    }
+
+    this.dragListKind = this.activeTab;
+    this.dragStartY = p.y;
+    this.dragStartScrollY = this.activeTab === 'friend' ? this.friendScrollY : this.worldScrollY;
+    this.dragMoved = false;
+  }
+
+  private onNativeTouchMove(event: any): void {
+    if (!this.sceneActive || !this.dragListKind) return;
+    const touch = this.firstTouch(event);
+    if (!touch) return;
+    const p = this.cssToDesignPoint(touch);
+    this.applyListDragY(p.y);
+  }
+
+  private pointerDesignY(event: PIXI.FederatedPointerEvent): number {
+    return event.global.y / Math.max(0.0001, Game.scale || 1);
+  }
+
+  private onListDragStart(kind: BoardTab, event: PIXI.FederatedPointerEvent): void {
+    this.dragListKind = kind;
+    this.dragStartY = this.pointerDesignY(event);
+    this.dragStartScrollY = kind === 'friend' ? this.friendScrollY : this.worldScrollY;
+    this.dragMoved = false;
+  }
+
+  private onListDragMove(event: PIXI.FederatedPointerEvent): void {
+    if (!this.dragListKind) return;
+    this.applyListDragY(this.pointerDesignY(event));
+  }
+
+  private applyListDragY(currentY: number): void {
+    if (!this.dragListKind) return;
+    const dy = currentY - this.dragStartY;
+    if (Math.abs(dy) > 3) {
+      this.dragMoved = true;
+    }
+
+    if (this.dragListKind === 'friend') {
+      // 主域不知道好友总人数，只限制不能往下拉超过顶部；子域会按真实列表长度 clamp 下界。
+      this.friendScrollY = Math.min(0, this.dragStartScrollY + dy);
+      this.renderFriendBoardWithCurrentState(false);
+      return;
+    }
+
+    const list = this.worldResult?.list ?? [];
+    const area = this.getListArea();
+    this.worldScrollY = this.clampScrollY(this.dragStartScrollY + dy, list.length, area.h, 84, 10);
+    if (this.worldListContent) {
+      this.worldListContent.y = this.worldScrollY;
+    }
+  }
+
+  private onListDragEnd(): void {
+    this.dragListKind = null;
+    this.dragMoved = false;
   }
 
   /**
@@ -1238,18 +1427,9 @@ export class LeaderboardScene implements Scene {
       return;
     }
 
-    const W = Game.logicWidth;
     // 好友榜区域：跟世界榜列表的纵向起止严格对齐（startY=cardY+196, 底距 26）；
     // 横向用同样的 sidePad=28，行宽 = cardW - 56，跟 createRankRow 的有效宽相同。
-    const topY = this.cardY + 196;
-    const bottomY = this.cardY + this.cardH - 26;
-    const sidePad = 28;
-    const area = {
-      x: this.cardX + sidePad,
-      y: topY,
-      w: this.cardW - sidePad * 2,
-      h: Math.max(120, bottomY - topY),
-    };
+    const area = this.getFriendListArea();
 
     // sharedCanvas 物理像素 = 设计像素 * pixelRatio；
     // 取 2x 以保证文字与头像在高 dpr 屏上仍清晰，但又不至于让子域 canvas 太大浪费内存
@@ -1285,9 +1465,17 @@ export class LeaderboardScene implements Scene {
       width: physW,
       height: physH,
       pixelRatio,
+      scrollY: this.friendScrollY,
       selfOpenId: this.resolveWechatOpenId(),
       force: true,
     });
+    this.friendRenderState = {
+      tab: tabKey,
+      width: physW,
+      height: physH,
+      pixelRatio,
+      selfOpenId: this.resolveWechatOpenId(),
+    };
     const overlayOk = Game.setOpenDataOverlay({
       canvas,
       x: area.x,
@@ -1311,6 +1499,16 @@ export class LeaderboardScene implements Scene {
     // 把上一次可能残留的 wx 原生授权按钮拆掉。
     this.destroyWeChatProfileNativeBtn();
     this.weChatProfileButtonRect = { x: 0, y: 0, w: 0, h: 0 };
+    this.addListDragLayer(area, 'friend');
+  }
+
+  private renderFriendBoardWithCurrentState(force: boolean): void {
+    if (!this.friendRenderState) return;
+    renderFriendBoard({
+      ...this.friendRenderState,
+      scrollY: this.friendScrollY,
+      force,
+    });
   }
 
   /** CloudBase 登录态里的 userId 形如 `wx:<openid>`，子域用 openid 精确高亮“我” */
