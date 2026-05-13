@@ -861,20 +861,25 @@ export class HomeScene implements Scene {
    */
   private computeRankEntryCssRect(): { left: number; top: number; width: number; height: number } | null {
     const designW = Game.designWidth || 750;
-    const screenW = Game.screenWidth || designW;
-    if (!screenW || !designW) {
+    if (!designW) {
       return null;
     }
-    const designToCss = screenW / designW;
     const cx = this.leaderboardEntryRoot.x;
     const cy = this.leaderboardEntryRoot.y;
     if (!Number.isFinite(cx) || !Number.isFinite(cy)) {
       return null;
     }
-    const cssLeft = Math.round((cx - HOME_FOOTER_CARD_W / 2) * designToCss);
-    const cssTop = Math.round((cy - HOME_FOOTER_CARD_H / 2) * designToCss);
-    const cssW = Math.max(1, Math.round(HOME_FOOTER_CARD_W * designToCss));
-    const cssH = Math.max(1, Math.round(HOME_FOOTER_CARD_H * designToCss));
+    // 设计像素 → 物理像素（含 letterbox 偏移）→ CSS 像素（÷ dpr）
+    // iPhone 上 stageOffset 为 0，等价于旧的 `* (screenWidth/designWidth)`；
+    // iPad 等需要 letterbox 时，stageOffsetX/Y 让按钮跟着舞台居中后的真实位置走。
+    const dpr = Math.max(1, Game.dpr || 1);
+    const scale = Math.max(0.0001, Game.scale || 1);
+    const designLeft = cx - HOME_FOOTER_CARD_W / 2;
+    const designTop = cy - HOME_FOOTER_CARD_H / 2;
+    const cssLeft = Math.round((Game.stageOffsetX + designLeft * scale) / dpr);
+    const cssTop = Math.round((Game.stageOffsetY + designTop * scale) / dpr);
+    const cssW = Math.max(1, Math.round((HOME_FOOTER_CARD_W * scale) / dpr));
+    const cssH = Math.max(1, Math.round((HOME_FOOTER_CARD_H * scale) / dpr));
     return { left: cssLeft, top: cssTop, width: cssW, height: cssH };
   }
 

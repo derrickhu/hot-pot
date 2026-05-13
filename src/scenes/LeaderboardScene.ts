@@ -149,6 +149,23 @@ const TOP_RANK_ROW_STYLE: Record<number, {
   },
 };
 
+/**
+ * 复用型榜单行容器：避免每次进入可视区时重新 new PIXI.Container / PIXI.Text，
+ * 真机上 PIXI.Text 的 canvas rasterize 是最贵的一步。
+ */
+interface RankRowView extends PIXI.Container {
+  __bg: PIXI.Graphics;
+  __badgeSlot: PIXI.Container;
+  __avatarSlot: PIXI.Container;
+  __name: PIXI.Text;
+  __value: PIXI.Text;
+  /** 上一次写入的关键属性，用来跳过无变化的 PIXI.Text style 重置 */
+  __lastName?: string;
+  __lastValue?: string;
+  __lastNameFontSize?: number;
+  __lastNameStrokeThickness?: number;
+}
+
 export class LeaderboardScene implements Scene {
   readonly name = 'leaderboard';
   readonly container = new PIXI.Container();
@@ -223,6 +240,21 @@ export class LeaderboardScene implements Scene {
   private dragMoved = false;
   private sceneActive = false;
   private nativeTouchHandlersInstalled = false;
+  /**
+   * 拖动期间最近一次的 Y（设计像素）。
+   * onTouchMove 真机上 60~120Hz 触发，
+   * 这里仅记录最新值，由 update(dt) 每帧 commit 一次，
+   * 避免一帧内做多次 renderWorldVisibleRows / postMessage 排版。
+   */
+  private pendingDragY: number | null = null;
+  /**
+   * 世界榜行复用：index -> 当前显示的行容器。
+   * 滚动越界后从 map 中 detach 并 push 回 worldRowPool，
+   * 新进入的 index 从池里 pop 然后 in-place 更新内容（PIXI.Text 复用避免 rasterize）。
+   */
+  private readonly worldRowByIndex = new Map<number, RankRowView>();
+  /** 行容器对象池：detach 但保持引用，避免重复创建子节点 */
+  private readonly worldRowPool: RankRowView[] = [];
 
   constructor() {
     this.container.addChild(this.backdrop, this.trophyDeco, this.cardChrome, this.cardContent, this.mineLayer);
@@ -274,6 +306,10 @@ export class LeaderboardScene implements Scene {
     this.time += dt;
     // 顶部奖杯轻微上下浮动，强化“弹出层”视觉
     this.trophyDeco.y = Math.sin(this.time * 1.6) * 3;
+    // 拖动事件每帧 commit 一次，避免 onTouchMove 高频触发导致一帧多次重排
+    if (this.pendingDragY != null) {
+      this.commitPendingDrag();
+    }
     // 注：不再每帧 sync wx 原生按钮 —— CTA 矩形只在 drawMineRow 时变化，
     //    那里已经同步调过 syncWeChatProfileNativeBtn 一次。
     //    基础库 3.15+ 上每帧 Object.assign(style, ...) 都会触发
@@ -617,6 +653,9 @@ export class LeaderboardScene implements Scene {
     this.worldListRecords = [];
     this.worldVisibleStart = -1;
     this.worldVisibleEnd = -1;
+    // cardContent.removeChildren() 已经把 viewport detach，行容器还留在 worldRowByIndex 里，
+    // 这里统一搬运到池子里准备下一轮复用，避免重建 PIXI.Text。
+    this.resetWorldRowPool();
 
     this.drawTabs();
 
@@ -860,16 +899,22 @@ export class LeaderboardScene implements Scene {
 
     const content = new PIXI.Container();
     content.y = this.worldScrollY;
+    content.eventMode = 'none';
     viewport.addChild(content);
     this.worldListContent = content;
+    // 切换数据源时强制清空，避免新一批 records 被旧 index 的复用行误命中
+    this.resetWorldRowPool();
     this.renderWorldVisibleRows();
 
     this.addListDragLayer(area, 'world');
   }
 
   /**
-   * 世界榜虚拟列表：100 名只渲染当前窗口附近的行。
-   * Pixi 真机上保留 100 行 Text/Graphics/头像节点会明显卡顿；Canvas 2D 项目 xiao_chu 没这个节点成本。
+   * 世界榜虚拟列表：50 名只渲染当前窗口附近的行。
+   * 真机性能要点：
+   * 1) 行容器 + 内部 PIXI.Text 走对象池复用，避免滚动时重复创建/销毁；
+   * 2) 同 index 行已在显示 → 直接复位 y 不动；
+   * 3) 滚出可视区的行 detach 进池子，等下一次滚入时 in-place 重写内容。
    */
   private renderWorldVisibleRows(): void {
     const content = this.worldListContent;
@@ -892,16 +937,154 @@ export class LeaderboardScene implements Scene {
     }
     this.worldVisibleStart = startIndex;
     this.worldVisibleEnd = endIndex;
-    const old = content.removeChildren();
-    for (const child of old) {
-      child.destroy({ children: true, texture: false, baseTexture: false } as any);
+
+    // 1) 把不再可视的行 detach 进池子
+    for (const [idx, row] of this.worldRowByIndex) {
+      if (idx < startIndex || idx >= endIndex) {
+        if (row.parent) row.parent.removeChild(row);
+        this.worldRowByIndex.delete(idx);
+        this.worldRowPool.push(row);
+      }
     }
 
+    // 2) 新进入可视区的 index：从池里复用 / 不够再 new
+    const cx = Game.logicWidth / 2;
     for (let i = startIndex; i < endIndex; i += 1) {
-      const rec = records[i]!;
-      const row = this.createRankRow(rec, i);
-      row.position.set(Game.logicWidth / 2, area.y + i * step + rowH / 2);
-      content.addChild(row);
+      let row = this.worldRowByIndex.get(i);
+      if (!row) {
+        row = this.worldRowPool.pop() ?? this.createRankRowTemplate();
+        this.updateRankRowContent(row, records[i]!, i);
+        content.addChild(row);
+        this.worldRowByIndex.set(i, row);
+      }
+      row.position.set(cx, area.y + i * step + rowH / 2);
+    }
+  }
+
+  /** 清空虚拟列表的复用资源（切玩法 / 切 tab / 重新加载后） */
+  private resetWorldRowPool(): void {
+    for (const row of this.worldRowByIndex.values()) {
+      if (row.parent) row.parent.removeChild(row);
+      this.worldRowPool.push(row);
+    }
+    this.worldRowByIndex.clear();
+  }
+
+  /** 构建一行可复用的容器骨架，所有可变内容都放在 named slot 里 */
+  private createRankRowTemplate(): RankRowView {
+    const w = this.cardW - 56;
+    const root = new PIXI.Container() as RankRowView;
+    root.eventMode = 'none';
+
+    const bg = new PIXI.Graphics();
+    root.addChild(bg);
+    root.__bg = bg;
+
+    const badgeSlot = new PIXI.Container();
+    badgeSlot.eventMode = 'none';
+    badgeSlot.position.set(-w / 2 + 36, 0);
+    root.addChild(badgeSlot);
+    root.__badgeSlot = badgeSlot;
+
+    const avatarSlot = new PIXI.Container();
+    avatarSlot.eventMode = 'none';
+    avatarSlot.position.set(-w / 2 + 112, 0);
+    root.addChild(avatarSlot);
+    root.__avatarSlot = avatarSlot;
+
+    const name = new PIXI.Text('', {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 25,
+      fill: 0x5a3318,
+      fontWeight: '900',
+      stroke: 0xffffff,
+      strokeThickness: 1,
+      lineJoin: 'round',
+    });
+    name.anchor.set(0, 0.5);
+    name.resolution = 2;
+    name.position.set(-w / 2 + 170, 0);
+    name.eventMode = 'none';
+    root.addChild(name);
+    root.__name = name;
+
+    const value = new PIXI.Text('', {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 26,
+      fill: 0xd25a36,
+      fontWeight: '900',
+      stroke: 0xffffff,
+      strokeThickness: 2,
+      lineJoin: 'round',
+    });
+    value.anchor.set(1, 0.5);
+    value.resolution = 2;
+    value.position.set(w / 2 - 32, 0);
+    value.eventMode = 'none';
+    root.addChild(value);
+    root.__value = value;
+
+    return root;
+  }
+
+  /**
+   * 复用现有 row：清掉 badge / avatar 旧子节点，再重画背景 + 写入新文案。
+   * 关键：name / value 的 PIXI.Text 是同一个实例，仅在 string 变化时才 set .text，
+   * 这样 Text 内部不会再 rasterize 一次画布。
+   */
+  private updateRankRowContent(row: RankRowView, record: RankRecord, listIndex: number): void {
+    const w = this.cardW - 56;
+    const h = 84;
+    const rank = record.rank ?? listIndex + 1;
+    const topStyle = TOP_RANK_ROW_STYLE[rank];
+
+    const bg = row.__bg;
+    bg.clear();
+    if (topStyle) {
+      bg.beginFill(topStyle.fill);
+      bg.lineStyle(3, topStyle.stroke, 1);
+      bg.drawRoundedRect(-w / 2, -h / 2, w, h, 16);
+      bg.endFill();
+    } else if (record.isMe) {
+      bg.beginFill(0xffedb0);
+      bg.lineStyle(3, 0xefbd48, 1);
+      bg.drawRoundedRect(-w / 2, -h / 2, w, h, 16);
+      bg.endFill();
+    } else {
+      bg.lineStyle(1, COLOR_ROW_STROKE, 0.75);
+      bg.moveTo(-w / 2 + 18, h / 2);
+      bg.lineTo(w / 2 - 18, h / 2);
+    }
+
+    row.__badgeSlot.removeChildren();
+    const badge = this.createRankBadge(rank, record.isMe);
+    badge.position.set(0, topStyle ? -2 : 0);
+    row.__badgeSlot.addChild(badge);
+
+    row.__avatarSlot.removeChildren();
+    const avatar = this.createAvatar(record, rank);
+    row.__avatarSlot.addChild(avatar);
+
+    const displayName = this.resolveDisplayName(record);
+    const desiredFont = topStyle ? 28 : 25;
+    const desiredStroke = topStyle ? 2 : 1;
+    if (row.__lastNameFontSize !== desiredFont) {
+      (row.__name.style as PIXI.TextStyle).fontSize = desiredFont;
+      row.__lastNameFontSize = desiredFont;
+    }
+    if (row.__lastNameStrokeThickness !== desiredStroke) {
+      (row.__name.style as PIXI.TextStyle).strokeThickness = desiredStroke;
+      row.__lastNameStrokeThickness = desiredStroke;
+    }
+    if (row.__lastName !== displayName) {
+      row.__name.text = displayName;
+      row.__lastName = displayName;
+    }
+
+    const newVal = this.formatRecordValue(record);
+    if (row.__lastValue !== newVal) {
+      row.__value.text = newVal;
+      row.__lastValue = newVal;
     }
   }
 
@@ -969,8 +1152,15 @@ export class LeaderboardScene implements Scene {
     return Math.max(minScrollY, Math.min(0, scrollY));
   }
 
-  /** 在列表上方盖一层透明触摸区，世界榜移动 Pixi 列表，好友榜下发 scrollY 给子域 */
+  /**
+   * 在列表上方盖一层透明触摸区，世界榜移动 Pixi 列表，好友榜下发 scrollY 给子域。
+   * 微信小游戏下我们已经通过 `wx.onTouchStart/Move/End` 走原生触摸通道，
+   * 这里就不再额外挂 Pixi pointer 拖动层，避免同一次手势被处理两次（明显的滑动卡顿来源）。
+   */
   private addListDragLayer(area: { x: number; y: number; w: number; h: number }, kind: BoardTab): void {
+    if (this.nativeTouchHandlersInstalled) {
+      return;
+    }
     const hit = new PIXI.Graphics();
     hit.beginFill(0xffffff, 0.001);
     hit.drawRect(area.x, area.y, area.w, area.h);
@@ -1009,12 +1199,12 @@ export class LeaderboardScene implements Scene {
   }
 
   private cssToDesignPoint(touch: { clientX: number; clientY: number }): { x: number; y: number } {
-    const designW = Game.designWidth || 750;
-    const screenW = Game.screenWidth || designW;
-    const scale = designW / Math.max(1, screenW);
+    // CSS px → canvas 物理像素（× dpr）→ 减掉舞台 letterbox 偏移 → 除以舞台缩放 → 设计像素
+    const dpr = Math.max(1, Game.dpr || 1);
+    const scale = Math.max(0.0001, Game.scale || 1);
     return {
-      x: touch.clientX * scale,
-      y: touch.clientY * scale,
+      x: (touch.clientX * dpr - Game.stageOffsetX) / scale,
+      y: (touch.clientY * dpr - Game.stageOffsetY) / scale,
     };
   }
 
@@ -1043,7 +1233,9 @@ export class LeaderboardScene implements Scene {
   }
 
   private pointerDesignY(event: PIXI.FederatedPointerEvent): number {
-    return event.global.y / Math.max(0.0001, Game.scale || 1);
+    // PIXI event.global 是 canvas 物理像素，先减去舞台 letterbox 偏移再除以缩放
+    const scale = Math.max(0.0001, Game.scale || 1);
+    return (event.global.y - Game.stageOffsetY) / scale;
   }
 
   private onListDragStart(kind: BoardTab, event: PIXI.FederatedPointerEvent): void {
@@ -1058,8 +1250,25 @@ export class LeaderboardScene implements Scene {
     this.applyListDragY(this.pointerDesignY(event));
   }
 
+  /**
+   * 真机上 wx.onTouchMove 可能 60~120Hz 触发，
+   * 这里只暂存最新 Y，真正的 scroll 计算和子节点更新由 update(dt) 每帧 commit 一次，
+   * 避免一帧内重复执行 renderWorldVisibleRows / postMessage 给子域。
+   */
   private applyListDragY(currentY: number): void {
     if (!this.dragListKind) return;
+    this.pendingDragY = currentY;
+  }
+
+  /** 帧驱动提交：把最近一次 pointer/touchmove 的 Y 真正应用到 scrollY 上 */
+  private commitPendingDrag(): void {
+    if (this.pendingDragY == null || !this.dragListKind) {
+      this.pendingDragY = null;
+      return;
+    }
+    const currentY = this.pendingDragY;
+    this.pendingDragY = null;
+
     const dy = currentY - this.dragStartY;
     if (Math.abs(dy) > 3) {
       this.dragMoved = true;
@@ -1081,6 +1290,7 @@ export class LeaderboardScene implements Scene {
   private onListDragEnd(): void {
     this.dragListKind = null;
     this.dragMoved = false;
+    this.pendingDragY = null;
   }
 
   /**
@@ -1450,10 +1660,10 @@ export class LeaderboardScene implements Scene {
       return;
     }
     const global = cta.toGlobal(new PIXI.Point(btnCenterX, 0));
-    // global 是物理像素；除以 stage.scale 还原回设计像素
+    // global 是 canvas 物理像素；先减去舞台 letterbox 偏移再除 stage.scale 还原回设计像素
     const stageScale = Math.max(0.0001, Game.scale || 1);
-    const designX = global.x / stageScale;
-    const designY = global.y / stageScale;
+    const designX = (global.x - Game.stageOffsetX) / stageScale;
+    const designY = (global.y - Game.stageOffsetY) / stageScale;
     this.weChatProfileButtonRect = {
       x: designX - btnW / 2,
       y: designY - btnH / 2,
@@ -1483,15 +1693,16 @@ export class LeaderboardScene implements Scene {
       return;
     }
     // weChatProfileButtonRect 存的是"设计像素"坐标；
-    // 设计 → CSS 像素 = 设计 * (screenWidth / designWidth) = 设计 * (1 / designWidth) * screenWidth
-    // 我们直接用 Game 上的 designWidth / screenWidth 换算：
-    const designW = Game.designWidth || 750;
-    const screenW = Game.screenWidth || designW;
-    const designToCss = screenW / designW;
-    const cssLeft = Math.round(rect.x * designToCss);
-    const cssTop = Math.round(rect.y * designToCss);
-    const cssW = Math.max(1, Math.round(rect.w * designToCss));
-    const cssH = Math.max(1, Math.round(rect.h * designToCss));
+    // 设计 → 物理像素（含 letterbox 偏移）→ CSS 像素（÷ dpr）
+    // iPhone 上 stageOffset 为 0，scale = realWidth/designWidth，结果等价于旧的
+    // `rect.x * (screenWidth/designWidth)`；
+    // iPad 等需要 letterbox 时，stageOffsetX 把按钮拉到舞台居中后的真实位置。
+    const dpr = Math.max(1, Game.dpr || 1);
+    const scale = Math.max(0.0001, Game.scale || 1);
+    const cssLeft = Math.round((Game.stageOffsetX + rect.x * scale) / dpr);
+    const cssTop = Math.round((Game.stageOffsetY + rect.y * scale) / dpr);
+    const cssW = Math.max(1, Math.round((rect.w * scale) / dpr));
+    const cssH = Math.max(1, Math.round((rect.h * scale) / dpr));
 
     if (!this.weChatProfileNativeBtn) {
       try {

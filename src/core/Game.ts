@@ -20,11 +20,23 @@ class GameClass {
   stage = new PIXI.Container();
   ticker = new PIXI.Ticker();
   designWidth = 750;
+  /**
+   * 固定安全设计高度（现代 iPhone 约 750x1624）。
+   * 叠碗玩法的进度条、碗、工具栏是按这个纵向空间排布的；
+   * iPad 等宽屏设备必须把这整张安全画布等比 fit 进去，
+   * 不能只 fit 到 750x1334，否则碗会压到上方进度条。
+   */
+  designHeight = 1624;
   screenWidth = 375;
   screenHeight = 667;
   dpr = 2;
   scale = 1;
   safeTop = 0;
+  /** 等比缩放后舞台在 canvas 像素坐标系下的左上角偏移（letterbox 边距） */
+  stageOffsetX = 0;
+  stageOffsetY = 0;
+  /** init 完成后冻结下来的逻辑坐标系尺寸（设计像素） */
+  private cachedLogicHeight = 1624;
   private initialized = false;
   private screenCanvas: HTMLCanvasElement | null = null;
   private renderCanvas: HTMLCanvasElement | null = null;
@@ -48,7 +60,6 @@ class GameClass {
 
     const capsule = api?.getMenuButtonBoundingClientRect?.();
     const safeTopPx = capsule?.top || info?.statusBarHeight || 32;
-    this.safeTop = Math.round(safeTopPx * (this.designWidth / this.screenWidth));
 
     const realWidth = this.screenWidth * this.dpr;
     const realHeight = this.screenHeight * this.dpr;
@@ -61,7 +72,29 @@ class GameClass {
       canvas.height = realHeight;
     }
 
-    this.scale = realWidth / this.designWidth;
+    /**
+     * 等比适配：
+     * - 屏幕宽高比 < 设计稿宽高比（即屏幕"比设计更窄/更长"）：按宽缩放，
+     *   logicHeight 跟随屏幕实际长度变长，保留 iPhone 全屏铺满的体验。
+     * - 否则（屏幕比设计稿更宽，例如 iPad 3:4）：按高缩放，
+     *   logicHeight 固定 designHeight，舞台水平居中，左右出现 letterbox。
+     */
+    const designAspect = this.designWidth / this.designHeight;
+    const screenAspect = realWidth / realHeight;
+    if (screenAspect <= designAspect) {
+      this.scale = realWidth / this.designWidth;
+      this.cachedLogicHeight = realHeight / this.scale;
+      this.stageOffsetX = 0;
+      this.stageOffsetY = 0;
+    } else {
+      this.scale = realHeight / this.designHeight;
+      this.cachedLogicHeight = this.designHeight;
+      this.stageOffsetX = Math.round((realWidth - this.designWidth * this.scale) / 2);
+      this.stageOffsetY = 0;
+    }
+    // 系统安全区 CSS px -> 设计像素。必须在 scale/stageOffset 计算完成后再换算，
+    // 否则 iPad letterbox 模式下顶部按钮会偏小或偏上。
+    this.safeTop = Math.max(0, Math.round((safeTopPx * this.dpr - this.stageOffsetY) / this.scale));
 
     let pixiCanvas = this.createPixiRenderCanvas(screenCanvas, realWidth, realHeight, canvas);
     let runtime = this.createPixiRuntime(pixiCanvas, realWidth, realHeight);
@@ -100,6 +133,7 @@ class GameClass {
         + ' render=' + ((this.renderCanvas as any)?.width || 0) + 'x' + ((this.renderCanvas as any)?.height || 0)
     );
     this.stage.scale.set(this.scale, this.scale);
+    this.stage.position.set(this.stageOffsetX, this.stageOffsetY);
     this.ticker.add(() => {
       this.compositeToScreen();
     }, undefined, PIXI.UPDATE_PRIORITY.LOW);
@@ -321,8 +355,10 @@ class GameClass {
           0,
           overlay.canvas.width,
           overlay.canvas.height,
-          Math.round(overlay.x * this.scale),
-          Math.round(overlay.y * this.scale),
+          // 设计像素 → 物理像素后再叠加 letterbox 偏移，
+          // 否则 iPad 上好友榜会画在舞台左侧 letterbox 区域。
+          Math.round(this.stageOffsetX + overlay.x * this.scale),
+          Math.round(this.stageOffsetY + overlay.y * this.scale),
           Math.round(overlay.width * this.scale),
           Math.round(overlay.height * this.scale)
         );
@@ -361,7 +397,8 @@ class GameClass {
     console.log(
       '[Game] openData overlay set'
         + ' src=' + overlay.canvas.width + 'x' + overlay.canvas.height
-        + ' dst=' + Math.round(overlay.x * this.scale) + ',' + Math.round(overlay.y * this.scale)
+        + ' dst=' + Math.round(this.stageOffsetX + overlay.x * this.scale)
+        + ',' + Math.round(this.stageOffsetY + overlay.y * this.scale)
         + ',' + Math.round(overlay.width * this.scale) + 'x' + Math.round(overlay.height * this.scale)
     );
     return true;
@@ -377,7 +414,7 @@ class GameClass {
   }
 
   get logicHeight(): number {
-    return this.screenHeight / this.screenWidth * this.designWidth;
+    return this.cachedLogicHeight;
   }
 }
 
