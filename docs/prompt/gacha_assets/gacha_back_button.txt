@@ -1,0 +1,21 @@
+Single rounded pill "back" button asset, transparent background, 1:1 canvas.
+Reference image is the full UI mockup — match the SAME thick rounded outline,
+warm peach / honey colour, soft inner highlight, drop shadow style.
+
+Output ONLY the back button:
+
+- Pill shape, slightly wider than tall, ~80% of canvas width, centred.
+- Light cream / honey-yellow fill (#fff5d4), thick dark-brown rounded outline (#a05a26).
+- Inner top highlight band (semi-transparent white) for plastic gloss.
+- Inside the pill, on the LEFT half: a chunky white "←" left arrow with brown outline.
+- Inside the pill, on the RIGHT half: EXACTLY two Chinese characters 返回, brown fill
+  (#7a3a0c), white inner stroke, thick block-style font, baseline aligned with the arrow.
+- Subtle soft drop shadow underneath the pill.
+
+STRICT constraints:
+
+- TRANSPARENT background.
+- NO machine / NO capsules / NO panel / NO other UI elements.
+- NO English letters, NO numbers, NO logo.
+- The Chinese text MUST be EXACTLY 返回, two characters total, complete and clearly readable.
+- Single coherent button, no other clutter.

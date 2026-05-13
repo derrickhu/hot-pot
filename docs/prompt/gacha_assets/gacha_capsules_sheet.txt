@@ -1,0 +1,40 @@
+Capsule (扭蛋) ball sprite sheet asset, transparent background, 1:1 canvas (2K -> 2048x2048),
+4 rows x 4 columns = 16 capsule balls, each ball perfectly fills its own 512x512 cell.
+Reference image is the full UI mockup — match EXACTLY the SAME capsule visual style as the
+balls inside the dome of that mockup: glossy two-tone capsule (top half lighter, bottom half
+darker), thick outline, drop shadow, small icon emblem in the centre of the upper hemisphere.
+
+Strict layout requirements:
+
+- The canvas is divided into a STRICT 4x4 grid of EQUAL cells.
+- Each cell contains EXACTLY ONE round capsule ball, centred, occupying ~85% of the cell.
+- ALL 16 balls have the SAME diameter and the SAME outline thickness.
+- ALL 16 balls have a TRANSPARENT background — the spaces between cells are empty
+  transparent gutter, NOT a different colour.
+- When the sheet is later sliced into 16 equal sub-images (256x256 or 512x512), each
+  sub-image must contain ONE complete ball with ample transparent margin and NO part of
+  any neighbouring ball cropped in.
+
+Per-ball variation (16 unique designs):
+
+Row 1: bright YELLOW with golden STAR emblem | candy-PINK with white STAR emblem |
+       sky-BLUE with white SNOWFLAKE emblem  | mint-GREEN with white SNOWFLAKE emblem
+Row 2: orange with golden LIGHTNING-BOLT     | purple with white LIGHTNING-BOLT |
+       red with golden GIFT-BOX              | teal with white GIFT-BOX
+Row 3: cream-yellow with golden COIN          | rose with white COIN |
+       lime with white FLAME                 | violet with white FLAME
+Row 4: peach-orange with white WATER-DROP    | turquoise with white WATER-DROP |
+       coral-red with white MUSIC-NOTE       | warm-yellow with white FLOWER-PETAL
+
+Each emblem sits centred on the upper (lighter) hemisphere of its capsule, with subtle
+golden / white outline so it stays readable at small sizes.
+
+STRICT constraints:
+
+- TRANSPARENT background between cells (full alpha = 0 in the gutters).
+- NO Chinese characters, NO English letters, NO numbers anywhere on or around the balls.
+- NO machine, NO buttons, NO panels, NO speech bubbles, NO surrounding decorations.
+- NO grid lines drawn on the image — the layout is logical only.
+- All 16 balls must be visually distinct (different hue + emblem combination).
+- Each ball is a complete, self-contained sprite ready to be sliced and used individually
+  for runtime rolling animation.

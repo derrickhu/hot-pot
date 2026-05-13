@@ -1,0 +1,20 @@
+Title text logo asset, transparent background, horizontal layout, 16:9 canvas.
+Reference image is the full UI mockup — match the SAME huahua / 叮咚 POP cartoon font
+exactly: thick strokes, BRIGHT YELLOW fill (#fff06a), RED-ORANGE outline (#a83a16),
+DARK BROWN outermost outline, soft drop shadow, slightly bouncy baseline,
+each character lightly rotated, COMPLETE and CLEARLY readable strokes.
+
+Output ONLY the title text:
+
+- Generate ONLY this exact Chinese string with EXACTLY four characters: 金币扭蛋
+- Each character takes roughly 1/5 of the canvas width, centred horizontally and vertically.
+- Soft warm glow halo behind the text, very subtle.
+
+STRICT constraints:
+
+- TRANSPARENT background, NO panel / NO frame / NO ribbon / NO scroll behind the text.
+- NO English letters, NO numbers, NO punctuation, NO speech bubble.
+- NO machine / NO buttons / NO icons / NO decoration objects.
+- Text must be EXACTLY 金币扭蛋 in this order, four characters total, each character
+  drawn fully with correct strokes. No fake glyphs, no missing strokes.
+- Single PNG asset of the text only. Do NOT draw a card or frame around it.

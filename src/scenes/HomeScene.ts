@@ -4,16 +4,20 @@ import { Game } from '@/core/Game';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { getBowlLevelIndex } from '@/game/BowlProgress';
+import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH } from '@/gameobjects/CoinBar';
 import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
-import { openLeaderboardWithProfile } from '@/scenes/LeaderboardScene';
+import { openLeaderboard } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_BOWL } from '@/services/RankService';
-import { UserProfileService } from '@/services/UserProfileService';
 import { warmupFriendRankContext } from '@/utils/friendRanking';
 import { TextureCache } from '@/utils/TextureCache';
 
 /** 首页图鉴入口：独立图标，不带按钮底框 */
 const HOME_CATALOG_ICON_TEXTURE = 'assets/images/home_catalog_icon.png';
+/** 首页排行榜入口：与图鉴同风格的独立图标 */
+const HOME_LEADERBOARD_ICON_TEXTURE = 'assets/images/home_leaderboard_icon.png';
+/** 首页扭蛋入口：与图鉴同风格的独立图标 */
+const HOME_GACHA_ICON_TEXTURE = 'assets/images/home_gacha_icon.png';
 /** 主按钮：绿色无字药丸 + 边饰（关卡标题由程序叠字） */
 const HOME_PLAY_BTN_TEXTURE = 'assets/images/home_play_btn.png';
 /** 果切挑战：与关卡按钮同构药丸、暖色；文字与图标已烘焙在贴图内 */
@@ -56,6 +60,8 @@ export class HomeScene implements Scene {
   private readonly settingsOverlay: SettingsPauseOverlay;
   private readonly homeFooterSlots: PIXI.Container[] = [];
   private readonly leaderboardEntryRoot = new PIXI.Container();
+  private readonly gachaEntryRoot = new PIXI.Container();
+  private readonly homeCoinBar = new CoinBar();
   /** 进入关卡：贴图或紫底兜底 */
   private readonly playEntryRoot = new PIXI.Container();
   private playEntryBg!: PIXI.Graphics;
@@ -77,20 +83,6 @@ export class HomeScene implements Scene {
   private gameClubButton: ReturnType<NonNullable<typeof wx.createGameClubButton>> | null = null;
   private enteringBowl = false;
   private enteringFruitSlice = false;
-  /**
-   * 透明 wx.createUserInfoButton，覆盖在「排行榜」卡片上。
-   * 玩家点排行榜实际就是点这个原生按钮 → 微信自动连弹「隐私协议 → 用户信息授权」，
-   * 拿到 userInfo 后再进入排行榜场景。
-   * 已经授权过的玩家 / 非微信环境下不再创建此按钮，由 PIXI pointertap 走兜底路径。
-   */
-  private rankEntryAuthBtn: ReturnType<NonNullable<typeof wx.createUserInfoButton>> | null = null;
-  /** UserProfileService 资料变化时同步透明按钮的取消订阅 */
-  private unsubRankProfileChange: (() => void) | null = null;
-  /**
-   * 上一次写入透明按钮的 CSS 坐标，rect 没变就跳过 Object.assign(style, ...)，
-   * 避免基础库 3.15+ 上每次写 style 都刷出 updateTextView:fail SystemError。
-   */
-  private rankEntryLastCss: { left: number; top: number; width: number; height: number } | null = null;
 
   constructor() {
     this.settingsOverlay = new SettingsPauseOverlay(Game.logicWidth, Game.logicHeight, {
@@ -107,16 +99,12 @@ export class HomeScene implements Scene {
 
   onEnter(): void {
     this.refreshPlayEntryTitle();
+    this.homeCoinBar.refresh();
     this.layoutHomeMainColumn();
     this.bringGameClubAboveHomeUi();
     this.syncGameClubNativeButton();
     setTimeout(() => this.syncGameClubNativeButton(), 0);
     setTimeout(() => this.syncGameClubNativeButton(), 160);
-    // 排行榜入口的透明 wx 授权按钮：未授权时挂上，授权完成立即销毁
-    this.syncRankEntryAuthBtn();
-    if (!this.unsubRankProfileChange) {
-      this.unsubRankProfileChange = UserProfileService.onChange(() => this.syncRankEntryAuthBtn());
-    }
     // 主页空闲时预热好友榜子域沙箱，把 ~100-500ms 的冷启动藏在 home 阶段，
     // 等玩家点开排行榜并切到好友榜 tab 时少等一截。失败完全静默。
     warmupFriendRankContext();
@@ -135,11 +123,6 @@ export class HomeScene implements Scene {
 
   onExit(): void {
     this.hideGameClubNativeButton();
-    this.destroyRankEntryAuthBtn();
-    if (this.unsubRankProfileChange) {
-      this.unsubRankProfileChange();
-      this.unsubRankProfileChange = null;
-    }
   }
 
   private refreshPlayEntryTitle(): void {
@@ -152,12 +135,17 @@ export class HomeScene implements Scene {
       TextureCache.load('home_play_btn', HOME_PLAY_BTN_TEXTURE),
       TextureCache.load('home_fruit_slice_challenge_btn', HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE),
       TextureCache.load('game_logo_title', HOME_LOGO_TITLE_TEXTURE),
+      TextureCache.load('home_leaderboard_icon', HOME_LEADERBOARD_ICON_TEXTURE),
+      TextureCache.load('home_gacha_icon', HOME_GACHA_ICON_TEXTURE),
+      TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
     ]);
     const tex = TextureCache.get('__home_bg');
     if (!tex) {
       this.applyPlayEntryArt();
       this.applyFruitSliceEntryArt();
       this.applyHomeLogoTitle();
+      this.refreshGeneratedFooterIcons();
+      this.homeCoinBar.refreshIcon();
       this.layoutHomeMainColumn();
       this.bringGameClubAboveHomeUi();
       return;
@@ -171,6 +159,8 @@ export class HomeScene implements Scene {
     this.applyPlayEntryArt();
     this.applyFruitSliceEntryArt();
     this.applyHomeLogoTitle();
+    this.refreshGeneratedFooterIcons();
+    this.homeCoinBar.refreshIcon();
     this.layoutHomeMainColumn();
     this.bringGameClubAboveHomeUi();
   }
@@ -319,24 +309,37 @@ export class HomeScene implements Scene {
     const fruitY = playY + playHalf + gap + fruitHalf;
     this.fruitSliceEntryRoot.position.set(W / 2, fruitY);
 
-    /** 底部两张卡片并排：左排行榜 / 右图鉴；居中对齐主按钮柱 */
+    /** 底部入口：宽屏三卡并排；窄屏扭蛋居中，排行榜 / 图鉴左右并排。 */
     const cardCenterY = Math.round(fruitY + fruitHalf + 24 + HOME_FOOTER_CARD_H / 2);
-    const cardLeftX = Math.round(W / 2 - (HOME_FOOTER_CARD_W + HOME_FOOTER_CARD_GAP) / 2);
-    const cardRightX = Math.round(W / 2 + (HOME_FOOTER_CARD_W + HOME_FOOTER_CARD_GAP) / 2);
+    const threeCardGap = 18;
+    const threeCardW = HOME_FOOTER_CARD_W * 3 + threeCardGap * 2;
+    const useThreeCards = threeCardW <= W - 24;
+    const cardLeftX = useThreeCards
+      ? Math.round(W / 2 - HOME_FOOTER_CARD_W - threeCardGap)
+      : Math.round(W / 2 - (HOME_FOOTER_CARD_W + HOME_FOOTER_CARD_GAP) / 2);
+    const cardMiddleX = Math.round(W / 2);
+    const cardRightX = useThreeCards
+      ? Math.round(W / 2 + HOME_FOOTER_CARD_W + threeCardGap)
+      : Math.round(W / 2 + (HOME_FOOTER_CARD_W + HOME_FOOTER_CARD_GAP) / 2);
+    const gachaY = useThreeCards
+      ? cardCenterY
+      : Math.round(fruitY + fruitHalf + 20 + HOME_FOOTER_CARD_H / 2);
+    const sideCardY = useThreeCards
+      ? cardCenterY
+      : Math.round(gachaY + HOME_FOOTER_CARD_H + 16);
 
     const bookSlot = this.homeFooterSlots[0];
     if (bookSlot) {
-      bookSlot.position.set(cardRightX, cardCenterY);
+      bookSlot.position.set(cardRightX, sideCardY);
     }
-    this.leaderboardEntryRoot.position.set(cardLeftX, cardCenterY);
+    this.leaderboardEntryRoot.position.set(cardLeftX, sideCardY);
+    this.gachaEntryRoot.position.set(cardMiddleX, gachaY);
 
     /** 游戏圈紧贴屏幕底部，并与图标卡片留出足够呼吸感 */
-    const gameClubMinY = cardCenterY + HOME_FOOTER_CARD_H / 2 + 36;
+    const gameClubMinY = Math.max(sideCardY, gachaY) + HOME_FOOTER_CARD_H / 2 + 36;
     const gameClubY = Math.min(H - 48, Math.max(gameClubMinY, H - 76));
     this.gameClubFallbackRoot.position.set(Math.round(W * 0.5), gameClubY);
 
-    // 排行榜入口位置变化后，同步上面的透明 wx 原生按钮坐标
-    this.syncRankEntryAuthBtn();
   }
 
   /** 图鉴入口：白色卡片底 + 草莓贴图（无贴图时落入 emoji 兜底） */
@@ -397,6 +400,9 @@ export class HomeScene implements Scene {
     this.gradFill.drawRect(0, top + 200, W, H - top - 200);
     this.gradFill.endFill();
     this.container.addChild(this.bgFill, this.gradFill);
+
+    this.homeCoinBar.position.set(110, top + 28);
+    this.container.addChild(this.homeCoinBar);
 
     /** 无顶栏木条：背景全屏 */
     const contentTop = top + 8;
@@ -509,6 +515,29 @@ export class HomeScene implements Scene {
     this.homeFooterSlots.push(bookSlot);
     this.container.addChild(bookSlot);
 
+    this.gachaEntryRoot.position.set(Math.round(W * 0.5), Math.max(playY + 220, H - 200));
+    this.gachaEntryRoot.eventMode = 'static';
+    this.gachaEntryRoot.cursor = 'pointer';
+    this.gachaEntryRoot.hitArea = new PIXI.Rectangle(
+      -HOME_FOOTER_CARD_W / 2 - 6,
+      -HOME_FOOTER_CARD_H / 2 - 6,
+      HOME_FOOTER_CARD_W + 12,
+      HOME_FOOTER_CARD_H + 12,
+    );
+    this.gachaEntryRoot.addChild(this.createFooterCardBackdrop());
+    const gachaIcon = this.createGachaCardIcon();
+    gachaIcon.position.set(0, -HOME_FOOTER_CARD_H / 2 + 64);
+    this.gachaEntryRoot.addChild(gachaIcon);
+    const gachaLabel = this.createFooterCardLabel('扭蛋', 0xb94a12);
+    gachaLabel.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
+    this.gachaEntryRoot.addChild(gachaLabel);
+    this.gachaEntryRoot.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      const api = typeof wx !== 'undefined' ? wx : null;
+      api?.showToast?.({ title: '敬请期待', icon: 'none' });
+    });
+    this.container.addChild(this.gachaEntryRoot);
+
     this.leaderboardEntryRoot.position.set(Math.round(W * 0.38), Math.max(playY + 220, H - 200));
     this.leaderboardEntryRoot.eventMode = 'static';
     this.leaderboardEntryRoot.cursor = 'pointer';
@@ -525,17 +554,11 @@ export class HomeScene implements Scene {
     const rankLabel = this.createFooterCardLabel('排行榜', 0x275f2d);
     rankLabel.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
     this.leaderboardEntryRoot.addChild(rankLabel);
-    /**
-     * 仅在「没有原生 wx 授权按钮覆盖」时才会真正触发：
-     *   - 玩家已授权过本机资料 → 不创建覆盖按钮，PIXI 这一路直接进入排行榜
-     *   - 非微信小游戏（开发环境 / 抖音端等） → 同上
-     * 微信小游戏未授权状态下，玩家点击的是上面盖着的透明 createUserInfoButton，
-     * 其 onTap → handleRankEntryAuthTap → openLeaderboardWithProfile 才是主路径。
-     */
+    /** 只在玩家主动点排行榜时触发隐私授权；首页不预创建微信授权按钮。 */
     this.leaderboardEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
       this.hideGameClubNativeButton();
-      openLeaderboardWithProfile(RANK_BOARD_BOWL);
+      openLeaderboard(RANK_BOARD_BOWL);
     });
     this.container.addChild(this.leaderboardEntryRoot);
 
@@ -753,185 +776,6 @@ export class HomeScene implements Scene {
     }
   }
 
-  /**
-   * 同步「排行榜」卡片上方的透明 wx.createUserInfoButton。
-   * - 未授权 + 微信端：创建/更新一个完全透明的原生按钮覆盖在卡片上
-   * - 已授权 / 非微信：销毁按钮，让 PIXI pointertap 走兜底路径
-   */
-  private syncRankEntryAuthBtn(): void {
-    const api = typeof wx !== 'undefined' ? wx : null;
-    if (!api?.createUserInfoButton) {
-      this.destroyRankEntryAuthBtn();
-      return;
-    }
-    // 已经拿到真实昵称头像，就不需要再卡这一层授权按钮
-    if (UserProfileService.hasRealProfile()) {
-      this.destroyRankEntryAuthBtn();
-      return;
-    }
-
-    const rect = this.computeRankEntryCssRect();
-    if (!rect) {
-      this.destroyRankEntryAuthBtn();
-      return;
-    }
-
-    if (!this.rankEntryAuthBtn) {
-      try {
-        // 注：text 必须非空、fontSize 最低 12，部分基础库下 text='' 或 fontSize<12
-        // 按钮不会被渲染（也就不会触发 onTap），用空格 + color 透明能避开这条坑。
-        const btn = api.createUserInfoButton({
-          type: 'text',
-          text: ' ',
-          style: {
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height,
-            backgroundColor: 'rgba(0,0,0,0)',
-            borderColor: 'rgba(0,0,0,0)',
-            borderWidth: 0,
-            borderRadius: 24,
-            color: 'rgba(0,0,0,0)',
-            fontSize: 12,
-            lineHeight: rect.height,
-          },
-          withCredentials: false,
-        });
-        if (btn) {
-          this.rankEntryAuthBtn = btn;
-          this.rankEntryLastCss = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-          btn.onTap?.((res) => this.handleRankEntryAuthTap(res));
-          btn.show?.();
-          console.log(
-            `[HomeScene] rank entry wx btn created css(left=${rect.left} top=${rect.top}` +
-              ` w=${rect.width} h=${rect.height})`,
-          );
-        } else {
-          console.warn('[HomeScene] createUserInfoButton returned falsy');
-        }
-      } catch (error) {
-        console.warn('[HomeScene] create rank entry userInfo button failed', error);
-      }
-      return;
-    }
-
-    const last = this.rankEntryLastCss;
-    if (last && last.left === rect.left && last.top === rect.top && last.width === rect.width && last.height === rect.height) {
-      // 坐标无变化，跳过 style 写入，避免 updateTextView 噪音
-      return;
-    }
-    try {
-      this.rankEntryLastCss = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-      if (this.rankEntryAuthBtn.style) {
-        Object.assign(this.rankEntryAuthBtn.style, {
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height,
-        });
-      }
-      this.rankEntryAuthBtn.show?.();
-    } catch (error) {
-      console.warn('[HomeScene] sync rank entry userInfo button failed', error);
-    }
-  }
-
-  private destroyRankEntryAuthBtn(): void {
-    this.rankEntryLastCss = null;
-    if (!this.rankEntryAuthBtn) {
-      return;
-    }
-    try {
-      this.rankEntryAuthBtn.hide?.();
-    } catch {
-      // 隐藏失败不影响后续 destroy
-    }
-    try {
-      this.rankEntryAuthBtn.destroy?.();
-    } catch {
-      // 部分基础库 destroy 后会抛错，忽略
-    }
-    this.rankEntryAuthBtn = null;
-  }
-
-  /**
-   * 把「排行榜」卡片的设计像素中心点 → CSS 像素左上角矩形。
-   * 必须等 layoutHomeMainColumn 把 leaderboardEntryRoot 摆好后再算。
-   */
-  private computeRankEntryCssRect(): { left: number; top: number; width: number; height: number } | null {
-    const designW = Game.designWidth || 750;
-    if (!designW) {
-      return null;
-    }
-    const cx = this.leaderboardEntryRoot.x;
-    const cy = this.leaderboardEntryRoot.y;
-    if (!Number.isFinite(cx) || !Number.isFinite(cy)) {
-      return null;
-    }
-    // 设计像素 → 物理像素（含 letterbox 偏移）→ CSS 像素（÷ dpr）
-    // iPhone 上 stageOffset 为 0，等价于旧的 `* (screenWidth/designWidth)`；
-    // iPad 等需要 letterbox 时，stageOffsetX/Y 让按钮跟着舞台居中后的真实位置走。
-    const dpr = Math.max(1, Game.dpr || 1);
-    const scale = Math.max(0.0001, Game.scale || 1);
-    const designLeft = cx - HOME_FOOTER_CARD_W / 2;
-    const designTop = cy - HOME_FOOTER_CARD_H / 2;
-    const cssLeft = Math.round((Game.stageOffsetX + designLeft * scale) / dpr);
-    const cssTop = Math.round((Game.stageOffsetY + designTop * scale) / dpr);
-    const cssW = Math.max(1, Math.round((HOME_FOOTER_CARD_W * scale) / dpr));
-    const cssH = Math.max(1, Math.round((HOME_FOOTER_CARD_H * scale) / dpr));
-    return { left: cssLeft, top: cssTop, width: cssW, height: cssH };
-  }
-
-  /**
-   * 透明 wx.createUserInfoButton 的 onTap 回调：
-   * - 拿到 userInfo（真实昵称头像）→ 写入 UserProfileService → 进排行榜
-   * - 玩家拒绝授权 / 隐私协议未配置 / 任何异常 → 也进排行榜，由榜内 CTA 兑底
-   */
-  private handleRankEntryAuthTap(res: any): void {
-    const api = typeof wx !== 'undefined' ? wx : null;
-    AudioManager.playButtonSound();
-    this.hideGameClubNativeButton();
-
-    const errMsg: string = (res?.errMsg as string) || '';
-    const errCode = res?.err_code;
-    // 排错关键日志：把微信回调的核心字段全部打印（避免 stringify 整个 res 导致超长）
-    console.log(
-      `[HomeScene] rank entry userInfo onTap:` +
-        ` hasUserInfo=${!!res?.userInfo}` +
-        ` nick="${res?.userInfo?.nickName || ''}"` +
-        ` avatarUrl=${res?.userInfo?.avatarUrl ? String(res.userInfo.avatarUrl).slice(0, 64) + '...' : '(empty)'}` +
-        ` errMsg="${errMsg}"` +
-        ` errCode=${errCode}`,
-    );
-
-    // -12034：开发者侧没在小程序后台配置「用户隐私保护指引」
-    const privacyNotConfigured = errCode === -12034 || errMsg.includes('no privacy api permission');
-
-    if (res?.userInfo) {
-      // 这里 applyFromWeChat 会同步触发 RankUpload 主动 flush，
-      // 不再依赖之后的 LeaderboardScene.onEnter 才上报新资料。
-      const applied = UserProfileService.applyFromWeChat(res.userInfo);
-      if (applied) {
-        try {
-          api?.showToast?.({ title: '已带微信昵称上榜', icon: 'success', duration: 1200 });
-        } catch {
-          // 部分宿主无 showToast，安静失败
-        }
-      }
-    } else if (privacyNotConfigured) {
-      try {
-        api?.showToast?.({ title: '隐私协议未配置', icon: 'none', duration: 1500 });
-      } catch {
-        // 同上
-      }
-    }
-    // 不管授权结果如何，都进入排行榜：
-    //   - 同意了：榜单立即显示真实头像昵称
-    //   - 拒绝了 / 隐私未配置：榜内仍有「使用微信昵称头像上榜」CTA 兜底
-    openLeaderboardWithProfile(RANK_BOARD_BOWL);
-  }
-
   private getGameClubLogicRect(centerX = Game.logicWidth * 0.5, centerY = 0): { x: number; y: number; width: number; height: number } {
     const y = centerY > 0 ? centerY : this.gameClubFallbackRoot.y;
     return {
@@ -998,8 +842,70 @@ export class HomeScene implements Scene {
     return label;
   }
 
+  private refreshGeneratedFooterIcons(): void {
+    this.replaceFooterIcon(this.gachaEntryRoot, this.createGachaCardIcon(), -HOME_FOOTER_CARD_H / 2 + 64);
+    this.replaceFooterIcon(this.leaderboardEntryRoot, this.createLeaderboardCardIcon(), -HOME_FOOTER_CARD_H / 2 + 72);
+  }
+
+  private replaceFooterIcon(root: PIXI.Container, icon: PIXI.Container, y: number): void {
+    const current = root.children[1];
+    if (current) {
+      root.removeChild(current);
+    }
+    icon.position.set(0, y);
+    root.addChildAt(icon, Math.min(1, root.children.length));
+  }
+
+  /** 扭蛋入口图标：金币和胶囊球，保持无需贴图即可显示。 */
+  private createGachaCardIcon(): PIXI.Container {
+    const icon = this.createFooterCardTextureIcon('home_gacha_icon');
+    if (icon) {
+      return icon;
+    }
+
+    const root = new PIXI.Container();
+    const base = new PIXI.Graphics();
+    base.beginFill(0xffd86a, 0.45);
+    base.drawRoundedRect(-46, 30, 92, 12, 6);
+    base.endFill();
+    root.addChild(base);
+
+    const coin = new PIXI.Graphics();
+    coin.beginFill(0xffd34d);
+    coin.lineStyle(4, 0xc47a10, 1);
+    coin.drawCircle(-24, -2, 32);
+    coin.endFill();
+    coin.beginFill(0xfff1a8);
+    coin.drawCircle(-24, -2, 20);
+    coin.endFill();
+    root.addChild(coin);
+
+    const capsule = new PIXI.Graphics();
+    capsule.lineStyle(4, 0xffffff, 0.9);
+    capsule.beginFill(0xff6f8a);
+    capsule.drawRoundedRect(-4, -36, 58, 70, 28);
+    capsule.endFill();
+    capsule.beginFill(0x86d9ff);
+    capsule.drawRoundedRect(-4, -2, 58, 36, 18);
+    capsule.endFill();
+    root.addChild(capsule);
+
+    const sparkle = new PIXI.Graphics();
+    sparkle.beginFill(0xffffff);
+    this.drawTinyStar(sparkle, 30, -44, 5, 10, 4);
+    this.drawTinyStar(sparkle, -52, -34, 5, 7, 3);
+    sparkle.endFill();
+    root.addChild(sparkle);
+    return root;
+  }
+
   /** 排行榜卡片图标：绿色柱状图 + 顶部金色奖杯小角标 */
   private createLeaderboardCardIcon(): PIXI.Container {
+    const icon = this.createFooterCardTextureIcon('home_leaderboard_icon');
+    if (icon) {
+      return icon;
+    }
+
     const root = new PIXI.Container();
 
     // 底座阴影
@@ -1032,6 +938,21 @@ export class HomeScene implements Scene {
     star.endFill();
     root.addChild(star);
 
+    return root;
+  }
+
+  private createFooterCardTextureIcon(textureKey: string): PIXI.Container | null {
+    const tex = TextureCache.get(textureKey);
+    if (!tex) {
+      return null;
+    }
+    const root = new PIXI.Container();
+    const sp = new PIXI.Sprite(tex);
+    sp.anchor.set(0.5);
+    const target = Math.min(82, homeCatalogIconDisplayTarget());
+    const sc = target / Math.max(tex.width, tex.height);
+    sp.scale.set(sc);
+    root.addChild(sp);
     return root;
   }
 

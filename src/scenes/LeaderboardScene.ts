@@ -31,9 +31,9 @@ type BoardTab = 'world' | 'friend';
 
 let nextInitialBoard: RankBoard = RANK_BOARD_BOWL;
 
-const BOARD_TAB_META: Record<RankBoard, { label: string; shortLabel: string; icon: string }> = {
-  [RANK_BOARD_BOWL]: { label: '叠碗闯关', shortLabel: '叠碗', icon: '🍲' },
-  [RANK_BOARD_FRUIT]: { label: '果切挑战', shortLabel: '果切', icon: '🍉' },
+const BOARD_TAB_META: Record<RankBoard, { label: string; shortLabel: string }> = {
+  [RANK_BOARD_BOWL]: { label: '捞水果', shortLabel: '捞水果' },
+  [RANK_BOARD_FRUIT]: { label: '果切挑战', shortLabel: '果切' },
 };
 
 const LEADERBOARD_MEDAL_ASSETS: Record<number, string> = {
@@ -758,7 +758,7 @@ export class LeaderboardScene implements Scene {
     bg.endFill();
     root.addChild(bg);
 
-    const label = new PIXI.Text(`${meta.icon} ${meta.label}`, {
+    const label = new PIXI.Text(meta.label, {
       fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
       fontSize: 24,
       fill: selected ? 0xffffff : COLOR_TAB_INACTIVE_TEXT,

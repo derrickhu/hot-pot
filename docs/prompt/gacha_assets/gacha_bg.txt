@@ -1,0 +1,25 @@
+9:16 vertical mobile game background asset for a gacha (capsule toy) activity screen.
+Reference image is the full UI mockup of the same screen — keep EXACTLY the same cartoon
+art style, line thickness, colour palette, drop-shadow soft glow, summer pastel mood.
+
+Output ONLY the BACKGROUND layer of that mockup:
+
+- Warm cream / honey-yellow base, with a faint radial sunburst from the upper-middle.
+- Two soft peach circles bleeding in (top-left and bottom-right corners) for depth.
+- Scattered translucent decorative fruits in the corners and mid-band:
+  strawberries, lemon halves, blueberries, grapes, orange slices.
+  All fruits are SOFT, low-saturation, ~40% opacity, like background stickers, NOT main subjects.
+- Sprinkle of small yellow / white sparkle stars and dotted lines.
+- A pair of decorative speech-bubble "?" callouts near the upper area:
+  left side a small yellow + green pair, right side a pink + blue pair.
+  These are PURE decoration shapes only, no text inside them at all.
+- Optional: thin radial sunray streaks from the centre, very faint.
+
+STRICT constraints:
+
+- NO machine / NO gachapon / NO capsules / NO buttons / NO panels / NO cards.
+- NO Chinese characters, NO English letters, NO numbers, NO logo, NO QR code.
+- NO speech-bubble TEXT inside the "?" bubbles — they must be empty bubble shapes only.
+- NO phone frame, NO notch, NO device mockup.
+- Background fills the WHOLE 9:16 canvas edge-to-edge (full bleed).
+- Single coherent illustration, flat cartoon style with thick rounded outlines.

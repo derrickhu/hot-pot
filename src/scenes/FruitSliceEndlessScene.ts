@@ -12,6 +12,7 @@ import {
   getFruitSliceStageBonus,
   getFruitSliceStageIndex,
 } from '@/config/fruitSliceEndless';
+import { fruitSliceCoinsForScore, nextFruitSliceCoinTier } from '@/config/economy';
 import { getUnlockedFruitIds } from '@/config/fruitCatalog';
 import { FRUIT_CONFIGS, FRUIT_MAP, type FruitConfig, type FruitId } from '@/config/fruits';
 import { fruitSliceWholeTextureKey, FRUIT_SLICE_IDS, FRUIT_SLICE_WHOLE_PATH } from '@/config/fruitSliceWhole';
@@ -21,8 +22,16 @@ import { Game } from '@/core/Game';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { BowlTutorialOverlay } from '@/gameobjects/BowlTutorialOverlay';
+import { settleFruitSliceCoinReward, type FruitSliceCoinRewardResult } from '@/game/FruitSliceCoinRewards';
 import { getFruitSliceBestScore, recordFruitSliceRun } from '@/game/FruitSliceProgress';
+import { consumeFruitSliceTool, getFruitSliceToolCount } from '@/game/FruitSliceToolInventory';
 import { submitFruitBestRankIfNeeded } from '@/game/RankUpload';
+import {
+  CoinBar,
+  COIN_ICON_TEXTURE_KEY,
+  COIN_ICON_TEXTURE_PATH,
+  createCoinIcon,
+} from '@/gameobjects/CoinBar';
 import { openLeaderboard } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_FRUIT } from '@/services/RankService';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
@@ -91,7 +100,7 @@ const REVIVE_PANEL_HIT_LAYOUT = {
   abandon: { xRatio: 0.5, yRatio: 0.87, wRatio: 0.46, hRatio: 0.12 },
 };
 const FRUIT_SLICE_VISUAL_SCALE: Partial<Record<FruitId, number>> = {
-  pineapple: 1.16,
+  pineapple: 1.08,
   starfruit: 1.12,
 };
 const FRUIT_SLICE_UI_DIR = 'subpackages/bowl_game/assets/images/fruit_slice';
@@ -162,6 +171,14 @@ export class FruitSliceEndlessScene implements Scene {
     wordWrapWidth: 320,
   });
   private readonly toolHelpFreeBtn = new PIXI.Sprite();
+  private readonly toolHelpActionText = new PIXI.Text('', {
+    fontSize: 24,
+    fill: 0xffffff,
+    fontWeight: '900',
+    stroke: 0x7a3d16,
+    strokeThickness: 4,
+    lineJoin: 'round',
+  });
   private readonly overlayLayer = new PIXI.Container();
   private readonly goalCelebrateOverlay = new PIXI.Container();
   private readonly goalCelebrateDim = new PIXI.Graphics();
@@ -190,6 +207,7 @@ export class FruitSliceEndlessScene implements Scene {
   private readonly toolElimSprite = new PIXI.Sprite();
   private readonly toolShuffleSprite = new PIXI.Sprite();
   private readonly scorePanelSprites: PIXI.Sprite[] = [];
+  private readonly coinBar = new CoinBar();
   private readonly fruits: FruitSliceNode[] = [];
   private readonly pipeStack: PipeEntry[] = [];
   private pendingPipeSlots = 0;
@@ -213,6 +231,7 @@ export class FruitSliceEndlessScene implements Scene {
   private pipeBlockAdBusy = false;
   private pendingToolKind: FruitSliceToolKind | null = null;
   private toolRewardedAdBusy = false;
+  private lastCoinReward: FruitSliceCoinRewardResult | null = null;
   private fruitTopY = 0;
   private fruitBottomY = 0;
   private initialFruitTopY = 0;
@@ -320,6 +339,7 @@ export class FruitSliceEndlessScene implements Scene {
         TextureCache.load('fruit_slice_ui_revive_panel', FRUIT_SLICE_UI_ASSETS.revivePanel),
         TextureCache.load('fruit_slice_ui_tutorial_hand', FRUIT_SLICE_UI_ASSETS.tutorialHand),
         TextureCache.load('ui_panel_free_btn', UI_PANEL_FREE_BTN_TEXTURE),
+        TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
         ...FRUIT_SLICE_IDS.map((id) =>
           TextureCache.load(fruitSliceWholeTextureKey(id), FRUIT_SLICE_WHOLE_PATH[id]),
         ),
@@ -397,6 +417,8 @@ export class FruitSliceEndlessScene implements Scene {
       this.layoutToolHelpPanelSprite();
     }
     this.applyToolHelpFreeButtonTexture();
+    this.coinBar.refreshIcon();
+    this.coinBar.refresh();
     this.refreshSlantedBoardLayout();
   }
 
@@ -989,6 +1011,9 @@ export class FruitSliceEndlessScene implements Scene {
     this.redrawGridWarningLine();
     this.container.addChild(this.gridWarningLine);
     this.drawHud(W, H, top, headerH, cliffTop, cliffBottom);
+    this.coinBar.position.set(110, top + 28);
+    this.container.addChild(this.coinBar);
+    this.coinBar.refresh();
     this.mountToolButtons();
     this.container.addChild(this.textEffectLayer);
     this.buildToolHelpOverlay();
@@ -1129,6 +1154,11 @@ export class FruitSliceEndlessScene implements Scene {
     });
     panel.addChild(this.toolHelpFreeBtn);
 
+    this.toolHelpActionText.anchor.set(0.5);
+    this.toolHelpActionText.position.set(0, 110);
+    this.toolHelpActionText.eventMode = 'none';
+    panel.addChild(this.toolHelpActionText);
+
     const close = new PIXI.Container();
     close.position.set(184, -164);
     close.eventMode = 'static';
@@ -1219,6 +1249,8 @@ export class FruitSliceEndlessScene implements Scene {
       this.toolHelpTitle.text = '打乱道具';
       this.toolHelpDesc.text = '重新随机排列上方水果，\n帮你找到新的下落选择。';
     }
+    const ownedCount = getFruitSliceToolCount(kind);
+    this.toolHelpActionText.text = ownedCount > 0 ? `使用 1/${ownedCount}` : '';
     this.toolHelpOverlay.visible = true;
     this.fruitLayer.eventMode = 'none';
   }
@@ -1483,6 +1515,17 @@ export class FruitSliceEndlessScene implements Scene {
     if (!kind || this.toolRewardedAdBusy) {
       return;
     }
+    const ownedCount = getFruitSliceToolCount(kind);
+    if (ownedCount > 0) {
+      const result = consumeFruitSliceTool(kind);
+      if (!result.consumed) {
+        this.spawnCenterBanner('道具数量不足');
+        return;
+      }
+      this.hideToolHelpPanel();
+      this.applyFruitSliceTool(kind);
+      return;
+    }
     this.toolRewardedAdBusy = true;
     try {
       const result = await showRewardedAd({
@@ -1491,11 +1534,7 @@ export class FruitSliceEndlessScene implements Scene {
       }, FRUIT_SLICE_REWARDED_AD_UNIT_ID);
       if (result === 'completed' || result === 'unavailable') {
         this.hideToolHelpPanel();
-        if (kind === 'eliminate') {
-          this.eliminatePipeTopPair();
-        } else {
-          this.shuffleFruits();
-        }
+        this.applyFruitSliceTool(kind);
       } else if (result === 'skipped') {
         this.spawnCenterBanner('看完广告后才能使用');
       } else {
@@ -1503,6 +1542,14 @@ export class FruitSliceEndlessScene implements Scene {
       }
     } finally {
       this.toolRewardedAdBusy = false;
+    }
+  }
+
+  private applyFruitSliceTool(kind: FruitSliceToolKind): void {
+    if (kind === 'eliminate') {
+      this.eliminatePipeTopPair();
+    } else {
+      this.shuffleFruits();
     }
   }
 
@@ -1545,6 +1592,7 @@ export class FruitSliceEndlessScene implements Scene {
     this.clearRound();
     this.resetFruitSpawnBounds();
     this.score = 0;
+    this.lastCoinReward = null;
     this.combo = 0;
     this.lastComboAt = 0;
     this.nextMilestoneIndex = 0;
@@ -1784,6 +1832,12 @@ export class FruitSliceEndlessScene implements Scene {
     sp.anchor.set(0.5);
     sp.scale.set(this.getFruitSpriteScale(fruitId, node.radius, tex));
     node.addChild(sp);
+  }
+
+  private setFruitNodeVisual(node: FruitSliceNode, fruitId: FruitId): void {
+    node.radius = this.getFruitRadius(fruitId);
+    this.setFruitNodeId(node, fruitId);
+    node.hitArea = new PIXI.Circle(0, 0, node.radius * 1.12);
   }
 
   private ensureTutorialOverlay(): void {
@@ -2276,11 +2330,16 @@ export class FruitSliceEndlessScene implements Scene {
     if (markReviveUnavailable) {
       this.reviveUsed = true;
     }
+    this.lastCoinReward = settleFruitSliceCoinReward(this.score);
     const isNewBest = this.score > 0 ? recordFruitSliceRun(this.score) : false;
     this.bestScore = getFruitSliceBestScore();
     this.updateHud();
     // 只有刷新最高分时才上报，避免无意义的 update；后端也会按"非更优记录"二次拦截
     submitFruitBestRankIfNeeded(isNewBest);
+    if (this.lastCoinReward.totalCoins > 0) {
+      this.showCoinRewardOverlay(this.lastCoinReward, isNewBest);
+      return;
+    }
     this.showEndOverlay(isNewBest);
   }
 
@@ -2321,41 +2380,32 @@ export class FruitSliceEndlessScene implements Scene {
       root.addChild(panel);
     }
 
-    const scoreTitle = new PIXI.Text('本局分数', {
-      fontSize: 25,
+    const scoreTitle = new PIXI.Text(`本局分数  ${this.score}`, {
+      fontSize: 34,
       fill: 0x6a3a18,
       fontWeight: '900',
       stroke: 0xfff4d0,
-      strokeThickness: 3,
+      strokeThickness: 4,
       lineJoin: 'round',
     });
     scoreTitle.anchor.set(0.5);
-    scoreTitle.position.set(W / 2, H / 2 - 74);
+    scoreTitle.position.set(W / 2, H / 2 - 54);
     root.addChild(scoreTitle);
 
-    const scoreValue = new PIXI.Text(String(this.score), {
-      fontSize: 42,
-      fill: 0xe45a22,
+    const coinHint = new PIXI.Text(this.getFruitSliceCoinProgressHint(this.score), {
+      fontSize: 25,
+      fill: 0xff8a1f,
       fontWeight: '900',
-      stroke: 0xfff4d0,
-      strokeThickness: 5,
-      lineJoin: 'round',
-    });
-    scoreValue.anchor.set(0.5);
-    scoreValue.position.set(W / 2, H / 2 - 35);
-    root.addChild(scoreValue);
-
-    const hint = new PIXI.Text('看广告清空管道，继续挑战新记录', {
-      fontSize: 21,
-      fill: 0x7a4a24,
-      fontWeight: '800',
       stroke: 0xfff6df,
-      strokeThickness: 3,
+      strokeThickness: 4,
       lineJoin: 'round',
+      align: 'center',
+      wordWrap: true,
+      wordWrapWidth: Math.min(360, W * 0.72),
     });
-    hint.anchor.set(0.5);
-    hint.position.set(W / 2, H / 2 + 8);
-    root.addChild(hint);
+    coinHint.anchor.set(0.5);
+    coinHint.position.set(W / 2, H / 2 - 2);
+    root.addChild(coinHint);
 
     const panelPoint = (xRatio: number, yRatio: number) => ({
       x: W / 2 + (xRatio - 0.5) * panelW * panelScale,
@@ -2467,6 +2517,281 @@ export class FruitSliceEndlessScene implements Scene {
     }));
     this.overlayLayer.addChild(root);
     this.endOverlay = root;
+  }
+
+  private showCoinRewardOverlay(reward: FruitSliceCoinRewardResult, isNewBest: boolean): void {
+    this.hideEndOverlay();
+    const W = Game.logicWidth;
+    const H = Game.logicHeight;
+    const centerX = W / 2;
+    const centerY = H * 0.42;
+
+    const root = new PIXI.Container();
+    root.eventMode = 'static';
+    root.cursor = 'pointer';
+    root.hitArea = new PIXI.Rectangle(0, 0, W, H);
+
+    const dim = new PIXI.Graphics();
+    dim.beginFill(0x06121b, 0.74);
+    dim.drawRect(0, 0, W, H);
+    dim.endFill();
+    dim.eventMode = 'static';
+    root.addChild(dim);
+
+    const burstRoot = new PIXI.Container();
+    burstRoot.position.set(centerX, centerY);
+    root.addChild(burstRoot);
+
+    const rays = this.buildRewardRays(20, 84, 220, 0xffe27a, 0.42);
+    burstRoot.addChild(rays);
+    const ringRays = this.buildRewardRays(14, 110, 178, 0xffffff, 0.22);
+    ringRays.rotation = Math.PI / 14;
+    burstRoot.addChild(ringRays);
+
+    const sparkles = this.buildRewardSparkles(burstRoot);
+
+    const title = new PIXI.Text('获得金币', {
+      fontSize: 52,
+      fill: 0xfff06a,
+      fontWeight: '900',
+      stroke: 0x6d2a10,
+      strokeThickness: 9,
+      dropShadow: true,
+      dropShadowBlur: 4,
+      dropShadowDistance: 3,
+      dropShadowColor: 0x2c1208,
+      lineJoin: 'round',
+    });
+    title.anchor.set(0.5);
+    title.position.set(centerX, centerY - 200);
+    title.resolution = 2;
+    root.addChild(title);
+
+    const coin = createCoinIcon(96);
+    coin.position.set(centerX, centerY);
+    root.addChild(coin);
+
+    const amount = new PIXI.Text(`+${reward.totalCoins}`, {
+      fontSize: 76,
+      fill: 0xffd84a,
+      fontWeight: '900',
+      stroke: 0x6d2a10,
+      strokeThickness: 10,
+      dropShadow: true,
+      dropShadowBlur: 4,
+      dropShadowDistance: 3,
+      dropShadowColor: 0x2c1208,
+      lineJoin: 'round',
+    });
+    amount.anchor.set(0.5);
+    amount.position.set(centerX, centerY + 138);
+    amount.resolution = 2;
+    root.addChild(amount);
+
+    const detailLines: string[] = [];
+    if (reward.firstRunCoins > 0) {
+      detailLines.push(`每日首局挑战 +${reward.firstRunCoins}`);
+    }
+    if (reward.scoreCoins > 0) {
+      detailLines.push(`达到${reward.scoreTierMinScore}积分奖励 +${reward.scoreCoins}`);
+    }
+    if (detailLines.length === 0) {
+      detailLines.push('挑战奖励');
+    }
+    const detail = new PIXI.Text(detailLines.join('\n'), {
+      fontSize: 24,
+      fill: 0xfff1d0,
+      fontWeight: '900',
+      stroke: 0x3b2316,
+      strokeThickness: 4,
+      align: 'center',
+      lineHeight: 34,
+    });
+    detail.anchor.set(0.5);
+    detail.position.set(centerX, centerY + 210);
+    detail.resolution = 2;
+    root.addChild(detail);
+
+    const closeHint = new PIXI.Text('点击任意处入账', {
+      fontSize: 24,
+      fill: 0xfdf1d4,
+      fontWeight: '800',
+      stroke: 0x3b2316,
+      strokeThickness: 4,
+    });
+    closeHint.anchor.set(0.5);
+    closeHint.position.set(centerX, H * 0.78);
+    closeHint.resolution = 2;
+    root.addChild(closeHint);
+
+    let elapsed = 0;
+    let closing = false;
+    coin.scale.set(0);
+    amount.alpha = 0;
+    detail.alpha = 0;
+    title.alpha = 0;
+    title.y -= 16;
+    const tick = (delta: number): void => {
+      if (closing || root.destroyed) {
+        Game.ticker.remove(tick);
+        return;
+      }
+      elapsed += delta / 60;
+      const t = elapsed;
+      rays.rotation += delta * 0.012;
+      ringRays.rotation -= delta * 0.0065;
+      const scale = Math.min(1, t * 4);
+      const settle = 1 - Math.pow(1 - scale, 3);
+      coin.scale.set(0.7 * settle + Math.sin(t * 4.6) * 0.05 * settle);
+      coin.rotation = Math.sin(t * 3.6) * 0.06;
+      const titleSettle = Math.min(1, Math.max(0, (t - 0.05) * 5));
+      title.alpha = titleSettle;
+      title.y = (centerY - 200) - 16 + titleSettle * 16;
+      amount.alpha = Math.min(1, Math.max(0, (t - 0.18) * 6));
+      detail.alpha = Math.min(1, Math.max(0, (t - 0.32) * 5));
+      closeHint.alpha = 0.6 + Math.sin(t * 4.2) * 0.4;
+      for (const sp of sparkles) {
+        const pulse = (Math.sin(t * 5 + sp.phase) + 1) / 2;
+        sp.node.alpha = (0.28 + pulse * 0.72) * Math.min(1, t * 4);
+        sp.node.scale.set(0.65 + pulse * 0.55);
+        sp.node.rotation += delta * 0.018;
+      }
+    };
+    Game.ticker.add(tick);
+
+    root.on('pointertap', () => {
+      if (closing) {
+        return;
+      }
+      closing = true;
+      Game.ticker.remove(tick);
+      AudioManager.playButtonSound();
+      title.visible = false;
+      amount.visible = false;
+      detail.visible = false;
+      closeHint.visible = false;
+      burstRoot.visible = false;
+      coin.visible = false;
+      this.playCoinDepositEffect(centerX, centerY, () => {
+        this.hideEndOverlay();
+        this.showEndOverlay(isNewBest);
+      });
+    });
+
+    this.overlayLayer.addChild(root);
+    this.endOverlay = root;
+  }
+
+  /** 金光放射线（参考 BowlBadgeUnlockOverlay 的视觉，颜色叠加到遮罩上）。 */
+  private buildRewardRays(
+    count: number,
+    innerR: number,
+    outerR: number,
+    color: number,
+    alpha: number,
+  ): PIXI.Container {
+    const root = new PIXI.Container();
+    const g = new PIXI.Graphics();
+    for (let i = 0; i < count; i += 1) {
+      const a = (Math.PI * 2 * i) / count;
+      const spread = i % 2 === 0 ? 0.06 : 0.036;
+      const out = i % 2 === 0 ? outerR : outerR * 0.78;
+      g.beginFill(color, i % 2 === 0 ? alpha : alpha * 0.6);
+      g.moveTo(Math.cos(a - spread) * innerR, Math.sin(a - spread) * innerR);
+      g.lineTo(Math.cos(a) * out, Math.sin(a) * out);
+      g.lineTo(Math.cos(a + spread) * innerR, Math.sin(a + spread) * innerR);
+      g.closePath();
+      g.endFill();
+    }
+    g.blendMode = PIXI.BLEND_MODES.ADD;
+    root.addChild(g);
+    return root;
+  }
+
+  /** 围绕金币的闪烁小星，与放射线一起构成「获得新内容」的高光效果。 */
+  private buildRewardSparkles(parent: PIXI.Container): Array<{ node: PIXI.Graphics; phase: number }> {
+    const points = [
+      [-150, -36, 0],
+      [-110, 96, 0.8],
+      [120, -86, 1.5],
+      [144, 64, 2.2],
+      [-30, -148, 2.8],
+      [56, 138, 3.4],
+    ] as const;
+    const list: Array<{ node: PIXI.Graphics; phase: number }> = [];
+    for (const [x, y, phase] of points) {
+      const star = new PIXI.Graphics();
+      star.beginFill(0xffffff, 0.95);
+      star.moveTo(0, -10);
+      star.lineTo(3.6, -3.6);
+      star.lineTo(10, 0);
+      star.lineTo(3.6, 3.6);
+      star.lineTo(0, 10);
+      star.lineTo(-3.6, 3.6);
+      star.lineTo(-10, 0);
+      star.lineTo(-3.6, -3.6);
+      star.closePath();
+      star.endFill();
+      star.beginFill(0xfff0a2, 0.75);
+      star.drawCircle(0, 0, 2.8);
+      star.endFill();
+      star.position.set(x, y);
+      star.blendMode = PIXI.BLEND_MODES.ADD;
+      parent.addChild(star);
+      list.push({ node: star, phase });
+    }
+    return list;
+  }
+
+
+  private getFruitSliceCoinProgressHint(score: number): string {
+    const current = fruitSliceCoinsForScore(score);
+    const next = nextFruitSliceCoinTier(score);
+    if (!current && next) {
+      return `${next.minScore}分可得${next.coins}金币`;
+    }
+    if (current && next) {
+      return `已得${current.coins}金币  ${next.minScore}分可得${next.coins}金币`;
+    }
+    if (current) {
+      return `已得${current.coins}金币  最高档奖励到手`;
+    }
+    return '1000分起有金币奖励';
+  }
+
+  private playCoinDepositEffect(fromX: number, fromY: number, done: () => void): void {
+    const targetX = this.coinBar.x + 4;
+    const targetY = this.coinBar.y;
+    const coin = createCoinIcon(28);
+    coin.position.set(fromX, fromY);
+    coin.scale.set(1.45);
+    this.overlayLayer.addChild(coin);
+
+    let elapsed = 0;
+    const duration = 0.72;
+    const tick = (): void => {
+      if (coin.destroyed) {
+        Game.ticker.remove(tick);
+        return;
+      }
+      elapsed += Game.ticker.deltaMS / 1000;
+      const p = Math.min(elapsed / duration, 1);
+      const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      coin.position.x = fromX + (targetX - fromX) * ease;
+      coin.position.y = fromY + (targetY - fromY) * ease - Math.sin(p * Math.PI) * 90;
+      coin.scale.set(1.45 - 0.75 * p);
+      coin.rotation += 0.18;
+      if (p >= 1) {
+        Game.ticker.remove(tick);
+        coin.parent?.removeChild(coin);
+        coin.destroy({ children: true });
+        this.coinBar.refresh();
+        this.coinBar.bump();
+        this.spawnCenterBanner('金币已入账');
+        setTimeout(done, 280);
+      }
+    };
+    Game.ticker.add(tick);
   }
 
   private createOverlayHitButton(
@@ -3254,24 +3579,36 @@ export class FruitSliceEndlessScene implements Scene {
       return;
     }
     const activeIds = getFruitSliceActiveFruitIds(this.score);
-    for (const node of this.fruits) {
-      if (node.state !== 'fixed' && node.state !== 'settled') {
-        continue;
-      }
+    const shuffleTargets = this.fruits.filter((node) => node.state === 'fixed' || node.state === 'settled');
+    for (const node of shuffleTargets) {
       const fruitId = activeIds[Math.floor(Math.random() * activeIds.length)]!;
-      node.fruitId = fruitId;
-      node.radius = this.getFruitRadius(fruitId);
-      node.removeChildren();
-      const tex = TextureCache.get(fruitSliceWholeTextureKey(fruitId));
-      if (tex) {
-        const sp = new PIXI.Sprite(tex);
-        sp.anchor.set(0.5);
-        sp.scale.set(this.getFruitSpriteScale(fruitId, node.radius, tex));
-        node.addChild(sp);
-      }
-      node.hitArea = new PIXI.Circle(0, 0, node.radius * 1.12);
+      this.setFruitNodeVisual(node, fruitId);
       node.rotation = (Math.random() - 0.5) * 0.35;
     }
+
+    const pipeTop = this.pipeStack[this.pipeStack.length - 1];
+    if (pipeTop && shuffleTargets.length > 0) {
+      const bottomRow = this.getBottomFruitRow(shuffleTargets);
+      if (bottomRow.length > 0 && !bottomRow.some((node) => node.fruitId === pipeTop.fruitId)) {
+        const target = bottomRow[Math.floor(Math.random() * bottomRow.length)]!;
+        this.setFruitNodeVisual(target, pipeTop.fruitId);
+      }
+    }
+  }
+
+  private getBottomFruitRow(nodes: FruitSliceNode[]): FruitSliceNode[] {
+    let bottomY = -Infinity;
+    for (const node of nodes) {
+      const y = node.__slideTo ?? node.y;
+      if (y > bottomY) {
+        bottomY = y;
+      }
+    }
+    if (!Number.isFinite(bottomY)) {
+      return [];
+    }
+    const rowThreshold = Math.max(42, this.gridRowStep() * 0.6);
+    return nodes.filter((node) => bottomY - (node.__slideTo ?? node.y) <= rowThreshold);
   }
 
   private eliminatePipeTopPair(): void {

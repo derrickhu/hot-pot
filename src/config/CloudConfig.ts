@@ -20,6 +20,11 @@ export const BACKEND_ANON_ID_KEY = `${GAME_KEY}_anon_id`;
 export const BOWL_PROGRESS_KEY = `${GAME_KEY}_bowl_progress`;
 export const USER_SETTINGS_KEY = `${GAME_KEY}_settings`;
 export const FRUIT_SLICE_PROGRESS_KEY = `${GAME_KEY}_fruit_slice_progress`;
+export const WALLET_KEY = `${GAME_KEY}_wallet_v1`;
+export const GACHA_STATE_KEY = `${GAME_KEY}_gacha_state_v1`;
+export const TOOL_INVENTORY_KEY = `${GAME_KEY}_tool_inventory_v1`;
+export const FRUIT_SLICE_REWARD_KEY = `${GAME_KEY}_fruit_slice_reward_v1`;
+export const FRUIT_SLICE_TOOL_INVENTORY_KEY = `${GAME_KEY}_fruit_slice_tool_inventory_v1`;
 /**
  * 玩家自己授权拿到的微信昵称 + 头像 URL；仅用于排行榜显示。
  * 不进入 CLOUD_SYNC_ALLOWLIST：用户资料本机敏感，不参与跨设备云端同步，
@@ -34,6 +39,11 @@ export const CLOUD_SYNC_ALLOWLIST = [
   BOWL_PROGRESS_KEY,
   USER_SETTINGS_KEY,
   FRUIT_SLICE_PROGRESS_KEY,
+  WALLET_KEY,
+  GACHA_STATE_KEY,
+  TOOL_INVENTORY_KEY,
+  FRUIT_SLICE_REWARD_KEY,
+  FRUIT_SLICE_TOOL_INVENTORY_KEY,
 ] as const;
 
 export const CLOUD_SYNC_EXCLUDE_KEYS = [

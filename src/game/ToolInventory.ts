@@ -1,5 +1,5 @@
-import { GAME_KEY } from '@/config/CloudConfig';
-import { Platform } from '@/core/PlatformService';
+import { TOOL_INVENTORY_KEY } from '@/config/CloudConfig';
+import { PersistService } from '@/core/PersistService';
 
 export type ToolKind = 'addDish' | 'remove' | 'shuffle';
 
@@ -10,7 +10,6 @@ export interface ToolInventoryState {
   lastShareRewardDate: string;
 }
 
-const TOOL_INVENTORY_KEY = `${GAME_KEY}_tool_inventory_v1`;
 const DAILY_SHARE_REWARD_KIND: ToolKind = 'remove';
 
 const DEFAULT_TOOL_INVENTORY: ToolInventoryState = {
@@ -21,20 +20,11 @@ const DEFAULT_TOOL_INVENTORY: ToolInventoryState = {
 };
 
 export function readToolInventory(): ToolInventoryState {
-  const raw = Platform.getStorageSync(TOOL_INVENTORY_KEY);
-  if (!raw) {
-    return { ...DEFAULT_TOOL_INVENTORY };
-  }
-  try {
-    const parsed = JSON.parse(raw) as Partial<ToolInventoryState>;
-    return normalizeToolInventory(parsed);
-  } catch {
-    return { ...DEFAULT_TOOL_INVENTORY };
-  }
+  return normalizeToolInventory(PersistService.readJSON<Partial<ToolInventoryState>>(TOOL_INVENTORY_KEY) || {});
 }
 
 export function writeToolInventory(next: ToolInventoryState): void {
-  Platform.setStorageSync(TOOL_INVENTORY_KEY, JSON.stringify(normalizeToolInventory(next)));
+  PersistService.writeJSON(TOOL_INVENTORY_KEY, normalizeToolInventory(next));
 }
 
 export function canClaimDailyShareToolReward(): boolean {
@@ -64,6 +54,17 @@ export function consumeTool(kind: ToolKind): { consumed: boolean; count: number 
   state[kind] -= 1;
   writeToolInventory(state);
   return { consumed: true, count: state[kind] };
+}
+
+export function addTool(kind: ToolKind, count: number): ToolInventoryState {
+  const state = readToolInventory();
+  const amount = normalizeCount(count);
+  if (amount <= 0) {
+    return state;
+  }
+  state[kind] += amount;
+  writeToolInventory(state);
+  return state;
 }
 
 export function toolKindForIndex(index: number): ToolKind {

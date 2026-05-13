@@ -1,0 +1,22 @@
+Single large rounded pill "main action" button asset, transparent background, 16:9 canvas.
+Reference image is the full UI mockup — match the SAME thick rounded outline, glossy plastic
+look, drop shadow.
+
+Output ONLY the button SHAPE — NO text, NO icons inside:
+
+- Long pill, ~92% of canvas width, ~52% of canvas height, centred.
+- Vivid orange gradient fill (#ff8c3c → #ffc466 top-down), thick dark-brown rounded outline
+  (#8d3a0d), inner white-yellow gloss highlight band on the upper portion.
+- Soft drop shadow under the pill.
+- A subtle inner double-stroke (light cream) just inside the dark outline, to keep the
+  huahua / 叮咚 POP UI signature.
+
+STRICT constraints:
+
+- TRANSPARENT background.
+- The pill must be COMPLETELY EMPTY inside — no text, no characters, no Chinese, no English,
+  no numbers, no coin icon, no star, no decoration.
+- NO machine / NO capsules / NO panel / NO other UI elements.
+- NO secondary smaller pill or sticker on top.
+- Single coherent button, ready for runtime to overlay programmatic Chinese text and a
+  coin-cost badge on top.
