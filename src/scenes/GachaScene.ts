@@ -13,39 +13,33 @@ import {
   createCoinIcon,
 } from '@/gameobjects/CoinBar';
 import { TextureCache } from '@/utils/TextureCache';
+import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
+const GACHA_IMAGE_DIR = 'subpackages/bowl_game/assets/images/gacha';
 const GACHA_BG_KEY = 'gacha_bg';
-const GACHA_BG_PATH = 'assets/images/gacha/gacha_bg.png';
+const GACHA_BG_PATH = `${GACHA_IMAGE_DIR}/gacha_bg.png`;
 const GACHA_TITLE_KEY = 'gacha_title';
-const GACHA_TITLE_PATH = 'assets/images/gacha/gacha_title.png';
+const GACHA_TITLE_PATH = `${GACHA_IMAGE_DIR}/gacha_title.png`;
 const GACHA_BACK_BTN_KEY = 'gacha_back_btn';
 const GACHA_BACK_BTN_PATH = 'subpackages/bowl_game/assets/images/fruit_slice/back_button.png';
 const GACHA_PULL_BTN_KEY = 'gacha_pull_btn';
-const GACHA_PULL_BTN_PATH = 'assets/images/gacha/gacha_pull_button.png';
+const GACHA_PULL_BTN_PATH = `${GACHA_IMAGE_DIR}/gacha_pull_button.png`;
 const GACHA_POOL_PANEL_KEY = 'gacha_pool_panel';
-const GACHA_POOL_PANEL_PATH = 'assets/images/gacha/gacha_pool_panel.png';
-const GACHA_POOL_LABEL_KEY = 'gacha_pool_label';
-const GACHA_POOL_LABEL_PATH = 'assets/images/gacha/gacha_pool_label.png';
+const GACHA_POOL_PANEL_PATH = `${GACHA_IMAGE_DIR}/gacha_pool_panel.png`;
 const GACHA_MACHINE_BACK_KEY = 'gacha_machine_back';
-const GACHA_MACHINE_BACK_PATH = 'assets/images/gacha/gacha_machine_back.png';
+const GACHA_MACHINE_BACK_PATH = `${GACHA_IMAGE_DIR}/gacha_machine_back.png`;
 const GACHA_RESULT_TITLE_RIBBON_KEY = 'gacha_result_title_ribbon';
-const GACHA_RESULT_TITLE_RIBBON_PATH = 'assets/images/gacha/gacha_result_title_ribbon.png';
-const GACHA_DOME_OVERLAY_KEY = 'gacha_dome_overlay';
-const GACHA_DOME_OVERLAY_PATH = 'assets/images/gacha/gacha_machine_dome_overlay.png';
+const GACHA_RESULT_TITLE_RIBBON_PATH = `${GACHA_IMAGE_DIR}/gacha_result_title_ribbon.png`;
 const GACHA_CAPSULES_SHEET_KEY = 'gacha_capsules';
-const GACHA_CAPSULES_SHEET_PATH = 'assets/images/gacha/gacha_capsules_sheet.png';
-/** 资源未到位时仍兜底使用的老整机贴图（v1 单图，玻璃罩内空）。 */
-const GACHA_MACHINE_LEGACY_KEY = 'gacha_machine';
-const GACHA_MACHINE_LEGACY_PATH = 'assets/images/gacha/gacha_machine.png';
+const GACHA_CAPSULES_SHEET_PATH = `${GACHA_IMAGE_DIR}/gacha_capsules_sheet.png`;
 
-/** 道具图标 sheet 直接放主包，避免对 bowl_game 子包的运行时依赖 */
 const BOWL_TOOL_REWARD_ICONS_KEY = 'gacha_pool_bowl_tool_icons';
-const BOWL_TOOL_REWARD_ICONS_PATH = 'assets/images/gacha/pool_bowl_tool_icons.png';
+const BOWL_TOOL_REWARD_ICONS_PATH = `${GACHA_IMAGE_DIR}/pool_bowl_tool_icons.png`;
 const FRUIT_SLICE_TOOL_BUTTONS_KEY = 'gacha_pool_fruit_tool_icons';
-const FRUIT_SLICE_TOOL_BUTTONS_PATH = 'assets/images/gacha/pool_fruit_tool_icons.png';
+const FRUIT_SLICE_TOOL_BUTTONS_PATH = `${GACHA_IMAGE_DIR}/pool_fruit_tool_icons.png`;
 const BUNDLE_REWARD_ICONS_KEY = 'gacha_pool_bundle_icons';
-const BUNDLE_REWARD_ICONS_PATH = 'assets/images/gacha/pool_bundle_icons.png';
+const BUNDLE_REWARD_ICONS_PATH = `${GACHA_IMAGE_DIR}/pool_bundle_icons.png`;
 
 /** 玻璃球区域中心相对扭蛋机左上的归一化位置（按 v3 立体机身贴图量得）。 */
 const DOME_CENTER_NX = 0.50;
@@ -127,6 +121,7 @@ export class GachaScene implements Scene {
   private capsuleFrames: PIXI.Texture[] = [];
   /** 玻璃罩内的胶囊球阵（贴图就绪后才挂上） */
   private domeBalls: DomeBalls | null = null;
+  private gachaTexturesPromise: Promise<void> | null = null;
 
   constructor() {
     this.pullButtonLabel = new PIXI.Text('抽一发！', {
@@ -185,40 +180,41 @@ export class GachaScene implements Scene {
       this.coinBar.refreshIcon();
       this.refreshPullButtonCoinIcon();
     });
-    void this.preloadGachaTextures();
     this.build();
+  }
+
+  private ensureGachaTextures(): Promise<void> {
+    if (!this.gachaTexturesPromise) {
+      this.gachaTexturesPromise = this.preloadGachaTextures().catch((error) => {
+        this.gachaTexturesPromise = null;
+        console.warn('[GachaScene] preload failed', error);
+      });
+    }
+    return this.gachaTexturesPromise;
   }
 
   /** 预加载本场景全部贴图，每张失败都允许，运行时各自走兜底。 */
   private async preloadGachaTextures(): Promise<void> {
+    await loadBowlSubpackage();
     const jobs: Array<Promise<unknown>> = [
       TextureCache.load(GACHA_BG_KEY, GACHA_BG_PATH).then((tex) => this.applyBgTexture(tex)),
       TextureCache.load(GACHA_TITLE_KEY, GACHA_TITLE_PATH).then((tex) => this.applyTitleTexture(tex)),
       TextureCache.load(GACHA_BACK_BTN_KEY, GACHA_BACK_BTN_PATH).then((tex) => this.applyBackButtonTexture(tex)),
       TextureCache.load(GACHA_PULL_BTN_KEY, GACHA_PULL_BTN_PATH).then((tex) => this.applyPullButtonTexture(tex)),
       TextureCache.load(GACHA_POOL_PANEL_KEY, GACHA_POOL_PANEL_PATH).then((tex) => this.applyPoolPanelTexture(tex)),
-      TextureCache.load(GACHA_POOL_LABEL_KEY, GACHA_POOL_LABEL_PATH).then((tex) => this.applyPoolLabelTexture(tex)),
       TextureCache.load(GACHA_MACHINE_BACK_KEY, GACHA_MACHINE_BACK_PATH).then((tex) => this.applyMachineBackTexture(tex)),
       TextureCache.load(GACHA_RESULT_TITLE_RIBBON_KEY, GACHA_RESULT_TITLE_RIBBON_PATH),
-      TextureCache.load(GACHA_DOME_OVERLAY_KEY, GACHA_DOME_OVERLAY_PATH).then((tex) => this.applyDomeOverlayTexture(tex)),
       TextureCache.load(GACHA_CAPSULES_SHEET_KEY, GACHA_CAPSULES_SHEET_PATH).then((tex) => this.applyCapsulesSheet(tex)),
       TextureCache.load(BOWL_TOOL_REWARD_ICONS_KEY, BOWL_TOOL_REWARD_ICONS_PATH).then(() => this.refreshPoolSlots()),
       TextureCache.load(FRUIT_SLICE_TOOL_BUTTONS_KEY, FRUIT_SLICE_TOOL_BUTTONS_PATH).then(() => this.refreshPoolSlots()),
       TextureCache.load(BUNDLE_REWARD_ICONS_KEY, BUNDLE_REWARD_ICONS_PATH).then(() => this.refreshPoolSlots()),
     ];
-    /** machine_back 缺失时退回老的单图整机，仍然不至于变成兜底矢量 */
-    jobs.push(
-      TextureCache.load(GACHA_MACHINE_LEGACY_KEY, GACHA_MACHINE_LEGACY_PATH).then((tex) => {
-        if (!this.machineBackSprite.texture || this.machineBackSprite.texture === PIXI.Texture.EMPTY) {
-          this.applyMachineBackTexture(tex);
-        }
-      }),
-    );
     await Promise.all(jobs);
   }
 
   onEnter(): void {
     AudioManager.useDefaultBackgroundMusic();
+    void this.ensureGachaTextures();
     this.refreshBalance();
     this.phase = 'idle';
     this.phaseElapsed = 0;
@@ -646,11 +642,6 @@ export class GachaScene implements Scene {
     this.poolPanelLabelSprite.visible = false;
   }
 
-  private applyPoolLabelTexture(tex: PIXI.Texture | null): void {
-    /** v4 面板贴图已经内置「可能获得」标签，这里保留接口但不再叠第二份文字。 */
-    void tex;
-  }
-
   /** 扭蛋机底层贴图就绪：定位+缩放，并同步 dome 几何（mask/balls/overlay）。 */
   private applyMachineBackTexture(tex: PIXI.Texture | null): void {
     if (!tex || tex === PIXI.Texture.EMPTY) {
@@ -661,16 +652,6 @@ export class GachaScene implements Scene {
     const scale = targetH / tex.height;
     this.machineBackSprite.scale.set(scale);
     this.machineFallback.visible = false;
-    this.relayoutDomeElements();
-  }
-
-  /** 玻璃罩高光 overlay 贴图就绪：与机身底层同位同尺寸叠加，并隐藏程序兜底高光。 */
-  private applyDomeOverlayTexture(tex: PIXI.Texture | null): void {
-    if (!tex || tex === PIXI.Texture.EMPTY) {
-      return;
-    }
-    this.domeOverlaySprite.texture = tex;
-    this.domeOverlaySprite.visible = true;
     this.relayoutDomeElements();
   }
 

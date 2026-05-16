@@ -859,7 +859,7 @@ export class HomeScene implements Scene {
   private createGachaCardIcon(): PIXI.Container {
     const icon = this.createFooterCardTextureIcon('home_gacha_icon');
     if (icon) {
-      return icon;
+      return this.withGachaPromoTag(icon);
     }
 
     const root = new PIXI.Container();
@@ -895,6 +895,43 @@ export class HomeScene implements Scene {
     this.drawTinyStar(sparkle, -52, -34, 5, 7, 3);
     sparkle.endFill();
     root.addChild(sparkle);
+    return this.withGachaPromoTag(root);
+  }
+
+  private withGachaPromoTag(icon: PIXI.Container): PIXI.Container {
+    const root = new PIXI.Container();
+    root.addChild(icon);
+    const tag = new PIXI.Container();
+    tag.position.set(-46, -50);
+
+    const shadow = new PIXI.Graphics();
+    shadow.beginFill(0x4d2b16, 0.16);
+    shadow.drawRoundedRect(-45, -16, 90, 32, 13);
+    shadow.endFill();
+    shadow.position.set(2, 3);
+    tag.addChild(shadow);
+
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0xffef9a, 1);
+    bg.lineStyle(3, 0xd0641a, 1);
+    bg.drawRoundedRect(-45, -16, 90, 32, 13);
+    bg.endFill();
+    tag.addChild(bg);
+
+    const label = new PIXI.Text('金币抽奖', {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 18,
+      fill: 0xb94a12,
+      fontWeight: '900',
+      stroke: 0xffffff,
+      strokeThickness: 3,
+      lineJoin: 'round',
+    });
+    label.anchor.set(0.5);
+    label.resolution = 2;
+    tag.addChild(label);
+
+    root.addChild(tag);
     return root;
   }
 

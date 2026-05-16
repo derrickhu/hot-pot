@@ -110,6 +110,7 @@ const FRUIT_SLICE_VISUAL_SCALE: Partial<Record<FruitId, number>> = {
 };
 const FRUIT_SLICE_UI_DIR = 'subpackages/bowl_game/assets/images/fruit_slice';
 const UI_PANEL_FREE_BTN_TEXTURE = `${BOWL_IMAGES_ROOT}/ui_panel_free_btn.png`;
+const FRUIT_SLICE_TOOL_ROUND_LIMIT = 2;
 const FRUIT_SLICE_UI_ASSETS = {
   bg: `${FRUIT_SLICE_UI_DIR}/bg.png`,
   scorePanel: `${FRUIT_SLICE_UI_DIR}/score_panel.png`,
@@ -184,6 +185,14 @@ export class FruitSliceEndlessScene implements Scene {
     strokeThickness: 4,
     lineJoin: 'round',
   });
+  private readonly toolHelpUsageText = new PIXI.Text('', {
+    fontSize: 22,
+    fill: 0x7a3d16,
+    fontWeight: '900',
+    stroke: 0xfff1d0,
+    strokeThickness: 3,
+    lineJoin: 'round',
+  });
   private readonly overlayLayer = new PIXI.Container();
   private readonly goalCelebrateOverlay = new PIXI.Container();
   private readonly goalCelebrateDim = new PIXI.Graphics();
@@ -239,6 +248,7 @@ export class FruitSliceEndlessScene implements Scene {
   private pipeBlockAdBusy = false;
   private pendingToolKind: FruitSliceToolKind | null = null;
   private toolRewardedAdBusy = false;
+  private fruitToolUsesThisRound: Record<FruitSliceToolKind, number> = { eliminate: 0, shuffle: 0 };
   private lastCoinReward: FruitSliceCoinRewardResult | null = null;
   private fruitTopY = 0;
   private fruitBottomY = 0;
@@ -1170,6 +1180,11 @@ export class FruitSliceEndlessScene implements Scene {
     this.toolHelpActionText.eventMode = 'none';
     panel.addChild(this.toolHelpActionText);
 
+    this.toolHelpUsageText.anchor.set(0.5);
+    this.toolHelpUsageText.position.set(0, 166);
+    this.toolHelpUsageText.eventMode = 'none';
+    panel.addChild(this.toolHelpUsageText);
+
     const close = new PIXI.Container();
     close.position.set(184, -164);
     close.eventMode = 'static';
@@ -1280,9 +1295,12 @@ export class FruitSliceEndlessScene implements Scene {
     }
     const ownedCount = getFruitSliceToolCount(kind);
     this.applyToolHelpActionButtonTexture(ownedCount > 0);
-    this.toolHelpActionText.text = ownedCount > 0 ? `使用 1/${ownedCount}` : '';
-    this.toolHelpActionText.visible = ownedCount > 0;
+    const limitReached = this.isFruitSliceToolLimitReached(kind);
+    this.toolHelpActionText.text = limitReached ? '已达上限' : ownedCount > 0 ? `使用 1/${ownedCount}` : '';
+    this.toolHelpActionText.visible = limitReached || ownedCount > 0;
+    this.toolHelpFreeBtn.alpha = limitReached ? 0.72 : 1;
     this.toolHelpFreeBtn.visible = true;
+    this.refreshToolHelpUsageText(kind);
     this.toolHelpOverlay.visible = true;
     this.fruitLayer.eventMode = 'none';
   }
@@ -1291,6 +1309,25 @@ export class FruitSliceEndlessScene implements Scene {
     this.pendingToolKind = null;
     this.toolHelpOverlay.visible = false;
     this.fruitLayer.eventMode = 'static';
+  }
+
+  private getFruitSliceToolUseCount(kind: FruitSliceToolKind): number {
+    return this.fruitToolUsesThisRound[kind] ?? 0;
+  }
+
+  private isFruitSliceToolLimitReached(kind: FruitSliceToolKind): boolean {
+    return this.getFruitSliceToolUseCount(kind) >= FRUIT_SLICE_TOOL_ROUND_LIMIT;
+  }
+
+  private refreshToolHelpUsageText(kind: FruitSliceToolKind): void {
+    const used = Math.min(this.getFruitSliceToolUseCount(kind), FRUIT_SLICE_TOOL_ROUND_LIMIT);
+    this.toolHelpUsageText.text = `每局限使用${FRUIT_SLICE_TOOL_ROUND_LIMIT}次，当前${used}/${FRUIT_SLICE_TOOL_ROUND_LIMIT}`;
+    this.toolHelpUsageText.style.fill = used >= FRUIT_SLICE_TOOL_ROUND_LIMIT ? 0xd94b33 : 0x7a3d16;
+  }
+
+  private showFruitSliceToolLimitReached(kind: FruitSliceToolKind): void {
+    this.refreshToolHelpUsageText(kind);
+    this.spawnCenterBanner(`本局${kind === 'eliminate' ? '消除' : '打乱'}道具已用完`);
   }
 
   private enqueueGoalCelebration(job: GoalCelebrationJob): void {
@@ -1547,6 +1584,13 @@ export class FruitSliceEndlessScene implements Scene {
     if (!kind || this.toolRewardedAdBusy) {
       return;
     }
+    if (this.isFruitSliceToolLimitReached(kind)) {
+      this.showFruitSliceToolLimitReached(kind);
+      return;
+    }
+    if (!this.canApplyFruitSliceTool(kind)) {
+      return;
+    }
     const ownedCount = getFruitSliceToolCount(kind);
     if (ownedCount > 0) {
       const result = consumeFruitSliceTool(kind);
@@ -1566,6 +1610,13 @@ export class FruitSliceEndlessScene implements Scene {
         extra: { score: this.score },
       }, FRUIT_SLICE_REWARDED_AD_UNIT_ID);
       if (result === 'completed' || result === 'unavailable') {
+        if (this.isFruitSliceToolLimitReached(kind)) {
+          this.showFruitSliceToolLimitReached(kind);
+          return;
+        }
+        if (!this.canApplyFruitSliceTool(kind)) {
+          return;
+        }
         this.hideToolHelpPanel();
         this.applyFruitSliceTool(kind);
       } else if (result === 'skipped') {
@@ -1578,12 +1629,32 @@ export class FruitSliceEndlessScene implements Scene {
     }
   }
 
+  private canApplyFruitSliceTool(kind: FruitSliceToolKind): boolean {
+    if (this.gameOver) {
+      return false;
+    }
+    if (kind === 'eliminate') {
+      if (this.pipeStack.length === 0) {
+        this.spawnCenterBanner('管道为空');
+        return false;
+      }
+      return true;
+    }
+    const hasShuffleTargets = this.fruits.some((node) => node.state === 'fixed' || node.state === 'settled');
+    if (!hasShuffleTargets) {
+      this.spawnCenterBanner('暂无可打乱水果');
+      return false;
+    }
+    return true;
+  }
+
   private applyFruitSliceTool(kind: FruitSliceToolKind): void {
     if (kind === 'eliminate') {
       this.eliminatePipeTopPair();
     } else {
       this.shuffleFruits();
     }
+    this.fruitToolUsesThisRound[kind] = this.getFruitSliceToolUseCount(kind) + 1;
   }
 
   private createInfoPill(x: number, y: number, label: string): { root: PIXI.Container; value: PIXI.Text } {
@@ -1818,6 +1889,7 @@ export class FruitSliceEndlessScene implements Scene {
     this.reviveUsed = false;
     this.reviveAdBusy = false;
     this.resumeStartAdBusy = false;
+    this.fruitToolUsesThisRound = { eliminate: 0, shuffle: 0 };
     this.pipeBlockRemoved = false;
     this.pipeWoodBlockSprite.visible = true;
     this.pipeWoodBlockSprite2.visible = true;
