@@ -7,6 +7,9 @@ const SCOOP_SFX_SRC = 'assets/audio/scoop_2.mp3';
 const ORDER_COMPLETE_SFX_SRC = 'assets/audio/order_complete.mp3';
 const BUTTON_SFX_SRC = 'assets/audio/button_common.mp3';
 const BADGE_UNLOCK_SFX_SRC = 'assets/audio/badge_unlock.mp3';
+const GACHA_PULL_SFX_SRC = 'assets/audio/gacha_pull.mp3';
+const GACHA_CAPSULE_POP_SFX_SRC = 'assets/audio/gacha_capsule_pop.mp3';
+const GACHA_REWARD_REVEAL_SFX_SRC = 'assets/audio/gacha_reward_reveal.mp3';
 /**
  * 暂存盘全满时的紧迫警告音；建议 0.4–0.6s 双音节"叮叮 / 铛铛"短促 stinger，
  * mono / 干声 / 无尾混响。文件不存在时 onError 静默兜底，不影响玩法。
@@ -117,6 +120,18 @@ class AudioManagerClass {
 
   playBadgeUnlockSound(): void {
     this.playSoundEffect(BADGE_UNLOCK_SFX_SRC);
+  }
+
+  playGachaPullSound(): void {
+    this.playSoundEffect(GACHA_PULL_SFX_SRC);
+  }
+
+  playGachaCapsulePopSound(): void {
+    this.playSoundEffect(GACHA_CAPSULE_POP_SFX_SRC);
+  }
+
+  playGachaRewardRevealSound(): void {
+    this.playSoundEffect(GACHA_REWARD_REVEAL_SFX_SRC);
   }
 
   playBufferPanicSound(): void {

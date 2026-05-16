@@ -47,15 +47,15 @@ export const FRUIT_SLICE_COIN_TIERS: FruitSliceCoinTier[] = [
 ];
 
 export const GACHA_REWARD_POOL: GachaReward[] = [
-  { id: 'bowl_remove_1', label: '关卡移除 x1', weight: 24, kind: 'bowlTool', tool: 'remove', count: 1 },
-  { id: 'bowl_shuffle_1', label: '关卡打乱 x1', weight: 20, kind: 'bowlTool', tool: 'shuffle', count: 1 },
-  { id: 'bowl_add_dish_1', label: '加菜碟 x1', weight: 16, kind: 'bowlTool', tool: 'addDish', count: 1 },
-  { id: 'fruit_eliminate_1', label: '果切消除 x1', weight: 18, kind: 'fruitSliceTool', tool: 'eliminate', count: 1 },
-  { id: 'fruit_shuffle_1', label: '果切打乱 x1', weight: 16, kind: 'fruitSliceTool', tool: 'shuffle', count: 1 },
+  { id: 'bowl_remove_1', label: '移除道具 x1', weight: 24, kind: 'bowlTool', tool: 'remove', count: 1 },
+  { id: 'bowl_shuffle_1', label: '打乱道具 x1', weight: 20, kind: 'bowlTool', tool: 'shuffle', count: 1 },
+  { id: 'bowl_add_dish_1', label: '加菜碟道具 x1', weight: 16, kind: 'bowlTool', tool: 'addDish', count: 1 },
+  { id: 'fruit_eliminate_1', label: '消除道具 x1', weight: 18, kind: 'fruitSliceTool', tool: 'eliminate', count: 1 },
+  { id: 'fruit_shuffle_1', label: '打乱道具 x1', weight: 16, kind: 'fruitSliceTool', tool: 'shuffle', count: 1 },
   {
     id: 'bowl_small_bundle',
     label: '关卡小礼包',
-    weight: 4,
+    weight: 8,
     kind: 'bundle',
     rewards: [
       { kind: 'bowlTool', tool: 'remove', count: 1 },
@@ -65,7 +65,7 @@ export const GACHA_REWARD_POOL: GachaReward[] = [
   {
     id: 'fruit_small_bundle',
     label: '果切小礼包',
-    weight: 2,
+    weight: 8,
     kind: 'bundle',
     rewards: [
       { kind: 'fruitSliceTool', tool: 'eliminate', count: 1 },

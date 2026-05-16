@@ -5,7 +5,7 @@ import { Game } from '@/core/Game';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { pullGachaOnce, type GachaPullResult } from '@/game/GachaState';
-import { getCoinBalance } from '@/game/Wallet';
+import { addCoins, getCoinBalance } from '@/game/Wallet';
 import {
   CoinBar,
   COIN_ICON_TEXTURE_KEY,
@@ -13,6 +13,7 @@ import {
   createCoinIcon,
 } from '@/gameobjects/CoinBar';
 import { TextureCache } from '@/utils/TextureCache';
+import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
 const GACHA_BG_KEY = 'gacha_bg';
 const GACHA_BG_PATH = 'assets/images/gacha/gacha_bg.png';
@@ -28,6 +29,8 @@ const GACHA_POOL_LABEL_KEY = 'gacha_pool_label';
 const GACHA_POOL_LABEL_PATH = 'assets/images/gacha/gacha_pool_label.png';
 const GACHA_MACHINE_BACK_KEY = 'gacha_machine_back';
 const GACHA_MACHINE_BACK_PATH = 'assets/images/gacha/gacha_machine_back.png';
+const GACHA_RESULT_TITLE_RIBBON_KEY = 'gacha_result_title_ribbon';
+const GACHA_RESULT_TITLE_RIBBON_PATH = 'assets/images/gacha/gacha_result_title_ribbon.png';
 const GACHA_DOME_OVERLAY_KEY = 'gacha_dome_overlay';
 const GACHA_DOME_OVERLAY_PATH = 'assets/images/gacha/gacha_machine_dome_overlay.png';
 const GACHA_CAPSULES_SHEET_KEY = 'gacha_capsules';
@@ -41,6 +44,8 @@ const BOWL_TOOL_REWARD_ICONS_KEY = 'gacha_pool_bowl_tool_icons';
 const BOWL_TOOL_REWARD_ICONS_PATH = 'assets/images/gacha/pool_bowl_tool_icons.png';
 const FRUIT_SLICE_TOOL_BUTTONS_KEY = 'gacha_pool_fruit_tool_icons';
 const FRUIT_SLICE_TOOL_BUTTONS_PATH = 'assets/images/gacha/pool_fruit_tool_icons.png';
+const BUNDLE_REWARD_ICONS_KEY = 'gacha_pool_bundle_icons';
+const BUNDLE_REWARD_ICONS_PATH = 'assets/images/gacha/pool_bundle_icons.png';
 
 /** 玻璃球区域中心相对扭蛋机左上的归一化位置（按 v3 立体机身贴图量得）。 */
 const DOME_CENTER_NX = 0.50;
@@ -56,6 +61,7 @@ const CAPSULE_SHEET_ROWS = 3;
 const CAPSULE_FRAME_COUNT = CAPSULE_SHEET_COLS * CAPSULE_SHEET_ROWS;
 /** v5 起改用“机身贴图自带一堆球”的静态方案，不再运行时叠胶囊球。 */
 const DOME_BALL_COUNT = 0;
+const GM_ADD_COINS_AMOUNT = 200;
 
 /** 金币扭蛋活动：消耗果切返利金币，抽取关卡/果切道具。
  *  视觉：整机贴图 + 程序动画（idle bob / shake / 出蛋飞行 / 光线 burst），
@@ -108,6 +114,7 @@ export class GachaScene implements Scene {
   private readonly poolPanelLabelSprite = new PIXI.Sprite();
   private readonly poolPanelSlotsRoot = new PIXI.Container();
   private readonly coinBar = new CoinBar();
+  private readonly gmCoinButtonRoot = new PIXI.Container();
   private readonly resultLayer = new PIXI.Container();
   private readonly tick = (delta: number): void => this.updateAnimation(delta);
   private animationTime = 0;
@@ -116,6 +123,8 @@ export class GachaScene implements Scene {
   private phaseElapsed = 0;
   /** 当前 shake/drop 暂存的抽奖结果，drop 收尾时 commit 到 result 弹层。 */
   private pendingResult: GachaPullResult | null = null;
+  /** 已生成的彩色扭蛋帧：出蛋动画随机抽一颗显示。 */
+  private capsuleFrames: PIXI.Texture[] = [];
   /** 玻璃罩内的胶囊球阵（贴图就绪后才挂上） */
   private domeBalls: DomeBalls | null = null;
 
@@ -190,10 +199,12 @@ export class GachaScene implements Scene {
       TextureCache.load(GACHA_POOL_PANEL_KEY, GACHA_POOL_PANEL_PATH).then((tex) => this.applyPoolPanelTexture(tex)),
       TextureCache.load(GACHA_POOL_LABEL_KEY, GACHA_POOL_LABEL_PATH).then((tex) => this.applyPoolLabelTexture(tex)),
       TextureCache.load(GACHA_MACHINE_BACK_KEY, GACHA_MACHINE_BACK_PATH).then((tex) => this.applyMachineBackTexture(tex)),
+      TextureCache.load(GACHA_RESULT_TITLE_RIBBON_KEY, GACHA_RESULT_TITLE_RIBBON_PATH),
       TextureCache.load(GACHA_DOME_OVERLAY_KEY, GACHA_DOME_OVERLAY_PATH).then((tex) => this.applyDomeOverlayTexture(tex)),
       TextureCache.load(GACHA_CAPSULES_SHEET_KEY, GACHA_CAPSULES_SHEET_PATH).then((tex) => this.applyCapsulesSheet(tex)),
       TextureCache.load(BOWL_TOOL_REWARD_ICONS_KEY, BOWL_TOOL_REWARD_ICONS_PATH).then(() => this.refreshPoolSlots()),
       TextureCache.load(FRUIT_SLICE_TOOL_BUTTONS_KEY, FRUIT_SLICE_TOOL_BUTTONS_PATH).then(() => this.refreshPoolSlots()),
+      TextureCache.load(BUNDLE_REWARD_ICONS_KEY, BUNDLE_REWARD_ICONS_PATH).then(() => this.refreshPoolSlots()),
     ];
     /** machine_back 缺失时退回老的单图整机，仍然不至于变成兜底矢量 */
     jobs.push(
@@ -267,18 +278,19 @@ export class GachaScene implements Scene {
       lineJoin: 'round',
     });
     this.titleText.anchor.set(0.5);
-    this.titleText.position.set(W / 2, top + 78);
+    this.titleText.position.set(W / 2, top + 98);
     this.titleText.resolution = 2;
     this.container.addChild(this.titleText);
 
     this.titleSprite = new PIXI.Sprite();
     this.titleSprite.anchor.set(0.5);
-    this.titleSprite.position.set(W / 2, top + 78);
+    this.titleSprite.position.set(W / 2, top + 98);
     this.titleSprite.visible = false;
     this.container.addChild(this.titleSprite);
 
     this.coinBar.position.set(110, top + 28);
     this.container.addChild(this.coinBar);
+    this.mountGmCoinButton(250, top + 28);
 
     /** 扭蛋机三层：machineBackSprite -> domeBallsLayer(罩内彩球) -> 可选 overlay */
     const machineCenterY = H * 0.42;
@@ -322,9 +334,9 @@ export class GachaScene implements Scene {
     this.container.addChild(this.pullHintText);
 
     /** 「可能获得」面板：贴底 + 7 个槽位 */
-    const poolPanelW = Math.min(650, W - 48);
-    const poolPanelH = 150;
-    const poolPanelY = H - poolPanelH / 2 - 54;
+    const poolPanelW = Math.min(740, W - 10);
+    const poolPanelH = 200;
+    const poolPanelY = H - poolPanelH / 2 - 30;
     this.layoutPoolPanel(W / 2, poolPanelY, poolPanelW, poolPanelH);
     this.container.addChild(this.poolPanelRoot);
 
@@ -402,6 +414,44 @@ export class GachaScene implements Scene {
   private refreshPullButtonCoinIcon(): void {
     this.pullButtonCoinIconRoot.removeChildren();
     this.pullButtonCoinIconRoot.addChild(createCoinIcon(18));
+  }
+
+  private mountGmCoinButton(x: number, y: number): void {
+    if (!isWxDevtoolsSimulator()) {
+      return;
+    }
+    const root = this.gmCoinButtonRoot;
+    root.position.set(x, y);
+    root.eventMode = 'static';
+    root.cursor = 'pointer';
+    root.hitArea = new PIXI.Rectangle(-58, -24, 116, 48);
+
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0x29364a, 0.78);
+    bg.lineStyle(2, 0xfff1a8, 0.85);
+    bg.drawRoundedRect(-58, -24, 116, 48, 20);
+    bg.endFill();
+    root.addChild(bg);
+
+    const label = new PIXI.Text(`GM +${GM_ADD_COINS_AMOUNT}`, {
+      fontSize: 20,
+      fill: 0xfff1a8,
+      fontWeight: '900',
+      stroke: 0x172033,
+      strokeThickness: 3,
+      lineJoin: 'round',
+    });
+    label.anchor.set(0.5);
+    label.resolution = 2;
+    root.addChild(label);
+
+    root.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      addCoins(GM_ADD_COINS_AMOUNT);
+      this.refreshBalance();
+      this.coinBar.bump();
+    });
+    this.container.addChild(root);
   }
 
   private drawPullButtonBg(width: number, height: number): void {
@@ -546,7 +596,7 @@ export class GachaScene implements Scene {
       return;
     }
     this.titleSprite.texture = tex;
-    const targetH = 64;
+    const targetH = 78;
     const s = targetH / tex.height;
     this.titleSprite.scale.set(s);
     this.titleSprite.visible = true;
@@ -587,7 +637,7 @@ export class GachaScene implements Scene {
       return;
     }
     this.poolPanelSprite.texture = tex;
-    const targetW = Math.min(650, Game.logicWidth - 48);
+    const targetW = Math.min(740, Game.logicWidth - 10);
     const s = targetW / tex.width;
     this.poolPanelSprite.scale.set(s);
     this.poolPanelSprite.visible = true;
@@ -641,6 +691,7 @@ export class GachaScene implements Scene {
     if (frames.length < CAPSULE_FRAME_COUNT) {
       return;
     }
+    this.capsuleFrames = frames;
     if (!this.domeBalls) {
       this.domeBalls = new DomeBalls(this.domeBallsLayer, frames, DOME_BALL_COUNT);
     } else {
@@ -742,8 +793,8 @@ export class GachaScene implements Scene {
     if (slotCount === 0) {
       return;
     }
-    const innerW = panelW - 92;
-    const slotW = Math.min(68, innerW / slotCount - 4);
+    const innerW = panelW - 36;
+    const slotW = Math.min(108, innerW / slotCount);
     const gap = (innerW - slotW * slotCount) / Math.max(1, slotCount - 1);
     const startX = -innerW / 2 + slotW / 2;
     for (let i = 0; i < slotCount; i += 1) {
@@ -753,7 +804,7 @@ export class GachaScene implements Scene {
       this.poolPanelSlotsRoot.addChild(slot);
     }
     /** 图标排在纯面板中线，不再程序绘制凹槽，避免与贴图槽位错位。 */
-    this.poolPanelSlotsRoot.position.set(0, panelH * 0.16);
+    this.poolPanelSlotsRoot.position.set(0, panelH * 0.17);
   }
 
   /** 单个奖池预览项：只放道具图标，不再程序绘制底槽，避免和贴图面板难对齐。 */
@@ -794,29 +845,17 @@ export class GachaScene implements Scene {
       }
       return root;
     }
-    /** bundle 礼包：用第一个内含道具的图标 + 上方礼盒小角标 */
-    const first = reward.rewards[0];
-    if (first) {
-      const subTex = first.kind === 'bowlTool'
-        ? this.getBowlToolIconTexture(first.tool)
-        : this.getFruitSliceToolIconTexture(first.tool);
-      if (subTex) {
-        const sp = new PIXI.Sprite(subTex);
-        sp.anchor.set(0.5);
-        const s = size / Math.max(subTex.width, subTex.height);
-        sp.scale.set(s);
-        root.addChild(sp);
-      } else {
-        root.addChild(this.fallbackIconText('礼'));
-      }
+    /** bundle 礼包：使用独立礼包图标，避免“原道具 + 礼盒角标”在小槽位里含义不清。 */
+    const bundleTex = this.getBundleRewardIconTexture(reward);
+    if (bundleTex) {
+      const sp = new PIXI.Sprite(bundleTex);
+      sp.anchor.set(0.5);
+      const s = size / Math.max(bundleTex.width, bundleTex.height);
+      sp.scale.set(s);
+      root.addChild(sp);
     } else {
       root.addChild(this.fallbackIconText('礼'));
     }
-    const gift = new PIXI.Text('🎁', { fontSize: Math.round(size * 0.4) });
-    gift.anchor.set(0.5);
-    gift.resolution = 2;
-    gift.position.set(size * 0.32, -size * 0.32);
-    root.addChild(gift);
     return root;
   }
 
@@ -858,10 +897,23 @@ export class GachaScene implements Scene {
     return new PIXI.Texture(sheet.baseTexture, rect);
   }
 
+  private getBundleRewardIconTexture(reward: Extract<GachaReward, { kind: 'bundle' }>): PIXI.Texture | null {
+    const sheet = TextureCache.get(BUNDLE_REWARD_ICONS_KEY);
+    if (!sheet || sheet.width <= 4) {
+      return null;
+    }
+    const isFruitBundle = reward.rewards.some((item) => item.kind === 'fruitSliceTool');
+    const half = Math.floor(sheet.width / 2);
+    const rect = isFruitBundle
+      ? new PIXI.Rectangle(half, 0, sheet.width - half, sheet.height)
+      : new PIXI.Rectangle(0, 0, half, sheet.height);
+    return new PIXI.Texture(sheet.baseTexture, rect);
+  }
+
   private refreshPoolSlots(): void {
     /** 道具贴图后到位：按当前面板宽度重排 */
-    const panelW = Math.min(540, Game.logicWidth - 24);
-    const panelH = 112;
+    const panelW = Math.min(740, Game.logicWidth - 10);
+    const panelH = 200;
     this.rebuildPoolSlots(panelW, panelH);
   }
 
@@ -917,6 +969,7 @@ export class GachaScene implements Scene {
   private startShakePhase(): void {
     this.phase = 'shake';
     this.phaseElapsed = 0;
+    AudioManager.playGachaPullSound();
     this.domeBalls?.startShake();
   }
 
@@ -937,10 +990,11 @@ export class GachaScene implements Scene {
     const targetX = Game.logicWidth / 2;
     const targetY = Game.logicHeight * 0.42;
 
-    const egg = this.createGachaEggIcon(40);
+    const egg = this.createRandomCapsuleIcon(86);
     egg.position.set(startX, startY);
     egg.scale.set(0.6);
     this.resultLayer.addChild(egg);
+    AudioManager.playGachaCapsulePopSound();
 
     let elapsed = 0;
     const duration = 0.85;
@@ -974,12 +1028,13 @@ export class GachaScene implements Scene {
       this.phase = 'idle';
       return;
     }
-    this.showRewardOverlay(result.reward, result.totalPulls);
+    this.showRewardOverlay(result.reward);
   }
 
-  /** 抽奖结果遮罩：参考获得金币弹层风格，遮罩 + 大金蛋 + 旋转金光 + 奖励名 */
-  private showRewardOverlay(reward: GachaReward, totalPulls: number): void {
+  /** 抽奖结果遮罩：遮罩 + 奖励对应图标 + 旋转金光 + 奖励名 */
+  private showRewardOverlay(reward: GachaReward): void {
     this.clearResultLayer();
+    AudioManager.playGachaRewardRevealSound();
     const W = Game.logicWidth;
     const H = Game.logicHeight;
     const centerX = W / 2;
@@ -1007,26 +1062,32 @@ export class GachaScene implements Scene {
     burstRoot.addChild(ringRays);
 
     const rarityTitle = this.getRewardRarityTitle(reward);
+    const titleY = centerY - 200;
+    const titleTextY = titleY - 10;
+    const titleRibbon = this.createResultTitleRibbon();
+    titleRibbon.position.set(centerX, titleY + 2);
+    root.addChild(titleRibbon);
+
     const title = new PIXI.Text(rarityTitle, {
-      fontSize: 48,
+      fontSize: 42,
       fill: 0xfff06a,
       fontWeight: '900',
       stroke: 0x6d2a10,
-      strokeThickness: 8,
+      strokeThickness: 7,
       dropShadow: true,
       dropShadowBlur: 4,
-      dropShadowDistance: 3,
+      dropShadowDistance: 2,
       dropShadowColor: 0x2c1208,
       lineJoin: 'round',
     });
     title.anchor.set(0.5);
-    title.position.set(centerX, centerY - 200);
+    title.position.set(centerX, titleTextY);
     title.resolution = 2;
     root.addChild(title);
 
-    const egg = this.createGachaEggIcon(96);
-    egg.position.set(centerX, centerY);
-    root.addChild(egg);
+    const rewardIcon = this.createRewardOverlayIcon(reward, 250);
+    rewardIcon.position.set(centerX, centerY);
+    root.addChild(rewardIcon);
 
     const rewardLabel = new PIXI.Text(reward.label, {
       fontSize: 44,
@@ -1045,8 +1106,9 @@ export class GachaScene implements Scene {
     rewardLabel.resolution = 2;
     root.addChild(rewardLabel);
 
-    const subLine = new PIXI.Text(`累计抽奖 ${totalPulls} 次`, {
-      fontSize: 22,
+    const bundleDetailText = reward.kind === 'bundle' ? this.getBundleRewardDetailText(reward) : '';
+    const subLine = new PIXI.Text(bundleDetailText, {
+      fontSize: 24,
       fill: 0xfff1d0,
       fontWeight: '900',
       stroke: 0x3b2316,
@@ -1056,7 +1118,10 @@ export class GachaScene implements Scene {
     subLine.anchor.set(0.5);
     subLine.position.set(centerX, centerY + 210);
     subLine.resolution = 2;
-    root.addChild(subLine);
+    subLine.visible = bundleDetailText.length > 0;
+    if (subLine.visible) {
+      root.addChild(subLine);
+    }
 
     const closeHint = new PIXI.Text('点击任意处关闭', {
       fontSize: 24,
@@ -1072,8 +1137,9 @@ export class GachaScene implements Scene {
 
     let elapsed = 0;
     let closing = false;
-    egg.scale.set(0);
+    rewardIcon.scale.set(0);
     rewardLabel.alpha = 0;
+    titleRibbon.alpha = 0;
     title.alpha = 0;
     title.y -= 14;
     const localTick = (delta: number): void => {
@@ -1086,13 +1152,17 @@ export class GachaScene implements Scene {
       rays.rotation += delta * 0.012;
       ringRays.rotation -= delta * 0.0065;
       const settle = Math.min(1, t * 4);
-      egg.scale.set(0.7 * settle + Math.sin(t * 4.6) * 0.05 * settle);
-      egg.rotation = Math.sin(t * 3.6) * 0.06;
+      rewardIcon.scale.set(1.0 * settle + Math.sin(t * 4.6) * 0.06 * settle);
+      rewardIcon.rotation = Math.sin(t * 3.6) * 0.06;
       const titleSettle = Math.min(1, Math.max(0, (t - 0.05) * 5));
       title.alpha = titleSettle;
-      title.y = (centerY - 200) - 14 + titleSettle * 14;
+      titleRibbon.alpha = titleSettle;
+      titleRibbon.y = (titleY + 2) - 14 + titleSettle * 14;
+      title.y = titleTextY - 14 + titleSettle * 14;
       rewardLabel.alpha = Math.min(1, Math.max(0, (t - 0.22) * 6));
-      subLine.alpha = Math.min(1, Math.max(0, (t - 0.35) * 5));
+      if (subLine.visible) {
+        subLine.alpha = Math.min(1, Math.max(0, (t - 0.35) * 5));
+      }
       closeHint.alpha = 0.6 + Math.sin(t * 4.2) * 0.4;
     };
     PIXI.Ticker.shared.add(localTick);
@@ -1123,6 +1193,86 @@ export class GachaScene implements Scene {
   /** 顶部稀有度文案：单道具 → "获得奖励"；礼包 → "稀有礼包！"。 */
   private getRewardRarityTitle(reward: GachaReward): string {
     return reward.kind === 'bundle' ? '稀有礼包！' : '获得奖励';
+  }
+
+  private createResultTitleRibbon(): PIXI.Container {
+    const root = new PIXI.Container();
+    const tex = TextureCache.get(GACHA_RESULT_TITLE_RIBBON_KEY);
+    if (tex && tex !== PIXI.Texture.EMPTY) {
+      const sp = new PIXI.Sprite(tex);
+      sp.anchor.set(0.5);
+      const targetW = Math.min(520, Game.logicWidth * 0.72);
+      const scale = targetW / Math.max(1, tex.width);
+      sp.scale.set(scale);
+      root.addChild(sp);
+      return root;
+    }
+    const fallback = new PIXI.Graphics();
+    fallback.beginFill(0xffd95a, 0.95);
+    fallback.lineStyle(5, 0x8b3a0c, 1);
+    fallback.drawRoundedRect(-210, -40, 420, 80, 32);
+    fallback.endFill();
+    fallback.beginFill(0xff6a2a, 0.9);
+    fallback.drawPolygon([-270, -28, -208, -28, -208, 28, -270, 28, -242, 0]);
+    fallback.drawPolygon([270, -28, 208, -28, 208, 28, 270, 28, 242, 0]);
+    fallback.endFill();
+    root.addChild(fallback);
+    return root;
+  }
+
+  private createRewardOverlayIcon(reward: GachaReward, size: number): PIXI.Container {
+    const root = new PIXI.Container();
+    let tex: PIXI.Texture | null = null;
+    if (reward.kind === 'bowlTool') {
+      tex = this.getBowlToolIconTexture(reward.tool);
+    } else if (reward.kind === 'fruitSliceTool') {
+      tex = this.getFruitSliceToolIconTexture(reward.tool);
+    } else {
+      tex = this.getBundleRewardIconTexture(reward);
+    }
+    if (!tex || tex === PIXI.Texture.EMPTY) {
+      root.addChild(this.createGachaEggIcon(size / 2));
+      return root;
+    }
+    const sp = new PIXI.Sprite(tex);
+    sp.anchor.set(0.5);
+    const scale = size / Math.max(tex.width, tex.height);
+    sp.scale.set(scale);
+    root.addChild(sp);
+    return root;
+  }
+
+  private createRandomCapsuleIcon(size: number): PIXI.Container {
+    if (this.capsuleFrames.length === 0) {
+      return this.createGachaEggIcon(size / 2);
+    }
+    const root = new PIXI.Container();
+    const tex = this.capsuleFrames[Math.floor(Math.random() * this.capsuleFrames.length)]!;
+    const sp = new PIXI.Sprite(tex);
+    sp.anchor.set(0.5);
+    const scale = size / Math.max(tex.width, tex.height);
+    sp.scale.set(scale);
+    root.addChild(sp);
+    return root;
+  }
+
+  private getBundleRewardDetailText(reward: Extract<GachaReward, { kind: 'bundle' }>): string {
+    const parts = reward.rewards.map((item) => `${this.getRewardItemShortLabel(item)} x${item.count}`);
+    return `包含：${parts.join('、')}`;
+  }
+
+  private getRewardItemShortLabel(
+    item:
+      | { kind: 'bowlTool'; tool: 'addDish' | 'remove' | 'shuffle'; count: number }
+      | { kind: 'fruitSliceTool'; tool: 'eliminate' | 'shuffle'; count: number },
+  ): string {
+    if (item.kind === 'bowlTool') {
+      if (item.tool === 'addDish') {
+        return '加菜碟道具';
+      }
+      return item.tool === 'remove' ? '移除道具' : '打乱道具';
+    }
+    return item.tool === 'eliminate' ? '消除道具' : '打乱道具';
   }
 
   /** 程序绘制的金色扭蛋胶囊（飞行 / 弹层共用），radius 控制整体大小。 */

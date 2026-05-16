@@ -12,7 +12,7 @@ import {
   getFruitSliceStageBonus,
   getFruitSliceStageIndex,
 } from '@/config/fruitSliceEndless';
-import { fruitSliceCoinsForScore, nextFruitSliceCoinTier } from '@/config/economy';
+import { FRUIT_SLICE_COIN_TIERS, fruitSliceCoinsForScore, nextFruitSliceCoinTier } from '@/config/economy';
 import { getUnlockedFruitIds } from '@/config/fruitCatalog';
 import { FRUIT_CONFIGS, FRUIT_MAP, type FruitConfig, type FruitId } from '@/config/fruits';
 import { fruitSliceWholeTextureKey, FRUIT_SLICE_IDS, FRUIT_SLICE_WHOLE_PATH } from '@/config/fruitSliceWhole';
@@ -32,6 +32,10 @@ import {
   COIN_ICON_TEXTURE_PATH,
   createCoinIcon,
 } from '@/gameobjects/CoinBar';
+import {
+  BOWL_COMMON_MODAL_BUTTON_ASSET,
+  BOWL_COMMON_MODAL_BUTTON_TEXTURE_KEY,
+} from '@/gameobjects/BowlMechanicIntroOverlay';
 import { openLeaderboard } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_FRUIT } from '@/services/RankService';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
@@ -43,6 +47,7 @@ import { sampleEdgeAt, sampleTextureTopEdge, type TextureTopEdge } from '@/utils
 
 type FruitPhysicsState = 'fixed' | 'falling' | 'settled' | 'enteringPipe' | 'pipe';
 type FruitSliceToolKind = 'eliminate' | 'shuffle';
+type FruitSliceStartChoiceSource = 'entry' | 'retry';
 type FruitSliceTutorialStep = 'idle' | 'first' | 'second' | 'waitingMatch' | 'score' | 'done';
 
 type GoalCelebrationJob =
@@ -206,6 +211,8 @@ export class FruitSliceEndlessScene implements Scene {
   });
   private readonly toolElimSprite = new PIXI.Sprite();
   private readonly toolShuffleSprite = new PIXI.Sprite();
+  private readonly fruitToolInventoryBadges: PIXI.Container[] = [];
+  private readonly fruitToolInventoryBadgeTexts: PIXI.Text[] = [];
   private readonly scorePanelSprites: PIXI.Sprite[] = [];
   private readonly coinBar = new CoinBar();
   private readonly fruits: FruitSliceNode[] = [];
@@ -227,6 +234,7 @@ export class FruitSliceEndlessScene implements Scene {
   private gameOver = false;
   private reviveUsed = false;
   private reviveAdBusy = false;
+  private resumeStartAdBusy = false;
   private pipeBlockRemoved = false;
   private pipeBlockAdBusy = false;
   private pendingToolKind: FruitSliceToolKind | null = null;
@@ -270,8 +278,9 @@ export class FruitSliceEndlessScene implements Scene {
     AudioManager.useFruitSliceBackgroundMusic();
     warmupRewardedAd(FRUIT_SLICE_REWARDED_AD_UNIT_ID);
     void this.preloadAssets().then(() => {
+      this.refreshFruitToolInventoryBadges();
       if (this.gameOver || (this.fruits.length === 0 && this.pipeStack.length === 0)) {
-        this.startRound();
+        this.showStartChoiceOrStartRound('entry');
       } else {
         this.startTutorialIfNeeded();
       }
@@ -340,6 +349,7 @@ export class FruitSliceEndlessScene implements Scene {
         TextureCache.load('fruit_slice_ui_revive_panel', FRUIT_SLICE_UI_ASSETS.revivePanel),
         TextureCache.load('fruit_slice_ui_tutorial_hand', FRUIT_SLICE_UI_ASSETS.tutorialHand),
         TextureCache.load('ui_panel_free_btn', UI_PANEL_FREE_BTN_TEXTURE),
+        TextureCache.load(BOWL_COMMON_MODAL_BUTTON_TEXTURE_KEY, BOWL_COMMON_MODAL_BUTTON_ASSET),
         TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
         ...FRUIT_SLICE_IDS.map((id) =>
           TextureCache.load(fruitSliceWholeTextureKey(id), FRUIT_SLICE_WHOLE_PATH[id]),
@@ -1238,6 +1248,24 @@ export class FruitSliceEndlessScene implements Scene {
     this.toolHelpFreeBtn.height = freeTex.height * s;
   }
 
+  private applyToolHelpActionButtonTexture(useInventoryButton: boolean): void {
+    const tex = useInventoryButton
+      ? TextureCache.get(BOWL_COMMON_MODAL_BUTTON_TEXTURE_KEY)
+      : TextureCache.get('ui_panel_free_btn');
+    if (!tex) {
+      return;
+    }
+    this.toolHelpFreeBtn.tint = 0xffffff;
+    this.toolHelpFreeBtn.texture = tex;
+    this.toolHelpFreeBtn.anchor.set(0.5);
+    const maxW = 300;
+    const maxH = 96;
+    const s = Math.min(1, maxW / tex.width, maxH / tex.height);
+    this.toolHelpFreeBtn.scale.set(s);
+    this.toolHelpFreeBtn.width = tex.width * s;
+    this.toolHelpFreeBtn.height = tex.height * s;
+  }
+
   private showToolHelpPanel(kind: FruitSliceToolKind): void {
     if (this.gameOver || this.toolRewardedAdBusy || this.goalCelebrateOverlay.visible) {
       return;
@@ -1251,7 +1279,10 @@ export class FruitSliceEndlessScene implements Scene {
       this.toolHelpDesc.text = '重新随机排列上方水果，\n帮你找到新的下落选择。';
     }
     const ownedCount = getFruitSliceToolCount(kind);
+    this.applyToolHelpActionButtonTexture(ownedCount > 0);
     this.toolHelpActionText.text = ownedCount > 0 ? `使用 1/${ownedCount}` : '';
+    this.toolHelpActionText.visible = ownedCount > 0;
+    this.toolHelpFreeBtn.visible = true;
     this.toolHelpOverlay.visible = true;
     this.fruitLayer.eventMode = 'none';
   }
@@ -1524,6 +1555,7 @@ export class FruitSliceEndlessScene implements Scene {
         return;
       }
       this.hideToolHelpPanel();
+      this.refreshFruitToolInventoryBadges();
       this.applyFruitSliceTool(kind);
       return;
     }
@@ -1588,19 +1620,204 @@ export class FruitSliceEndlessScene implements Scene {
     return { root, value };
   }
 
-  private startRound(): void {
+  private getBestResumeCheckpoint(): number | null {
+    const best = getFruitSliceBestScore();
+    let checkpoint = 0;
+    for (const tier of FRUIT_SLICE_COIN_TIERS) {
+      if (best >= tier.minScore && tier.minScore > checkpoint) {
+        checkpoint = tier.minScore;
+      }
+    }
+    return checkpoint > 0 ? checkpoint : null;
+  }
+
+  private showStartChoiceOrStartRound(source: FruitSliceStartChoiceSource): void {
+    const checkpoint = this.getBestResumeCheckpoint();
+    if (!checkpoint) {
+      this.startRound(0);
+      return;
+    }
+    this.showFruitSliceStartChoiceOverlay(checkpoint, source);
+  }
+
+  private getFruitSliceStageLabelForScore(score: number): string {
+    const stageIndex = getFruitSliceStageIndex(score);
+    return FRUIT_SLICE_STAGES[stageIndex]?.label ?? FRUIT_SLICE_STAGES[0]!.label;
+  }
+
+  private showFruitSliceStartChoiceOverlay(checkpoint: number, source: FruitSliceStartChoiceSource): void {
+    this.hideEndOverlay();
+    const W = Game.logicWidth;
+    const H = Game.logicHeight;
+    const best = getFruitSliceBestScore();
+    const root = new PIXI.Container();
+    root.eventMode = 'static';
+    root.hitArea = new PIXI.Rectangle(0, 0, W, H);
+
+    const dim = new PIXI.Graphics();
+    dim.beginFill(0x10202a, 0.62);
+    dim.drawRect(0, 0, W, H);
+    dim.endFill();
+    root.addChild(dim);
+
+    const panelTex = TextureCache.get('fruit_slice_ui_generic_panel');
+    if (panelTex) {
+      const panel = new PIXI.Sprite(panelTex);
+      panel.anchor.set(0.5);
+      const targetW = Math.min(W * 0.82, 430);
+      const targetH = H * 0.44;
+      const s = Math.min(targetW / panelTex.width, targetH / panelTex.height);
+      panel.scale.set(s);
+      panel.position.set(W / 2, H / 2);
+      root.addChild(panel);
+    } else {
+      const panel = new PIXI.Graphics();
+      panel.beginFill(0xfff4cf, 0.98);
+      panel.lineStyle(5, 0x8d5a2b, 1);
+      panel.drawRoundedRect(-224, -180, 448, 360, 30);
+      panel.endFill();
+      panel.position.set(W / 2, H / 2);
+      root.addChild(panel);
+    }
+
+    const title = new PIXI.Text('从哪个分数开始？', {
+      fontSize: 33,
+      fill: 0x8a3a20,
+      fontWeight: '900',
+      stroke: 0xfff3d2,
+      strokeThickness: 4,
+      lineJoin: 'round',
+    });
+    title.anchor.set(0.5);
+    title.position.set(W / 2, H / 2 - 209);
+    root.addChild(title);
+
+    const checkpointStageLabel = this.getFruitSliceStageLabelForScore(checkpoint);
+    const bestRow = new PIXI.Container();
+    bestRow.position.set(W / 2, H / 2 - 92);
+    root.addChild(bestRow);
+    const bestPrefix = this.createStartChoiceInlineText('历史最高 ', 0x4b2e20, 24);
+    const bestValue = this.createStartChoiceInlineText(`${best}`, 0xe45a22, 28);
+    const bestSuffix = this.createStartChoiceInlineText(' 分', 0x4b2e20, 24);
+    this.layoutCenteredInlineRow(bestRow, [bestPrefix, bestValue, bestSuffix], 2);
+
+    const stageRow = new PIXI.Container();
+    stageRow.position.set(W / 2, H / 2 - 58);
+    root.addChild(stageRow);
+    const stagePrefix = this.createStartChoiceInlineText('已解锁 ', 0x4b2e20, 24);
+    const stageValue = this.createStartChoiceInlineText(checkpointStageLabel, 0xe45a22, 28);
+    const stageSuffix = this.createStartChoiceInlineText(' 阶段', 0x4b2e20, 24);
+    this.layoutCenteredInlineRow(stageRow, [stagePrefix, stageValue, stageSuffix], 2);
+
+    const checkpointText = new PIXI.Text(`可从 ${checkpoint} 分继续挑战`, {
+      fontSize: 31,
+      fill: 0xe45a22,
+      fontWeight: '900',
+      align: 'center',
+      stroke: 0xfff4cf,
+      strokeThickness: 4,
+      lineJoin: 'round',
+    });
+    checkpointText.anchor.set(0.5);
+    checkpointText.position.set(W / 2, H / 2 - 22);
+    root.addChild(checkpointText);
+
+    root.addChild(this.createOverlayImageTextButton(W / 2, H / 2 + 58, 318, 58, '从头开始', () => {
+      if (this.resumeStartAdBusy) {
+        return;
+      }
+      AudioManager.playButtonSound();
+      this.startRound(0);
+    }));
+
+    root.addChild(this.createOverlayImageTextButton(W / 2, H / 2 + 126, 318, 58, `从${checkpoint}分开始`, () => {
+      AudioManager.playButtonSound();
+      void this.startRoundFromCheckpointByAd(checkpoint, source);
+    }, true));
+
+    root.addChild(this.createOverlayImageTextButton(W / 2, H / 2 + 192, 238, 50, '回首页', () => {
+      if (this.resumeStartAdBusy) {
+        return;
+      }
+      AudioManager.playButtonSound();
+      this.hideEndOverlay();
+      SceneManager.switchTo('home');
+    }));
+
+    this.overlayLayer.addChild(root);
+    this.endOverlay = root;
+  }
+
+  private async startRoundFromCheckpointByAd(checkpoint: number, source: FruitSliceStartChoiceSource): Promise<void> {
+    if (this.resumeStartAdBusy) {
+      return;
+    }
+    this.resumeStartAdBusy = true;
+    const best = getFruitSliceBestScore();
+    try {
+      const result = await showRewardedAd({
+        scene: 'fruit_slice_checkpoint_start',
+        extra: { checkpoint, bestScore: best, source },
+      }, FRUIT_SLICE_REWARDED_AD_UNIT_ID);
+      if (result === 'completed') {
+        this.startRound(checkpoint);
+        this.spawnCenterBanner(`已从${checkpoint}分开始`);
+        return;
+      }
+      this.spawnCenterBanner(result === 'skipped' ? '看完广告后才能从档位开始' : '广告暂不可用，请从头开始');
+    } finally {
+      this.resumeStartAdBusy = false;
+    }
+  }
+
+  private createStartChoiceInlineText(text: string, fill: number, fontSize: number): PIXI.Text {
+    const node = new PIXI.Text(text, {
+      fontSize,
+      fill,
+      fontWeight: '900',
+      stroke: 0xfff4cf,
+      strokeThickness: 3,
+      lineJoin: 'round',
+    });
+    node.anchor.set(0, 0.5);
+    node.resolution = 2;
+    return node;
+  }
+
+  private layoutCenteredInlineRow(row: PIXI.Container, nodes: PIXI.Text[], gap: number): void {
+    let totalW = Math.max(0, (nodes.length - 1) * gap);
+    for (const node of nodes) {
+      totalW += node.width;
+    }
+    let x = -totalW / 2;
+    for (const node of nodes) {
+      node.position.set(x, 0);
+      row.addChild(node);
+      x += node.width + gap;
+    }
+  }
+
+  private startRound(initialScore = 0): void {
+    const normalizedInitialScore = Number.isFinite(initialScore) ? Math.max(0, Math.floor(initialScore)) : 0;
     this.dismissGoalCelebration(true);
     this.clearRound();
     this.resetFruitSpawnBounds();
-    this.score = 0;
+    this.score = normalizedInitialScore;
     this.lastCoinReward = null;
     this.combo = 0;
     this.lastComboAt = 0;
     this.nextMilestoneIndex = 0;
-    this.currentStageIndex = 0;
+    while (
+      this.nextMilestoneIndex < FRUIT_SLICE_MILESTONES.length
+      && normalizedInitialScore >= FRUIT_SLICE_MILESTONES[this.nextMilestoneIndex]!
+    ) {
+      this.nextMilestoneIndex += 1;
+    }
+    this.currentStageIndex = getFruitSliceStageIndex(normalizedInitialScore);
     this.gameOver = false;
     this.reviveUsed = false;
     this.reviveAdBusy = false;
+    this.resumeStartAdBusy = false;
     this.pipeBlockRemoved = false;
     this.pipeWoodBlockSprite.visible = true;
     this.pipeWoodBlockSprite2.visible = true;
@@ -1617,14 +1834,16 @@ export class FruitSliceEndlessScene implements Scene {
     this.warningSfxCount = 0;
     this.warningSfxCooldown = 0;
     this.warningSfxActive = false;
-    this.displayedScore = 0;
+    this.displayedScore = normalizedInitialScore;
     this.scoreLabelPulseT = 0;
     this.scoreLabelPulseDur = 0;
     this.scoreLabel.scale.set(1);
     this.bestScore = getFruitSliceBestScore();
     this.generateInitialFruits();
     this.updateHud();
-    this.startTutorialIfNeeded();
+    if (normalizedInitialScore <= 0) {
+      this.startTutorialIfNeeded();
+    }
   }
 
   private resetFruitSpawnBounds(): void {
@@ -2488,7 +2707,7 @@ export class FruitSliceEndlessScene implements Scene {
       }));
       root.addChild(this.createOverlayHitButton(W / 2, H / 2 + 112, 120, 62, () => {
         AudioManager.playButtonSound();
-        this.startRound();
+        this.showStartChoiceOrStartRound('retry');
       }));
       root.addChild(this.createOverlayHitButton(W / 2 + 140, H / 2 + 112, 120, 62, () => {
         AudioManager.playButtonSound();
@@ -2508,7 +2727,7 @@ export class FruitSliceEndlessScene implements Scene {
       }));
       root.addChild(this.createOverlayHitButton(W / 2 + 104, btnY, 154, 60, () => {
         AudioManager.playButtonSound();
-        this.startRound();
+        this.showStartChoiceOrStartRound('retry');
       }));
     }
     root.addChild(this.createOverlayTextButton(W / 2, H / 2 + 178, 168, 50, '排行榜', () => {
@@ -2839,6 +3058,74 @@ export class FruitSliceEndlessScene implements Scene {
     return root;
   }
 
+  private createOverlayImageTextButton(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    label: string,
+    onTap: () => void,
+    showAdIcon = false,
+  ): PIXI.Container {
+    const tex = TextureCache.get(BOWL_COMMON_MODAL_BUTTON_TEXTURE_KEY);
+    if (!tex || tex === PIXI.Texture.EMPTY) {
+      return this.createOverlayTextButton(x, y, w, h, label, onTap);
+    }
+    const root = this.createOverlayHitButton(x, y, w, h, onTap);
+    const bg = new PIXI.Sprite(tex);
+    bg.anchor.set(0.5);
+    bg.width = w;
+    bg.height = h;
+    root.addChild(bg);
+    if (showAdIcon) {
+      const icon = this.createAdVideoIcon();
+      icon.position.set(-w * 0.32, 0);
+      root.addChild(icon);
+    }
+    const text = new PIXI.Text(label, {
+      fontSize: 24,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x8b3a12,
+      strokeThickness: 4,
+      lineJoin: 'round',
+    });
+    text.anchor.set(0.5);
+    if (showAdIcon) {
+      text.position.x = 18;
+    }
+    text.resolution = 2;
+    root.addChild(text);
+    return root;
+  }
+
+  private createAdVideoIcon(): PIXI.Container {
+    const root = new PIXI.Container();
+    const body = new PIXI.Graphics();
+    body.beginFill(0xffffff, 0.94);
+    body.lineStyle(3, 0x8b3a12, 0.92);
+    body.drawRoundedRect(-16, -12, 25, 24, 5);
+    body.endFill();
+    body.beginFill(0xffb24a, 0.9);
+    body.moveTo(12, -7);
+    body.lineTo(24, -13);
+    body.lineTo(24, 13);
+    body.lineTo(12, 7);
+    body.closePath();
+    body.endFill();
+    root.addChild(body);
+
+    const play = new PIXI.Graphics();
+    play.beginFill(0x8b3a12, 0.9);
+    play.moveTo(-6, -6);
+    play.lineTo(4, 0);
+    play.lineTo(-6, 6);
+    play.closePath();
+    play.endFill();
+    root.addChild(play);
+    return root;
+  }
+
   private addDisabledReviveMask(root: PIXI.Container, cx: number, cy: number): void {
     const mask = new PIXI.Graphics();
     mask.beginFill(0x2b271d, 0.56);
@@ -3127,6 +3414,13 @@ export class FruitSliceEndlessScene implements Scene {
     let elapsed = 0;
     let scored = false;
     const tick = (): void => {
+      if (root.destroyed) {
+        Game.ticker.remove(tick);
+        if (!scored) {
+          this.applyDisplayedScoreGain(gain);
+        }
+        return;
+      }
       elapsed += Game.ticker.deltaMS / 1000;
       if (elapsed < popDur) {
         const p = elapsed / popDur;
@@ -3221,6 +3515,10 @@ export class FruitSliceEndlessScene implements Scene {
     const total = popDur + holdDur + fadeDur;
     let elapsed = 0;
     const tick = (): void => {
+      if (label.destroyed) {
+        Game.ticker.remove(tick);
+        return;
+      }
       elapsed += Game.ticker.deltaMS / 1000;
       if (elapsed < popDur) {
         const p = elapsed / popDur;
@@ -3274,6 +3572,10 @@ export class FruitSliceEndlessScene implements Scene {
     let elapsed = 0;
     const duration = 1.8;
     const tick = (): void => {
+      if (root.destroyed) {
+        Game.ticker.remove(tick);
+        return;
+      }
       elapsed += Game.ticker.deltaMS / 1000;
       const p = Math.min(elapsed / duration, 1);
       root.alpha = p < 0.78 ? 1 : 1 - (p - 0.78) / 0.22;
@@ -3488,6 +3790,14 @@ export class FruitSliceEndlessScene implements Scene {
       sp.eventMode = 'static';
       sp.cursor = 'pointer';
     }
+    if (this.fruitToolInventoryBadges.length === 0) {
+      for (let i = 0; i < 2; i += 1) {
+        const badge = this.createFruitToolInventoryBadge();
+        badge.visible = false;
+        this.fruitToolInventoryBadges.push(badge);
+        this.fruitToolInventoryBadgeTexts.push(badge.getChildAt(1) as PIXI.Text);
+      }
+    }
     this.toolElimSprite.on('pointertap', () => {
       if (this.isTutorialActive()) {
         this.pulseTutorialTarget();
@@ -3504,8 +3814,14 @@ export class FruitSliceEndlessScene implements Scene {
       AudioManager.playButtonSound();
       this.showToolHelpPanel('shuffle');
     });
-    this.container.addChild(this.toolElimSprite, this.toolShuffleSprite);
+    this.container.addChild(
+      this.toolElimSprite,
+      this.toolShuffleSprite,
+      this.fruitToolInventoryBadges[0]!,
+      this.fruitToolInventoryBadges[1]!,
+    );
     this.layoutToolButtonsOnBoards();
+    this.refreshFruitToolInventoryBadges();
   }
 
   private layoutToolButtonsOnBoards(): void {
@@ -3573,6 +3889,58 @@ export class FruitSliceEndlessScene implements Scene {
     };
     place(te, xl, wL, btnH);
     place(ts, xr, wR, btnH);
+    this.layoutFruitToolInventoryBadges();
+  }
+
+  private createFruitToolInventoryBadge(): PIXI.Container {
+    const root = new PIXI.Container();
+    root.eventMode = 'none';
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0xff4f43, 1);
+    bg.lineStyle(3, 0xffffff, 1);
+    bg.drawCircle(0, 0, 18);
+    bg.endFill();
+    const text = new PIXI.Text('', {
+      fontSize: 17,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x8b241e,
+      strokeThickness: 3,
+    });
+    text.anchor.set(0.5);
+    text.resolution = 2;
+    root.addChild(bg, text);
+    return root;
+  }
+
+  private layoutFruitToolInventoryBadges(): void {
+    const data = [
+      { sprite: this.toolElimSprite, badge: this.fruitToolInventoryBadges[0] },
+      { sprite: this.toolShuffleSprite, badge: this.fruitToolInventoryBadges[1] },
+    ] as const;
+    for (const item of data) {
+      if (!item.badge) {
+        continue;
+      }
+      item.badge.position.set(
+        item.sprite.x + item.sprite.width * 0.42,
+        item.sprite.y - item.sprite.height * 0.36,
+      );
+    }
+  }
+
+  private refreshFruitToolInventoryBadges(): void {
+    const kinds: FruitSliceToolKind[] = ['eliminate', 'shuffle'];
+    for (let i = 0; i < kinds.length; i += 1) {
+      const badge = this.fruitToolInventoryBadges[i];
+      const text = this.fruitToolInventoryBadgeTexts[i];
+      if (!badge || !text) {
+        continue;
+      }
+      const count = getFruitSliceToolCount(kinds[i]!);
+      badge.visible = count > 0;
+      text.text = count > 9 ? '9+' : String(count);
+    }
   }
 
   private shuffleFruits(): void {

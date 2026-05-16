@@ -1,4 +1,5 @@
 import { analytics, EVENT_NAMES } from '@/analytics';
+import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
 export const GAMEPLAY_REWARDED_AD_UNIT_ID = 'adunit-baadf000b7626d29';
 export const FRUIT_SLICE_REWARDED_AD_UNIT_ID = 'adunit-1e675e21c04200f3';
@@ -182,6 +183,12 @@ export async function showRewardedAd(
   context: RewardedAdContext,
   adUnitId = GAMEPLAY_REWARDED_AD_UNIT_ID,
 ): Promise<RewardedAdResult> {
+  // 开发者工具里激励广告也常走 operateWXDataForAd 并报 system apperror；
+  // 真机不受影响，模拟器直接降级，避免广告 SDK 错误干扰玩法调试。
+  if (isWxDevtoolsSimulator()) {
+    return 'unavailable';
+  }
+
   trackAd(EVENT_NAMES.AD_REQUEST, adUnitId, context);
 
   if (pendingResolve) {

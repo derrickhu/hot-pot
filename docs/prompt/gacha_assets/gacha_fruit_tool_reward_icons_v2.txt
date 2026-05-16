@@ -1,0 +1,39 @@
+Create a horizontal 2-cell sprite sheet for fruit-slice reward tool icons.
+
+Purpose:
+These icons are displayed in the gacha "possible rewards" panel.
+They must correspond to the existing fruit-slice tool buttons, but as standalone item icons.
+
+Canvas and layout:
+- 2 columns x 1 row sprite sheet.
+- Pure solid chroma green background (#00ff66) for background removal.
+- Each cell contains exactly one centered standalone icon with generous padding.
+- No grid lines, no dividers, no labels.
+
+Style:
+- Cute polished 2D casual mobile game item icon art.
+- Match existing bowl reward icons: glossy highlights, clean brown outline, soft shadow, saturated colors.
+- Standalone transparent item icon after background removal.
+- NO button background, NO rounded rectangle, NO text.
+
+Cell 1: fruit-slice eliminate tool
+- A cute round dark gray bomb with short fuse and tiny orange spark.
+- Small fruit slice fragments around it: strawberry bit, orange wedge, kiwi or green slice.
+- The bomb is the main object.
+
+Cell 2: fruit-slice shuffle tool
+- Use the visual language of the original fruit-slice shuffle button: bright YELLOW double crossing arrows.
+- Two thick glossy yellow arrows crossing like a shuffle icon.
+- Add a few tiny fruit slices near the arrows only as accents.
+- Important: NO spoon, NO wooden spoon, NO ladle, NO utensil.
+- The yellow crossed arrows are the main object and must be easy to recognize at small size.
+
+Strict constraints:
+- NO text anywhere.
+- NO Chinese characters.
+- NO English letters.
+- NO numbers.
+- NO spoon or utensil in cell 2.
+- NO yellow rounded button background.
+- NO UI button shape.
+- NO labels, captions, badges, watermarks, logos.

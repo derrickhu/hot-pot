@@ -1,0 +1,29 @@
+Create a blank decorative title ribbon banner for a gacha reward popup.
+
+Purpose:
+This is an empty title background image. The game will draw Chinese title text on top in code.
+
+Canvas and layout:
+- Horizontal title banner, wide and short.
+- Pure solid chroma green background (#00ff66) for background removal.
+- The ribbon is centered with enough transparent padding after trimming.
+- NO text anywhere.
+
+Art style:
+- Cute polished 2D casual mobile game UI.
+- Premium reward-popup feeling, warm golden-yellow and red-orange ribbon.
+- Slightly curved central plaque with thick glossy gold rim.
+- Red/orange folded ribbon tails on both sides.
+- Small sparkle highlights and subtle shine, but no letters.
+- Clean dark-brown outline, soft drop shadow.
+- Looks more refined than plain text, suitable for "获得奖励" or "稀有礼包" text over it.
+
+Strict constraints:
+- NO text.
+- NO Chinese characters.
+- NO English letters.
+- NO numbers.
+- NO logo.
+- NO icon in the center.
+- NO reward item image.
+- ONLY one blank ribbon title banner on green background.

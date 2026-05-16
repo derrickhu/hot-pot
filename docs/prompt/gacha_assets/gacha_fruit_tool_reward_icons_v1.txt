@@ -1,0 +1,39 @@
+Create a horizontal 2-cell sprite sheet for fruit-slice game reward tool icons.
+
+Purpose:
+These icons will be shown inside a small "possible rewards" panel together with existing bowl-game reward icons.
+They must look like standalone item icons, NOT UI buttons.
+
+Canvas and layout:
+- 2 columns x 1 row sprite sheet.
+- Pure solid chroma green background (#00ff66) for background removal.
+- Each cell contains exactly one centered icon with generous padding.
+- No grid lines, no dividers, no labels.
+
+Style:
+- Cute polished 2D casual mobile game icon art.
+- Match the style of existing bowl reward icons: glossy highlights, clean brown outline, soft shadow, saturated colors, slightly dimensional.
+- Transparent game item feel after background removal.
+- No button capsule, no rounded rectangle button base, no text.
+
+Cell 1: fruit-slice eliminate tool icon
+- A cute round dark gray bomb with short fuse and tiny orange spark.
+- Add 2-3 small fruit slice fragments around it (strawberry bit, orange wedge, kiwi/green slice) to show it clears fruit.
+- The bomb is the main object, fruit fragments are small accents.
+- No Chinese text, no English text, no numbers.
+
+Cell 2: fruit-slice shuffle tool icon
+- Two bright green curved arrows forming a shuffle / swap motion.
+- In the middle, small fruit slices or a wooden spoon with fruit pieces being rearranged.
+- Must clearly mean "shuffle / reorder".
+- No Chinese text, no English text, no numbers.
+
+Strict constraints:
+- NO text anywhere.
+- NO Chinese characters.
+- NO English letters.
+- NO numbers.
+- NO yellow button background.
+- NO UI button shape.
+- NO labels, captions, badges, watermarks, logos.
+- Only two standalone icons on chroma green background.

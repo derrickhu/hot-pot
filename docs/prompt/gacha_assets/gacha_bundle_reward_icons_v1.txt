@@ -1,0 +1,41 @@
+Create a horizontal 2-cell sprite sheet for gacha bundle reward icons.
+
+Purpose:
+These are independent icons for the last two gacha rewards:
+1. bowl level tool bundle
+2. fruit-slice tool bundle
+They must clearly communicate the bundle meaning without using text.
+
+Canvas and layout:
+- 2 columns x 1 row sprite sheet.
+- Pure solid chroma green background (#00ff66) for background removal.
+- Each cell contains exactly one centered standalone icon with generous padding.
+- No grid lines, no dividers, no labels.
+
+Style:
+- Cute polished 2D casual mobile game item icon art.
+- Match the existing reward icons: glossy highlights, clean brown outline, soft shadow, saturated colors.
+- Standalone transparent item icon after background removal.
+- NO button background, NO rounded rectangle, NO text.
+
+Cell 1: bowl level tool bundle icon
+- A red gift box with golden ribbon, slightly open, glowing.
+- Around or emerging from it: a small blue broom and a small wooden spoon with green shuffle arrows.
+- This should mean "bowl/level tool bundle".
+- Keep the items compact and readable at small size.
+
+Cell 2: fruit-slice tool bundle icon
+- A red gift box with golden ribbon, slightly open, glowing.
+- Around or emerging from it: a small dark bomb with fuse and bright YELLOW crossed shuffle arrows.
+- Add tiny fruit slice accents such as orange wedge or strawberry bit.
+- This should mean "fruit-slice tool bundle".
+- Important: the shuffle symbol must be yellow crossed arrows, NOT green arrows, and NO spoon.
+
+Strict constraints:
+- NO text anywhere.
+- NO Chinese characters.
+- NO English letters.
+- NO numbers.
+- NO UI button shape.
+- NO labels, captions, badges, watermarks, logos.
+- In cell 2, NO spoon, NO wooden spoon, NO ladle, NO utensil.
