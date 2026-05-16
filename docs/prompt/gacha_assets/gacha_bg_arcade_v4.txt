@@ -1,0 +1,31 @@
+9:16 vertical mobile game background for a premium gacha screen.
+
+Goal:
+Create a celebratory game-center / arcade atmosphere behind a foreground gacha machine.
+The game will place the main gacha machine sprite in front, so this image must be a
+BACKGROUND ONLY layer.
+
+Art direction:
+- warm golden cream lighting, festive and celebratory
+- distant softly blurred arcade / game-center environment
+- far background contains several small out-of-focus gachapon machines, claw machines,
+  arcade cabinets, prize shelves, neon bokeh lights, confetti sparkles
+- all machines in the background must be far away, small, soft-focus, and decorative
+- cute polished 2D casual mobile game illustration, soft gradients, no hard realism
+- golden, cream, peach, mint, red accent colors
+
+Composition:
+- portrait 9:16, full bleed
+- center vertical lane remains bright and relatively empty for a large foreground gacha machine
+- blurred arcade silhouettes mostly on the left/right edges and in the upper/lower depth
+- top safe area stays light and clean for title and coin bar
+- bottom area stays calmer for the action button and reward panel
+- add subtle celebratory bokeh and sparkles around the edges, not over the center
+
+Strict constraints:
+- BACKGROUND ONLY.
+- NO large central foreground gacha machine.
+- NO UI button, NO reward panel, NO title, NO readable text.
+- NO Chinese characters, NO English letters, NO numbers, NO logo, NO QR code.
+- NO phone frame, NO notch, NO device mockup.
+- Distant machines must be blurry background props, never sharp foreground subjects.

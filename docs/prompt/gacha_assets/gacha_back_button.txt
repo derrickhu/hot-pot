@@ -1,6 +1,5 @@
-Single rounded pill "back" button asset, transparent background, 1:1 canvas.
-Reference image is the full UI mockup — match the SAME thick rounded outline,
-warm peach / honey colour, soft inner highlight, drop shadow style.
+Single rounded pill "back" button asset on solid chroma-green background (#00ff66),
+1:1 canvas. Generate only the button, no screen mockup.
 
 Output ONLY the back button:
 
@@ -14,7 +13,7 @@ Output ONLY the back button:
 
 STRICT constraints:
 
-- TRANSPARENT background.
+- Chroma-green background only outside the button for easy removal.
 - NO machine / NO capsules / NO panel / NO other UI elements.
 - NO English letters, NO numbers, NO logo.
 - The Chinese text MUST be EXACTLY 返回, two characters total, complete and clearly readable.

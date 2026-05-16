@@ -533,8 +533,7 @@ export class HomeScene implements Scene {
     this.gachaEntryRoot.addChild(gachaLabel);
     this.gachaEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
-      const api = typeof wx !== 'undefined' ? wx : null;
-      api?.showToast?.({ title: '敬请期待', icon: 'none' });
+      SceneManager.switchTo('gacha');
     });
     this.container.addChild(this.gachaEntryRoot);
 

@@ -1,0 +1,30 @@
+Design a lower-screen reward preview UI prototype for a casual mobile gacha page.
+
+Canvas:
+- 16:9 horizontal UI component mockup
+- pure chroma green background (#00ff66) outside the UI component for easy background removal
+
+Goal:
+Show a better design for the "possible rewards" information under the gacha button.
+The final game will overlay real reward icons, so focus on a clean, elegant panel container
+and easy-to-align icon layout.
+
+Design requirements:
+- one polished rounded rectangular reward panel
+- mint / cream / warm white color palette
+- cute premium mobile game style, dimensional but clean
+- top center has a small attached label tab with exactly four Chinese characters: 可能获得
+- the panel must NOT have deep recessed grooves or hard square slots
+- inside area is a clean horizontal shelf / soft glass strip / subtle separator layout for 7 rewards
+- use very light circular or pill-shaped placeholder glows for 7 positions, evenly spaced
+- placeholders should be subtle, not physical holes, so runtime icons can align cleanly
+- enough padding so 7 icons can sit centered across the panel
+- soft bevel, mint border, cream white fill, gentle drop shadow
+- compact height suitable for the bottom of a phone screen
+
+Strict constraints:
+- Only the label text 可能获得 is allowed.
+- NO actual reward icons, NO fruits, NO tools, NO stars, NO coins.
+- NO other Chinese, NO English, NO numbers.
+- NO machine, NO button, NO phone frame, NO background scene.
+- Chroma green background only outside the component.

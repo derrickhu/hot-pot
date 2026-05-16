@@ -1,25 +1,27 @@
-9:16 vertical mobile game background asset for a gacha (capsule toy) activity screen.
-Reference image is the full UI mockup of the same screen — keep EXACTLY the same cartoon
-art style, line thickness, colour palette, drop-shadow soft glow, summer pastel mood.
+9:16 vertical full-screen mobile game BACKGROUND ONLY asset.
 
-Output ONLY the BACKGROUND layer of that mockup:
+IMPORTANT: This prompt is NOT asking for a gacha machine or a UI mockup. Generate ONLY a clean
+empty background layer that other sprites will be placed on top of in the game.
 
-- Warm cream / honey-yellow base, with a faint radial sunburst from the upper-middle.
-- Two soft peach circles bleeding in (top-left and bottom-right corners) for depth.
-- Scattered translucent decorative fruits in the corners and mid-band:
-  strawberries, lemon halves, blueberries, grapes, orange slices.
-  All fruits are SOFT, low-saturation, ~40% opacity, like background stickers, NOT main subjects.
-- Sprinkle of small yellow / white sparkle stars and dotted lines.
-- A pair of decorative speech-bubble "?" callouts near the upper area:
-  left side a small yellow + green pair, right side a pink + blue pair.
-  These are PURE decoration shapes only, no text inside them at all.
-- Optional: thin radial sunray streaks from the centre, very faint.
+Art direction:
+- warm cream / honey-yellow candy-shop background, soft and bright
+- subtle radial sunburst rays from slightly above the center
+- two large soft peach/orange circles bleeding from top-left and bottom-right corners
+- a few tiny low-opacity fruit stickers near the far edges only: strawberry, lemon, blueberry,
+  grape, orange slice, all very pale and decorative, never central
+- small sparkle dots and tiny four-point stars around the edges
+- flat cute 2D casual mobile-game style, smooth vector-like painting, soft gradients
+
+Composition:
+- leave the middle 70% of the canvas visually clean and empty for the gacha machine sprite
+- decoration must stay near the margins and corners
+- no strong subjects, no foreground object, no UI layout, no card, no machine
 
 STRICT constraints:
-
-- NO machine / NO gachapon / NO capsules / NO buttons / NO panels / NO cards.
-- NO Chinese characters, NO English letters, NO numbers, NO logo, NO QR code.
-- NO speech-bubble TEXT inside the "?" bubbles — they must be empty bubble shapes only.
+- BACKGROUND ONLY.
+- Absolutely NO gachapon machine, NO capsule machine, NO capsule balls, NO coin, NO button,
+  NO panel, NO reward slots, NO title, NO text.
+- NO Chinese characters, NO English letters, NO numbers, NO logo, NO QR code, NO watermark.
 - NO phone frame, NO notch, NO device mockup.
-- Background fills the WHOLE 9:16 canvas edge-to-edge (full bleed).
-- Single coherent illustration, flat cartoon style with thick rounded outlines.
+- Full bleed 9:16 canvas, no transparent background needed.
+- If you are tempted to add a gacha machine, do not. The center must remain empty.

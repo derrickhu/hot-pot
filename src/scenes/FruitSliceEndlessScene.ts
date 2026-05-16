@@ -36,7 +36,7 @@ import { openLeaderboard } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_FRUIT } from '@/services/RankService';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
-import { FRUIT_SLICE_REWARDED_AD_UNIT_ID, showRewardedAd } from '@/utils/rewardedAd';
+import { FRUIT_SLICE_REWARDED_AD_UNIT_ID, showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { isFruitSliceTutorialDone, markFruitSliceTutorialDone } from '@/utils/tutorialState';
 import { shareGame } from '@/utils/wechatShare';
 import { sampleEdgeAt, sampleTextureTopEdge, type TextureTopEdge } from '@/utils/textureTopEdge';
@@ -268,6 +268,7 @@ export class FruitSliceEndlessScene implements Scene {
 
   onEnter(): void {
     AudioManager.useFruitSliceBackgroundMusic();
+    warmupRewardedAd(FRUIT_SLICE_REWARDED_AD_UNIT_ID);
     void this.preloadAssets().then(() => {
       if (this.gameOver || (this.fruits.length === 0 && this.pipeStack.length === 0)) {
         this.startRound();

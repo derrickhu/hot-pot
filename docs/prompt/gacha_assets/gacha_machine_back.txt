@@ -1,0 +1,41 @@
+Single premium gachapon / capsule toy machine sprite, NO TEXT, on a simple solid
+chroma-green background (#00ff66) for background removal. 9:16 canvas.
+
+Goal:
+Create a clean game-ready machine sprite that looks more dimensional and toy-like than a flat
+sticker. It should feel like a polished plastic product render in a cute casual mobile game:
+rounded forms, soft cel-shaded volume, bevels, shadows, thick but tasteful dark-brown outline.
+
+Machine design:
+- red glossy plastic lower body with orange/yellow base feet, rounded chunky toy shape
+- yellow and red circus-tent cap on top
+- small golden star coin emblem at the top
+- right side crank handle with red knob, attached to the body
+- center front egg outlet / capsule door must be EMPTY, no egg visible
+- lower body front must be PLAIN RED PLASTIC: NO characters, NO label, NO logo, NO words
+- large round glass dome above the body
+- dome interior must be EMPTY: no capsule balls, no prize, no star, no sparkle, no object
+- dome base glass can have a very faint cyan tint and transparent-looking volume, but no balls
+- no white sticker border around the whole machine; use only a clean dark-brown cartoon outline
+  directly on the silhouette, with natural shadow under the machine
+
+Dimensional rendering requirements:
+- visible plastic bevels on body and base
+- red body has soft highlight gradients and darker side shading
+- dome has subtle glass thickness and cyan edge tint
+- no flat cutout / no sticker / no pasted white halo
+- keep silhouette readable but give it volume
+
+Canvas / extraction:
+- solid chroma-green background (#00ff66), not checkerboard, not transparent
+- machine centered and fills about 78% of canvas height
+- enough padding on all sides for trimming
+- no other UI elements
+
+STRICT constraints:
+- NO TEXT anywhere. No Chinese, no English, no numbers, no punctuation.
+- DO NOT draw the word 扭蛋 on the machine.
+- NO white outer stroke / NO white sticker border / NO glow halo around the whole machine.
+- NO capsule balls or objects inside the dome. The dome must be visibly empty.
+- NO golden egg in the outlet. The outlet must be empty.
+- NO background scene, NO buttons, NO panels, NO reward icons, NO title, NO phone frame.

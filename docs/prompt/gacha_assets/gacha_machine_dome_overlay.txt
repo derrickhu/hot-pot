@@ -1,0 +1,26 @@
+Glass dome highlight overlay sprite for a gachapon machine, on solid black background.
+Square 1:1 canvas.
+
+Output ONLY the glass highlight shape, no machine body.
+
+Design:
+- one round glass dome highlight, centered
+- transparent-looking cyan rim-light around the circle
+- large soft white diagonal reflection from upper-left to lower-right
+- one or two small white glossy blobs near upper-left edge
+- soft cyan crescent reflection on lower-right inner edge
+- the center should remain mostly empty and dark/transparent-looking so capsule balls can be
+  visible underneath at runtime
+
+Background / extraction:
+- pure black background (#000000) outside the highlight shape
+- no checkerboard
+- no full machine silhouette
+- no text
+
+STRICT constraints:
+- ONLY glass highlight / reflection elements.
+- NO machine body, NO cap, NO base, NO crank handle, NO outlet.
+- NO capsules, NO balls, NO icons, NO fruits, NO stars, NO UI panel, NO button.
+- NO Chinese, NO English, NO numbers.
+- Do not draw a thick brown outline. Only cyan/white glass reflections.

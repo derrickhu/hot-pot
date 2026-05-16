@@ -1,0 +1,45 @@
+Single premium gachapon capsule toy machine sprite WITH MANY CAPSULE BALLS INSIDE,
+on pure solid chroma green background (#00ff66) for background removal.
+
+Goal:
+Create a final static game-ready gacha machine sprite. No runtime ball animation will be used.
+The machine itself must already contain many small colorful capsule balls inside the glass dome.
+
+Art style:
+- cute polished 2D casual mobile game art
+- dimensional glossy plastic toy rendering, not a flat sticker
+- red glossy rounded lower body with orange/yellow base feet
+- yellow and red circus tent cap
+- small golden star coin emblem at the top
+- right side crank handle with red knob
+- clean dark-brown cartoon outline directly on the silhouette
+- natural soft shadow under the machine
+- NO white sticker border / NO white halo around the whole machine
+
+Glass dome:
+- large round transparent glass dome
+- dome contains MANY small colorful capsule balls, around 18-24 balls
+- balls are small, not one giant ball
+- balls are stacked in several rows, filling the lower and middle dome area
+- colors include yellow, pink, blue, green, orange, purple, red, teal, cream
+- capsule balls are simple glossy two-tone plastic balls
+- NO icons, NO symbols, NO stars, NO snowflakes, NO letters, NO numbers printed on balls
+- add glass highlights and subtle cyan rim light in front of the balls
+
+Machine details:
+- center front egg outlet / capsule door should be EMPTY, no egg visible
+- lower body front is plain red plastic: NO text, NO Chinese, NO English, NO numbers, NO logo
+- do NOT draw the word 扭蛋 anywhere
+
+Canvas:
+- 9:16 canvas
+- machine centered, fills about 78% of canvas height
+- pure chroma-green background (#00ff66), no scene, no UI
+- enough padding for trimming
+
+Strict constraints:
+- NO text anywhere.
+- NO Chinese, NO English, NO numbers.
+- NO UI button, NO reward panel, NO title, NO phone frame.
+- NO large single capsule ball. The dome must show many small balls.
+- NO white outer sticker border.

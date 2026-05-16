@@ -1,40 +1,74 @@
 Capsule (扭蛋) ball sprite sheet asset, transparent background, 1:1 canvas (2K -> 2048x2048),
-4 rows x 4 columns = 16 capsule balls, each ball perfectly fills its own 512x512 cell.
-Reference image is the full UI mockup — match EXACTLY the SAME capsule visual style as the
-balls inside the dome of that mockup: glossy two-tone capsule (top half lighter, bottom half
-darker), thick outline, drop shadow, small icon emblem in the centre of the upper hemisphere.
+3 rows x 3 columns = 9 capsule balls, each ball perfectly fills its own ~682x682 cell.
+Reference image is the previous gacha UI mockup — match EXACTLY the SAME capsule visual style as
+the balls inside the dome of that mockup: glossy two-tone capsule (top half lighter, bottom half
+slightly darker / more saturated of the same hue), thick dark-brown rounded outline (~6px),
+small white highlight blob in the upper-left for plastic gloss, soft elliptical contact shadow
+at the bottom of each ball.
+
+CRITICAL — REJECTION RULE (read TWICE):
+
+Every single ball MUST be **PURE SOLID COLOUR** with **ABSOLUTELY ZERO** emblem, icon, logo,
+symbol, glyph, sticker, badge, or printed graphic on its surface. If you draw ANY of the
+following on ANY ball the output is REJECTED:
+
+  - NO star, NO snowflake, NO lightning bolt, NO gift box, NO present, NO coin, NO flame,
+    NO water drop, NO music note, NO flower, NO leaf, NO heart, NO arrow, NO question mark,
+    NO emoji, NO face, NO eye, NO mouth, NO smiley.
+  - NO Chinese character, NO English letter, NO Japanese kana, NO digit, NO punctuation.
+  - NO equator strip with a different colour pattern, NO stripes, NO polka dots, NO checker,
+    NO gradient swirl, NO sticker frame, NO decorative ring beyond the simple plastic split
+    line that separates the two halves of the capsule.
+
+The ONLY surface details allowed on each ball are:
+
+  1. The thin horizontal split line between the upper-half hue and the lower-half hue
+     (a single soft band, not a full ring of decoration).
+  2. The single small white plastic-gloss highlight blob in the upper-left quadrant.
+  3. The thick dark-brown rounded outline around the silhouette.
+
+Nothing else. Imagine each ball as a freshly-painted plastic Easter egg with a glossy
+matte finish — completely smooth, no print on it.
 
 Strict layout requirements:
 
-- The canvas is divided into a STRICT 4x4 grid of EQUAL cells.
-- Each cell contains EXACTLY ONE round capsule ball, centred, occupying ~85% of the cell.
-- ALL 16 balls have the SAME diameter and the SAME outline thickness.
-- ALL 16 balls have a TRANSPARENT background — the spaces between cells are empty
-  transparent gutter, NOT a different colour.
-- When the sheet is later sliced into 16 equal sub-images (256x256 or 512x512), each
-  sub-image must contain ONE complete ball with ample transparent margin and NO part of
-  any neighbouring ball cropped in.
+- The canvas is divided into a STRICT 3x3 grid of EQUAL cells.
+- Each cell contains EXACTLY ONE round capsule ball, centred, occupying ~80% of the cell.
+- ALL 9 balls have the SAME diameter and the SAME outline thickness.
+- ALL 9 balls have a TRANSPARENT background — the spaces between cells are empty
+  transparent gutter, NOT a different colour. The 3x3 grid is logical only; do NOT draw
+  any grid lines on the image.
+- When the sheet is later sliced into 9 equal sub-images (~682x682 each), every sub-image
+  must contain ONE complete ball with ample transparent margin and NO part of any
+  neighbouring ball cropped in.
 
-Per-ball variation (16 unique designs):
+Per-ball hue assignment (9 unique colours, top-half / bottom-half hex hints):
 
-Row 1: bright YELLOW with golden STAR emblem | candy-PINK with white STAR emblem |
-       sky-BLUE with white SNOWFLAKE emblem  | mint-GREEN with white SNOWFLAKE emblem
-Row 2: orange with golden LIGHTNING-BOLT     | purple with white LIGHTNING-BOLT |
-       red with golden GIFT-BOX              | teal with white GIFT-BOX
-Row 3: cream-yellow with golden COIN          | rose with white COIN |
-       lime with white FLAME                 | violet with white FLAME
-Row 4: peach-orange with white WATER-DROP    | turquoise with white WATER-DROP |
-       coral-red with white MUSIC-NOTE       | warm-yellow with white FLOWER-PETAL
+Row 1 (left to right):
+  1. bright sunny YELLOW  — top #ffe666 / bottom #f0c020
+  2. candy bubblegum PINK — top #ffb5d4 / bottom #ff7aaa
+  3. sky cyan BLUE        — top #b5e8ff / bottom #6cbff5
 
-Each emblem sits centred on the upper (lighter) hemisphere of its capsule, with subtle
-golden / white outline so it stays readable at small sizes.
+Row 2 (left to right):
+  4. mint pastel GREEN    — top #c5f3d1 / bottom #6cd690
+  5. vivid pumpkin ORANGE — top #ffc27a / bottom #ff8a3c
+  6. warm royal PURPLE    — top #d4b8ff / bottom #9a6dee
 
-STRICT constraints:
+Row 3 (left to right):
+  7. cherry tomato RED    — top #ffb1a8 / bottom #ff6b66
+  8. teal lagoon          — top #b6ecdf / bottom #4fb9a7
+  9. cream ivory          — top #fff3d4 / bottom #f0d188
+
+Each ball uses ONE solid hue for the lighter top half and a slightly more saturated /
+darker version of the SAME hue for the lower half — clean two-tone glossy plastic look.
+NO third colour, NO accent stripe, NO emblem.
+
+Composition reminders:
 
 - TRANSPARENT background between cells (full alpha = 0 in the gutters).
-- NO Chinese characters, NO English letters, NO numbers anywhere on or around the balls.
-- NO machine, NO buttons, NO panels, NO speech bubbles, NO surrounding decorations.
-- NO grid lines drawn on the image — the layout is logical only.
-- All 16 balls must be visually distinct (different hue + emblem combination).
-- Each ball is a complete, self-contained sprite ready to be sliced and used individually
-  for runtime rolling animation.
+- NO machine, NO gachapon, NO buttons, NO panels, NO speech bubbles, NO surrounding
+  decoration, NO sparkle stars, NO confetti.
+- All 9 balls must be visually distinct via hue.
+- Each ball is a complete, self-contained sprite ready to be sliced into an individual
+  texture for runtime rolling animation. Game code will overlay tool icons on top of
+  these capsules at runtime — DO NOT pre-bake any icon.

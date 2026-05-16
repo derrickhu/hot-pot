@@ -1,8 +1,9 @@
-Title text logo asset, transparent background, horizontal layout, 16:9 canvas.
-Reference image is the full UI mockup — match the SAME huahua / 叮咚 POP cartoon font
-exactly: thick strokes, BRIGHT YELLOW fill (#fff06a), RED-ORANGE outline (#a83a16),
-DARK BROWN outermost outline, soft drop shadow, slightly bouncy baseline,
-each character lightly rotated, COMPLETE and CLEARLY readable strokes.
+Title text logo asset on solid chroma-green background (#00ff66), horizontal layout,
+16:9 canvas.
+
+Create a standalone polished Chinese title logo in cute casual mobile game style:
+thick strokes, bright yellow fill, red-orange outline, dark-brown outer outline,
+soft shadow, slightly bouncy baseline, readable at mobile scale.
 
 Output ONLY the title text:
 
@@ -12,7 +13,7 @@ Output ONLY the title text:
 
 STRICT constraints:
 
-- TRANSPARENT background, NO panel / NO frame / NO ribbon / NO scroll behind the text.
+- Chroma-green background only, NO panel / NO frame / NO ribbon / NO scroll behind the text.
 - NO English letters, NO numbers, NO punctuation, NO speech bubble.
 - NO machine / NO buttons / NO icons / NO decoration objects.
 - Text must be EXACTLY 金币扭蛋 in this order, four characters total, each character

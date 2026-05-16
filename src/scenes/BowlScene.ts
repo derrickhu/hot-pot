@@ -48,7 +48,7 @@ import {
   SETTINGS_BTN_TEXTURE_KEY,
 } from '@/utils/settingsButtonSprite';
 import { shareGame, shareGameForReward } from '@/utils/wechatShare';
-import { showGameplayRewardedAd } from '@/utils/rewardedAd';
+import { showGameplayRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { FruitItem } from '@/gameobjects/FruitItem';
 import { BowlFailSettlementOverlay } from '@/gameobjects/BowlFailSettlementOverlay';
 import { BowlBadgeUnlockOverlay } from '@/gameobjects/BowlBadgeUnlockOverlay';
@@ -551,6 +551,7 @@ export class BowlScene implements Scene {
   }
 
   onEnter(): void {
+    warmupRewardedAd();
     if (!this.loaded) {
       this.ensureTexturesPreloaded()
         .then(() => {

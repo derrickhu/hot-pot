@@ -1,24 +1,19 @@
-Empty "reward preview" panel asset, transparent background, 16:9 canvas.
-Reference image is the full UI mockup — match the SAME white rounded card style, soft
-mint inner double stroke, drop shadow used by the bottom "可能获得" panel of that mockup.
+Empty reward-preview panel asset on solid chroma-green background (#00ff66), 16:9 canvas.
 
-Output ONLY the empty panel — NO text, NO icons, NO content inside:
+Output ONLY one horizontal panel with 7 empty slots.
 
-- A horizontal rounded white card (~94% of canvas width, ~80% of canvas height), centred.
-- Outer dark-mint outline (~3px), then a thin inner light-mint double stroke for the
-  signature double-rounded look.
-- Soft drop shadow.
-- Inside the panel: 6 evenly spaced empty SLOT cards in a single row.
-  Each slot is a small rounded white card with light-blue / pale-green inner fill,
-  thick rounded outline. Slots are EMPTY — no fruits, no tools, no stars, no Chinese,
-  no English, no numbers, no symbols inside the slots.
-- Equal spacing left/right and top/bottom around the slots.
+Design:
+- large horizontal rounded white card, centered, about 94% canvas width and 78% canvas height
+- mint-green outer border, soft inner mint double stroke
+- subtle dimensional bevel and soft drop shadow
+- inside: exactly 7 evenly spaced empty rounded-square slot cards in one row
+- each slot has pale cream / very light mint fill, small bevel, thin mint outline
+- all slots are empty placeholders
+- cute polished casual mobile game UI, clean and readable at small size
 
 STRICT constraints:
-
-- TRANSPARENT background OUTSIDE the panel.
-- NO Chinese characters anywhere (do NOT draw 可能获得 here).
-- NO English letters, NO numbers, NO QR code, NO watermark.
-- NO reward icons, NO rarity stars inside the slots.
-- NO machine / NO buttons / NO other UI.
-- Single panel, ready for runtime to overlay text label and per-slot icons.
+- NO text anywhere. Do NOT draw 可能获得.
+- NO icons, NO stars, NO fruits, NO tools, NO coins, NO numbers inside slots.
+- NO machine, NO button, NO background scene, NO phone frame.
+- Chroma-green background only outside the panel for easy removal.
+- Exactly 7 slots, no more, no fewer.

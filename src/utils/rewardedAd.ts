@@ -16,13 +16,12 @@ export interface RewardedAdContext {
 
 type RewardedVideoAd = ReturnType<NonNullable<typeof wx.createRewardedVideoAd>>;
 
-let gameplayRewardedAd: RewardedVideoAd | null = null;
-let fruitSliceRewardedAd: RewardedVideoAd | null = null;
+const rewardedAds = new Map<string, RewardedVideoAd>();
+const rewardedAdListenersReady = new Set<string>();
 let pendingResolve: ((result: RewardedAdResult) => void) | null = null;
 let pendingContext: RewardedAdContext | null = null;
-let rewardedAdListenersReady = false;
-let fruitSliceRewardedAdListenersReady = false;
-let pendingAdUnitId = GAMEPLAY_REWARDED_AD_UNIT_ID;
+let pendingAdUnitId: string | null = null;
+let pendingShowResolved = false;
 /**
  * 单次播放周期内是否已上报过 ad_error。
  *
@@ -42,9 +41,13 @@ const AD_TYPE = 'reward';
 const SDK_ERR_UNAVAILABLE = -100;
 const SDK_ERR_BUSY = -101;
 
-function buildAdParams(context: RewardedAdContext | null, extras?: Record<string, string | number | boolean>): Record<string, string | number | boolean | null> {
+function buildAdParams(
+  adUnitId: string,
+  context: RewardedAdContext | null,
+  extras?: Record<string, string | number | boolean>,
+): Record<string, string | number | boolean | null> {
   const base: Record<string, string | number | boolean | null> = {
-    ad_unit_id: pendingAdUnitId,
+    ad_unit_id: adUnitId,
     ad_type: AD_TYPE,
     scene: context?.scene || 'unknown',
   };
@@ -60,9 +63,14 @@ function buildAdParams(context: RewardedAdContext | null, extras?: Record<string
   return base;
 }
 
-function trackAd(eventName: string, context: RewardedAdContext | null, extras?: Record<string, string | number | boolean>): void {
+function trackAd(
+  eventName: string,
+  adUnitId: string,
+  context: RewardedAdContext | null,
+  extras?: Record<string, string | number | boolean>,
+): void {
   try {
-    analytics.track(eventName, buildAdParams(context, extras));
+    analytics.track(eventName, buildAdParams(adUnitId, context, extras));
   } catch {
     // 埋点失败不能影响业务
   }
@@ -77,16 +85,20 @@ function trackAd(eventName: string, context: RewardedAdContext | null, extras?: 
  */
 function reportAdErrorOnce(
   context: RewardedAdContext | null,
+  adUnitId: string,
   errCode: number,
   errMsg: string,
 ): void {
   if (errorReportedThisCycle) return;
   if (!context) return;
   errorReportedThisCycle = true;
-  trackAd(EVENT_NAMES.AD_ERROR, context, { err_code: errCode, err_msg: errMsg || 'unknown' });
+  trackAd(EVENT_NAMES.AD_ERROR, adUnitId, context, { err_code: errCode, err_msg: errMsg || 'unknown' });
 }
 
-function finishPendingRewardedAd(result: RewardedAdResult): void {
+function finishPendingRewardedAd(adUnitId: string, result: RewardedAdResult): void {
+  if (pendingAdUnitId !== adUnitId) {
+    return;
+  }
   const resolve = pendingResolve;
   const context = pendingContext;
   if (!resolve) {
@@ -94,67 +106,67 @@ function finishPendingRewardedAd(result: RewardedAdResult): void {
   }
   pendingResolve = null;
   pendingContext = null;
-  trackAd(EVENT_NAMES.AD_CLOSE, context, {
+  pendingAdUnitId = null;
+  pendingShowResolved = false;
+  trackAd(EVENT_NAMES.AD_CLOSE, adUnitId, context, {
     completed: result === 'completed',
     result,
   });
   resolve(result);
+  rewardedAds.get(adUnitId)?.load().catch((err: { errMsg?: string; errCode?: number } | Error | undefined) => {
+    console.warn('Rewarded video ad reload failed', adUnitId, err);
+  });
 }
 
-function bindGameplayRewardedAdListeners(ad: RewardedVideoAd): void {
-  if (pendingAdUnitId === FRUIT_SLICE_REWARDED_AD_UNIT_ID) {
-    if (fruitSliceRewardedAdListenersReady) return;
-    fruitSliceRewardedAdListenersReady = true;
-  } else if (rewardedAdListenersReady) {
+function bindRewardedAdListeners(ad: RewardedVideoAd, adUnitId: string): void {
+  if (rewardedAdListenersReady.has(adUnitId)) {
     return;
-  } else {
-    rewardedAdListenersReady = true;
   }
+  rewardedAdListenersReady.add(adUnitId);
   ad.onClose((res?: { isEnded?: boolean }) => {
-    finishPendingRewardedAd(res?.isEnded === false ? 'skipped' : 'completed');
+    finishPendingRewardedAd(adUnitId, res?.isEnded === false ? 'skipped' : 'completed');
   });
   ad.onError((err: { errMsg?: string; errCode?: number }) => {
-    console.warn('Rewarded video ad error', err);
-    // wx 真实 errCode 透传；onError 与 show().catch() 谁先到谁负责，cycle 标志去重
-    reportAdErrorOnce(pendingContext, Number(err?.errCode ?? -1), String(err?.errMsg || 'unknown'));
-    finishPendingRewardedAd('error');
+    console.warn('Rewarded video ad error', adUnitId, err);
+    if (pendingAdUnitId !== adUnitId) {
+      return;
+    }
+    // wx 真实 errCode 透传；onError 与 show().catch() 谁先到谁负责，cycle 标志去重。
+    reportAdErrorOnce(pendingContext, adUnitId, Number(err?.errCode ?? -1), String(err?.errMsg || 'unknown'));
+    if (pendingShowResolved) {
+      finishPendingRewardedAd(adUnitId, 'error');
+    }
   });
-}
-
-function getGameplayRewardedAd(): RewardedVideoAd | null {
-  if (typeof wx === 'undefined' || !wx.createRewardedVideoAd) {
-    return null;
-  }
-  try {
-    gameplayRewardedAd ??= wx.createRewardedVideoAd({ adUnitId: GAMEPLAY_REWARDED_AD_UNIT_ID });
-    bindGameplayRewardedAdListeners(gameplayRewardedAd);
-    return gameplayRewardedAd;
-  } catch {
-    return null;
-  }
 }
 
 function getRewardedAdByUnitId(adUnitId: string): RewardedVideoAd | null {
-  if (adUnitId === GAMEPLAY_REWARDED_AD_UNIT_ID) {
-    return getGameplayRewardedAd();
-  }
   if (typeof wx === 'undefined' || !wx.createRewardedVideoAd) {
     return null;
   }
+  const existing = rewardedAds.get(adUnitId);
+  if (existing) {
+    bindRewardedAdListeners(existing, adUnitId);
+    return existing;
+  }
   try {
-    if (adUnitId === FRUIT_SLICE_REWARDED_AD_UNIT_ID) {
-      fruitSliceRewardedAd ??= wx.createRewardedVideoAd({ adUnitId });
-      pendingAdUnitId = adUnitId;
-      bindGameplayRewardedAdListeners(fruitSliceRewardedAd);
-      return fruitSliceRewardedAd;
-    }
     const ad = wx.createRewardedVideoAd({ adUnitId });
-    pendingAdUnitId = adUnitId;
-    bindGameplayRewardedAdListeners(ad);
+    rewardedAds.set(adUnitId, ad);
+    bindRewardedAdListeners(ad, adUnitId);
     return ad;
   } catch {
     return null;
   }
+}
+
+/** 提前创建并加载广告对象，降低玩家点击时才临场 load 的失败率。 */
+export function warmupRewardedAd(adUnitId = GAMEPLAY_REWARDED_AD_UNIT_ID): void {
+  const ad = getRewardedAdByUnitId(adUnitId);
+  if (!ad) {
+    return;
+  }
+  ad.load().catch((err: { errMsg?: string; errCode?: number } | Error | undefined) => {
+    console.warn('Rewarded video ad warmup failed', adUnitId, err);
+  });
 }
 
 /**
@@ -170,21 +182,23 @@ export async function showRewardedAd(
   context: RewardedAdContext,
   adUnitId = GAMEPLAY_REWARDED_AD_UNIT_ID,
 ): Promise<RewardedAdResult> {
-  pendingAdUnitId = adUnitId;
-  trackAd(EVENT_NAMES.AD_REQUEST, context);
+  trackAd(EVENT_NAMES.AD_REQUEST, adUnitId, context);
+
+  if (pendingResolve) {
+    trackAd(EVENT_NAMES.AD_ERROR, adUnitId, context, { err_code: SDK_ERR_BUSY, err_msg: 'busy' });
+    return 'error';
+  }
 
   const ad = getRewardedAdByUnitId(adUnitId);
   if (!ad) {
     // SDK 不可用走自定义码（不会被 wx 真实码覆盖）
-    trackAd(EVENT_NAMES.AD_ERROR, context, { err_code: SDK_ERR_UNAVAILABLE, err_msg: 'unavailable' });
+    trackAd(EVENT_NAMES.AD_ERROR, adUnitId, context, { err_code: SDK_ERR_UNAVAILABLE, err_msg: 'unavailable' });
     return 'unavailable';
   }
-  if (pendingResolve) {
-    trackAd(EVENT_NAMES.AD_ERROR, context, { err_code: SDK_ERR_BUSY, err_msg: 'busy' });
-    return 'error';
-  }
 
+  pendingAdUnitId = adUnitId;
   pendingContext = context;
+  pendingShowResolved = false;
   errorReportedThisCycle = false;
   return new Promise<RewardedAdResult>((resolve) => {
     pendingResolve = resolve;
@@ -192,17 +206,26 @@ export async function showRewardedAd(
     ad.show()
       .then(() => {
         // 真正展示成功才打 ad_show，避免 load 失败时虚高曝光数据
-        trackAd(EVENT_NAMES.AD_SHOW, context);
+        if (pendingAdUnitId === adUnitId) {
+          pendingShowResolved = true;
+          trackAd(EVENT_NAMES.AD_SHOW, adUnitId, context);
+        }
       })
       .catch(() => ad.load().then(() => ad.show()).then(() => {
-        trackAd(EVENT_NAMES.AD_SHOW, context);
+        if (pendingAdUnitId === adUnitId) {
+          pendingShowResolved = true;
+          trackAd(EVENT_NAMES.AD_SHOW, adUnitId, context);
+        }
       }))
       .catch((err: { errMsg?: string; errCode?: number } | Error | undefined) => {
+        if (pendingAdUnitId !== adUnitId) {
+          return;
+        }
         // 兜底：极少数情况 promise 立即 reject 但 onError 没触发（如 ad.show is undefined），
         // 此时 reportAdErrorOnce 会真的打一次；onError 已上报过则被 cycle flag 跳过。
         const e = err as { errMsg?: string; errCode?: number } | undefined;
-        reportAdErrorOnce(pendingContext, Number(e?.errCode ?? -1), String(e?.errMsg || (err as Error)?.message || 'unknown'));
-        finishPendingRewardedAd('error');
+        reportAdErrorOnce(pendingContext, adUnitId, Number(e?.errCode ?? -1), String(e?.errMsg || (err as Error)?.message || 'unknown'));
+        finishPendingRewardedAd(adUnitId, 'error');
       });
   });
 }
