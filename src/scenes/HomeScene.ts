@@ -72,6 +72,10 @@ export class HomeScene implements Scene {
   private fruitSliceEntryBg!: PIXI.Graphics;
   private fruitSliceEntryTitle!: PIXI.Text;
   private fruitSliceEntrySprite: PIXI.Sprite | null = null;
+  /** 每日限定玩法：临时程序绘制入口 */
+  private readonly dailyLimitedEntryRoot = new PIXI.Container();
+  private dailyLimitedEntryBg!: PIXI.Graphics;
+  private dailyLimitedEntryTitle!: PIXI.Text;
   /** 顶栏与主按钮之间的 Logo 区（有贴图再显示） */
   private readonly homeLogoRoot = new PIXI.Container();
   private readonly homeLogoSprite = new PIXI.Sprite();
@@ -82,6 +86,7 @@ export class HomeScene implements Scene {
   private readonly gameClubFallbackRoot = new PIXI.Container();
   private gameClubButton: ReturnType<NonNullable<typeof wx.createGameClubButton>> | null = null;
   private enteringBowl = false;
+  private enteringDailyLimited = false;
   private enteringFruitSlice = false;
 
   constructor() {
@@ -304,9 +309,12 @@ export class HomeScene implements Scene {
       fruitHalf = 52;
     }
 
-    const gap = 16;
+    const dailyHalf = 44;
+    const gap = 14;
     this.playEntryRoot.position.set(W / 2, playY);
-    const fruitY = playY + playHalf + gap + fruitHalf;
+    const dailyY = playY + playHalf + gap + dailyHalf;
+    this.dailyLimitedEntryRoot.position.set(W / 2, dailyY);
+    const fruitY = dailyY + dailyHalf + gap + fruitHalf;
     this.fruitSliceEntryRoot.position.set(W / 2, fruitY);
 
     /** 底部入口：宽屏三卡并排；窄屏扭蛋居中，排行榜 / 图鉴左右并排。 */
@@ -451,6 +459,34 @@ export class HomeScene implements Scene {
       void this.enterBowlWithLoading();
     });
     this.container.addChild(this.playEntryRoot);
+
+    this.dailyLimitedEntryRoot.position.set(W / 2, playY + 108);
+    this.dailyLimitedEntryRoot.eventMode = 'static';
+    this.dailyLimitedEntryRoot.cursor = 'pointer';
+    this.dailyLimitedEntryBg = new PIXI.Graphics();
+    this.dailyLimitedEntryBg.beginFill(0x55c8ff);
+    this.dailyLimitedEntryBg.lineStyle(4, 0x1f7fab, 1);
+    this.dailyLimitedEntryBg.drawRoundedRect(-168, -44, 336, 88, 28);
+    this.dailyLimitedEntryBg.endFill();
+    this.dailyLimitedEntryRoot.addChild(this.dailyLimitedEntryBg);
+    this.dailyLimitedEntryTitle = new PIXI.Text('每日限定', {
+      fontSize: 36,
+      fill: 0xfff4c2,
+      fontWeight: '900',
+      stroke: 0x235a7a,
+      strokeThickness: 6,
+      dropShadow: false,
+      lineJoin: 'round',
+    });
+    this.dailyLimitedEntryTitle.anchor.set(0.5);
+    this.dailyLimitedEntryTitle.resolution = 2;
+    this.dailyLimitedEntryRoot.addChild(this.dailyLimitedEntryTitle);
+    this.dailyLimitedEntryRoot.hitArea = new PIXI.Rectangle(-176, -52, 352, 104);
+    this.dailyLimitedEntryRoot.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      void this.enterDailyLimitedWithLoading();
+    });
+    this.container.addChild(this.dailyLimitedEntryRoot);
 
     this.fruitSliceEntryRoot.position.set(W / 2, playY + 120);
     this.fruitSliceEntryRoot.eventMode = 'static';
@@ -624,6 +660,34 @@ export class HomeScene implements Scene {
       }
       loadingOverlay.destroy();
       this.enteringFruitSlice = false;
+    }
+  }
+
+  private async enterDailyLimitedWithLoading(): Promise<void> {
+    if (this.enteringDailyLimited) {
+      return;
+    }
+    this.enteringDailyLimited = true;
+    this.hideGameClubNativeButton();
+    const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
+    Game.stage.addChild(loadingOverlay.container);
+    try {
+      loadingOverlay.setProgress(0.16);
+      await loadingOverlay.loadAssets();
+      loadingOverlay.setProgress(0.46);
+      await SceneManager.prepare('dailyLimited');
+      loadingOverlay.setProgress(1);
+      SceneManager.switchTo('dailyLimited');
+    } catch (error) {
+      console.error('[HomeScene] enter daily limited failed', error);
+      const api = typeof wx !== 'undefined' ? wx : null;
+      api?.showToast?.({ title: '加载失败，请重试', icon: 'none' });
+    } finally {
+      if (loadingOverlay.container.parent) {
+        loadingOverlay.container.parent.removeChild(loadingOverlay.container);
+      }
+      loadingOverlay.destroy();
+      this.enteringDailyLimited = false;
     }
   }
 

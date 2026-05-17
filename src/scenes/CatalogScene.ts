@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
+import { PersistService } from '@/core/PersistService';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { getCatalogSlots, type CatalogSlot } from '@/config/fruitCatalog';
@@ -16,11 +17,24 @@ type PixiEventsHost = {
   mapPositionToPoint?: (point: PIXI.IPointData, x: number, y: number) => void;
 };
 
-type CatalogTab = 'fruit' | 'badge';
+type CatalogTab = 'fruit' | 'badge' | 'drink';
 
 interface BadgeCatalogSlot {
   badge: BowlBadgeDef;
   textureKey: string;
+  unlocked: boolean;
+}
+
+interface DailyLimitedRewardState {
+  claimedRecipeDateByTheme?: Record<string, string>;
+}
+
+interface DrinkRecipeCatalogSlot {
+  themeId: string;
+  title: string;
+  subtitle: string;
+  textureKey: string;
+  asset: string;
   unlocked: boolean;
 }
 
@@ -37,6 +51,9 @@ const CHROME_TEX_BASEBOARD = 'subpackages/bowl_game/assets/images/catalog/catalo
 const CHROME_TEX_TAB_ACTIVE = 'subpackages/bowl_game/assets/images/catalog/catalog_tab_active.png';
 const CHROME_TEX_TAB_INACTIVE = 'subpackages/bowl_game/assets/images/catalog/catalog_tab_inactive.png';
 const CHROME_TEX_ITEM_CARD = 'subpackages/bowl_game/assets/images/catalog/catalog_item_card.png';
+const DAILY_LIMITED_REWARD_STATE_KEY = 'hot_pot_daily_limited_reward_v1';
+const DAILY_RECIPE_CARD_TEXTURE_KEY = 'catalog_daily_recipe_pineapple_sprite_slush';
+const DAILY_RECIPE_CARD_PATH = 'subpackages/bowl_game/assets/images/daily_limited/pineapple_sprite_slush_recipe_card_v2.png';
 
 /** 底板 PNG 内已经画好的"图鉴"标题 / 返回按钮在缩到 logicWidth 后的近似坐标 */
 const PAINTED_BACK_X = 80;
@@ -47,16 +64,16 @@ const PAINTED_BACK_HIT_R = 64;
 const TAB_ROW_OFFSET_Y = 220;
 const GRID_TOP_OFFSET_Y = 305;
 
-const TAB_DISPLAY_W = 220;
+const TAB_DISPLAY_W = 172;
 const TAB_DISPLAY_H = 80;
-const TAB_GAP = 28;
+const TAB_GAP = 8;
 
 const GRID_PAD_X = 22;
 const GRID_GAP = 14;
 const GRID_COLS = 3;
 const ROW_GAP_Y = 22;
 
-/** 图鉴：水果图鉴 / 徽章图鉴 */
+/** 图鉴：水果图鉴 / 徽章图鉴 / 冰饮制作 */
 export class CatalogScene implements Scene {
   readonly name = 'catalog';
   readonly container = new PIXI.Container();
@@ -105,23 +122,25 @@ export class CatalogScene implements Scene {
     this.tabButtons = {
       fruit: this.createTabButton('水果图鉴', 'fruit'),
       badge: this.createTabButton('徽章图鉴', 'badge'),
+      drink: this.createTabButton('冰饮制作', 'drink'),
     };
-    this.tabsRoot.addChild(this.tabButtons.fruit.container, this.tabButtons.badge.container);
+    this.tabsRoot.addChild(this.tabButtons.fruit.container, this.tabButtons.badge.container, this.tabButtons.drink.container);
     this.chromeRoot.addChild(this.tabsRoot);
     this.container.addChild(this.chromeRoot);
 
     this.gridRoot.position.set(0, this.gridTop);
-    this.gridRoot.eventMode = 'none';
+    this.gridRoot.eventMode = 'static';
     this.gridRoot.mask = this.gridMask;
     this.container.addChild(this.gridMask);
     this.buildScrollArea();
-    this.container.addChild(this.gridRoot);
     this.container.addChild(this.scrollHit);
+    this.container.addChild(this.gridRoot);
 
     void this.loadChromeTextures();
   }
 
   onEnter(): void {
+    this.loadedTabs.delete('drink');
     void this.preloadAndBuild(this.activeTab);
     // 进入图鉴时尝试展示插屏广告；微信平台自带频次限制，业务侧无需节流
     void showInterstitialAd({ scene: 'catalog_open' });
@@ -164,10 +183,12 @@ export class CatalogScene implements Scene {
     if (activeTex) {
       this.fitTabSprite(this.tabButtons.fruit.activeSprite, activeTex);
       this.fitTabSprite(this.tabButtons.badge.activeSprite, activeTex);
+      this.fitTabSprite(this.tabButtons.drink.activeSprite, activeTex);
     }
     if (inactiveTex) {
       this.fitTabSprite(this.tabButtons.fruit.inactiveSprite, inactiveTex);
       this.fitTabSprite(this.tabButtons.badge.inactiveSprite, inactiveTex);
+      this.fitTabSprite(this.tabButtons.drink.inactiveSprite, inactiveTex);
     }
 
     this.layoutTabs();
@@ -188,9 +209,10 @@ export class CatalogScene implements Scene {
   private layoutTabs(): void {
     const W = Game.logicWidth;
     const tabY = this.baseboardY + TAB_ROW_OFFSET_Y;
-    const halfSpan = TAB_DISPLAY_W / 2 + TAB_GAP / 2;
-    this.tabButtons.fruit.container.position.set(W / 2 - halfSpan, tabY);
-    this.tabButtons.badge.container.position.set(W / 2 + halfSpan, tabY);
+    const step = TAB_DISPLAY_W + TAB_GAP;
+    this.tabButtons.fruit.container.position.set(W / 2 - step, tabY);
+    this.tabButtons.badge.container.position.set(W / 2, tabY);
+    this.tabButtons.drink.container.position.set(W / 2 + step, tabY);
   }
 
   private bindBackButton(): void {
@@ -225,7 +247,7 @@ export class CatalogScene implements Scene {
     activeSprite.anchor.set(0.5);
 
     const text = new PIXI.Text(label, {
-      fontSize: 26,
+      fontSize: 22,
       fill: 0xffffff,
       fontWeight: '800',
       stroke: 0x6a3a18,
@@ -264,6 +286,7 @@ export class CatalogScene implements Scene {
   private refreshTabs(): void {
     this.tabButtons.fruit.refresh();
     this.tabButtons.badge.refresh();
+    this.tabButtons.drink.refresh();
   }
 
   private getPixiEvents(): PixiEventsHost | null {
@@ -369,10 +392,15 @@ export class CatalogScene implements Scene {
               slot.assetCandidates.map((asset, index) => TextureCache.load(this.catalogTextureKey(slot, index), asset)),
             );
           await Promise.all(loads);
-        } else {
+        } else if (tab === 'badge') {
           await Promise.all(
             BOWL_BADGES.map((badge) => TextureCache.load(this.badgeTextureKey(badge), badge.asset)),
           );
+        } else {
+          const loads = this.getDrinkRecipeSlots()
+            .filter((slot) => slot.unlocked)
+            .map((slot) => TextureCache.load(slot.textureKey, slot.asset));
+          await Promise.all(loads);
         }
         this.loadedTabs.add(tab);
       }
@@ -438,8 +466,10 @@ export class CatalogScene implements Scene {
   private buildActiveGrid(): void {
     if (this.activeTab === 'fruit') {
       this.buildFruitGrid(getCatalogSlots());
-    } else {
+    } else if (this.activeTab === 'badge') {
       this.buildBadgeGrid(this.getBadgeSlots());
+    } else {
+      this.buildDrinkRecipeGrid(this.getDrinkRecipeSlots().filter((slot) => slot.unlocked));
     }
   }
 
@@ -615,6 +645,149 @@ export class CatalogScene implements Scene {
 
       this.gridRoot.addChild(cell);
     });
+  }
+
+  private getDrinkRecipeSlots(): DrinkRecipeCatalogSlot[] {
+    const state = PersistService.readJSON<DailyLimitedRewardState>(DAILY_LIMITED_REWARD_STATE_KEY);
+    const claimed = state?.claimedRecipeDateByTheme ?? {};
+    return [
+      {
+        themeId: 'pineapple_ice',
+        title: '菠萝冰',
+        subtitle: '菠萝雪碧冰沙',
+        textureKey: DAILY_RECIPE_CARD_TEXTURE_KEY,
+        asset: DAILY_RECIPE_CARD_PATH,
+        unlocked: !!claimed.pineapple_ice,
+      },
+    ];
+  }
+
+  private buildDrinkRecipeGrid(slots: DrinkRecipeCatalogSlot[]): void {
+    this.gridRoot.removeChildren();
+
+    if (slots.length === 0) {
+      this.maxScrollY = 0;
+      this.setScrollY(0);
+      const empty = new PIXI.Text('还没有解锁冰饮制作方法\n通关每日限定关卡后会收入这里', {
+        fontSize: 28,
+        fill: 0x7a4a22,
+        fontWeight: '800',
+        align: 'center',
+        lineHeight: 42,
+      });
+      empty.anchor.set(0.5, 0);
+      empty.resolution = 2;
+      empty.position.set(Game.logicWidth / 2, 80);
+      this.gridRoot.addChild(empty);
+      return;
+    }
+
+    const W = Game.logicWidth;
+    const cellW = (W - GRID_PAD_X * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
+    // 冰饮制作沿用徽章图鉴的无框陈列：上方图标，下方两行文字。
+    const iconH = cellW;
+    const labelLineH = 26;
+    const labelBlockH = labelLineH * 2 + 12;
+    const rowH = iconH + labelBlockH + ROW_GAP_Y;
+    const rowCount = Math.ceil(slots.length / GRID_COLS);
+    this.maxScrollY = Math.max(
+      0,
+      rowCount * rowH + ROW_GAP_Y - (Game.logicHeight - this.gridTop - 24),
+    );
+    this.setScrollY(Math.min(this.scrollY, this.maxScrollY));
+
+    slots.forEach((slot, i) => {
+      const col = i % GRID_COLS;
+      const row = Math.floor(i / GRID_COLS);
+      const x = GRID_PAD_X + col * (cellW + GRID_GAP);
+      const y = ROW_GAP_Y + row * rowH;
+      const cell = new PIXI.Container();
+      cell.position.set(x + cellW / 2, y);
+      cell.eventMode = 'static';
+      cell.cursor = 'pointer';
+      cell.hitArea = new PIXI.Rectangle(-cellW / 2, 0, cellW, iconH + labelBlockH);
+      cell.on('pointertap', () => {
+        AudioManager.playButtonSound();
+        this.showRecipePreview();
+      });
+
+      const recipeTex = TextureCache.get(slot.textureKey);
+      if (recipeTex) {
+        const sp = new PIXI.Sprite(recipeTex);
+        sp.anchor.set(0.5);
+        sp.scale.set(Math.min((cellW * 0.9) / recipeTex.width, (iconH * 0.9) / recipeTex.height));
+        sp.position.set(0, iconH / 2);
+        cell.addChild(sp);
+      }
+
+      const title = this.createCellLabel(slot.title, true, 18);
+      title.position.set(0, iconH + 6);
+      cell.addChild(title);
+      const subtitle = new PIXI.Text(slot.subtitle, {
+        fontSize: 16,
+        fill: 0x8a5b28,
+        fontWeight: '700',
+      });
+      subtitle.anchor.set(0.5, 0);
+      subtitle.resolution = 2;
+      subtitle.position.set(0, iconH + 6 + labelLineH);
+      cell.addChild(subtitle);
+
+      this.gridRoot.addChild(cell);
+    });
+  }
+
+  private showRecipePreview(): void {
+    const tex = TextureCache.get(DAILY_RECIPE_CARD_TEXTURE_KEY);
+    if (!tex) {
+      return;
+    }
+    const W = Game.logicWidth;
+    const H = Game.logicHeight;
+    const preview = new PIXI.Container();
+    preview.eventMode = 'static';
+    preview.cursor = 'pointer';
+    const dim = new PIXI.Graphics();
+    dim.beginFill(0x080808, 0.74);
+    dim.drawRect(0, 0, W, H);
+    dim.endFill();
+    preview.addChild(dim);
+
+    const sp = new PIXI.Sprite(tex);
+    sp.anchor.set(0.5);
+    const sc = Math.min((W * 0.84) / tex.width, (H * 0.72) / tex.height);
+    sp.scale.set(sc);
+    sp.position.set(W / 2, H / 2);
+    preview.addChild(sp);
+
+    const note = new PIXI.Text('已收入图鉴随时查看', {
+      fontSize: 24,
+      fill: 0xfff4d6,
+      fontWeight: '900',
+      stroke: 0x2d1a12,
+      strokeThickness: 4,
+    });
+    note.anchor.set(0.5);
+    note.resolution = 2;
+    note.position.set(W / 2, Math.min(H * 0.86, H / 2 + (tex.height * sc) / 2 + 34));
+    preview.addChild(note);
+
+    const close = new PIXI.Text('点击关闭', {
+      fontSize: 24,
+      fill: 0xffffff,
+      fontWeight: '800',
+      stroke: 0x2d1a12,
+      strokeThickness: 4,
+    });
+    close.anchor.set(0.5);
+    close.resolution = 2;
+    close.position.set(W / 2, H * 0.92);
+    preview.addChild(close);
+    preview.on('pointertap', () => {
+      this.container.removeChild(preview);
+      preview.destroy({ children: true });
+    });
+    this.container.addChild(preview);
   }
 
   private createCellLabel(text: string, unlocked: boolean, fontSize = 22): PIXI.Text {

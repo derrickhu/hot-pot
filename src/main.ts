@@ -9,6 +9,7 @@ import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { CloudSyncManager } from '@/managers/CloudSyncManager';
 import { BowlScene } from '@/scenes/BowlScene';
 import { CatalogScene } from '@/scenes/CatalogScene';
+import { DailyLimitedScene } from '@/scenes/DailyLimitedScene';
 import { FruitSliceEndlessScene } from '@/scenes/FruitSliceEndlessScene';
 import { GachaScene } from '@/scenes/GachaScene';
 import { HomeScene } from '@/scenes/HomeScene';
@@ -60,12 +61,14 @@ async function main(): Promise<void> {
 
     const homeScene = new HomeScene();
     const bowlScene = new BowlScene();
+    const dailyLimitedScene = new DailyLimitedScene();
     const fruitSliceScene = new FruitSliceEndlessScene();
     const gachaScene = new GachaScene();
     const catalogScene = new CatalogScene();
     const leaderboardScene = new LeaderboardScene();
     SceneManager.register(homeScene);
     SceneManager.register(bowlScene);
+    SceneManager.register(dailyLimitedScene);
     SceneManager.register(fruitSliceScene);
     SceneManager.register(gachaScene);
     SceneManager.register(catalogScene);
