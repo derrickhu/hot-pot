@@ -1,0 +1,28 @@
+Generate one square 3x3 equal grid image for mobile mini-game fruit assets. Strictly 3 columns and 3 rows, nine equal cells, clear light divider lines, pale warm cream background. One centered fruit subject in each cell, generous padding, no subject crossing cell boundaries.
+
+Art style: 2D hand-drawn cartoon food icon, same style as casual fruit hot-pot / fruit slicing mini-game assets, transparent-background friendly, top-down slightly angled 3/4 view, compact rounded shapes, bold dark brown outline, smaller inner color outline when useful, saturated appetizing colors, soft cel shading, small glossy highlights, no realistic photo texture, no hard 3D render.
+
+Important asset constraints:
+- Each row is exactly one fruit species.
+- Column 1 is a whole fruit.
+- Columns 2 and 3 are cut surfaces, slices, wedges, cubes, or opened pieces chosen to clearly show that fruit's most recognizable features.
+- Cut pieces should be bite-sized game ingredients, not huge plated halves unless the fruit needs a half-open form to show seeds.
+- Use no plates, bowls, forks, knives, hands, table, leaves as decoration except natural fruit stems/leaves.
+- NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no UI.
+
+## Batch C: wax apple / emblic / guava
+
+Row 1 WAX APPLE:
+1. Whole wax apple, bell-shaped glossy pink-red fruit, wider bottom, small green stem top, crisp watery look.
+2. Wax apple wedge, thin pink-red skin, white translucent watery flesh, hollow seed cavity hint.
+3. Small wax apple chunks, white translucent flesh with red skin edges, different angle.
+
+Row 2 EMBLIC:
+1. Whole emblic / Indian gooseberry, small round yellow-green fruit with vertical rib grooves and glossy skin.
+2. Cut emblic half, pale green-yellow flesh, radial star-like seed core visible.
+3. Emblic wedge segments, ribbed yellow-green skin edge, tart juicy flesh, different angle.
+
+Row 3 GUAVA:
+1. Whole guava, light green oval fruit, slightly bumpy skin, small brown stem.
+2. Guava half, green rind, pink flesh center with many tiny cream seeds.
+3. Guava wedge slice, pink seeded flesh and green rind edge, different angle.

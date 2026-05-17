@@ -1,0 +1,51 @@
+Generate one clean PNG sprite sheet containing exactly FOUR bottom navigation graphic buttons for a cute summer fruit WeChat mini game.
+
+Use the provided reference image as the style target, especially the leaderboard button style: a standalone hand-painted icon above a Chinese label, with no square card background behind it.
+
+Output layout:
+- Exactly 4 columns in one horizontal row.
+- Each column is one complete bottom navigation button: icon above, Chinese label below.
+- Put all four buttons on one perfectly flat, solid, uniform bright magenta background: RGB #ff00ff.
+- Do NOT generate transparency.
+- Do NOT generate checkerboard transparency preview.
+- Leave clear magenta spacing between columns for splitting later.
+
+Strict visual style:
+- Cute polished 2D hand-painted cartoon mobile game UI.
+- Match the existing fruit game style: thick dark warm outline, soft highlights, rounded shapes, juicy colors.
+- Each button is a free-standing graphic button, NOT a framed card.
+- NO square tile, NO rounded rectangle card, NO white box, NO button backplate, NO cream panel behind individual icons.
+- The icon itself can have dimensional shading and a small soft internal shadow, but there must be no separate outer card shape.
+- The Chinese label sits directly under the icon, like the reference leaderboard button.
+- Label style: thick rounded Chinese UI font, dark brown / dark green fill, subtle cream outline, very readable at small mobile size.
+
+Button 1, column 1:
+- Icon: leaderboard / ranking icon similar to the reference: three glossy green vertical bars of different heights with a small golden trophy on top/right.
+- Label text exactly three Chinese characters: 排行榜
+
+Button 2, column 2:
+- Icon: cute gacha / capsule draw icon, using a colorful capsule ball, small gold coin, and tiny sparkle. It should clearly mean lucky capsule draw / gacha.
+- Label text exactly two Chinese characters: 扭蛋
+- Optional tiny badge above the icon with exactly four Chinese characters: 金币抽奖
+
+Button 3, column 3:
+- Icon: fruit collection book / fruit atlas, a small cream notebook or booklet with a strawberry on the cover, slightly tilted, no square background card.
+- Label text exactly two Chinese characters: 图鉴
+
+Button 4, column 4:
+- Icon: settings for music and sound only, NOT a gear. Use a cute music note plus a small speaker / volume wave, or two mini toggle sliders labeled by pictograms only.
+- It should communicate "music and sound effects" rather than general settings.
+- Do NOT include vibration, phone, gear, wrench, or tool imagery.
+- Label text exactly two Chinese characters: 设置
+
+Strict text rules:
+- Generate ONLY these Chinese strings: 排行榜, 扭蛋, 图鉴, 设置, 金币抽奖.
+- If the tiny badge is too hard to render cleanly, omit it entirely rather than making fake text.
+- Chinese characters must be complete, correct, clear, and readable.
+- NO English letters, NO random numbers, NO watermark, NO logo, NO extra Chinese words.
+
+Clean cutout rules:
+- Background must be flat RGB #ff00ff all the way to the image edges.
+- Do not use magenta inside the icons or text.
+- No glow or shadow outside the icon/label that blends into the magenta background.
+- Keep crisp edges so the magenta background can be removed cleanly.

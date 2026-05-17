@@ -10,6 +10,7 @@ const BADGE_UNLOCK_SFX_SRC = 'assets/audio/badge_unlock.mp3';
 const GACHA_PULL_SFX_SRC = 'assets/audio/gacha_pull.mp3';
 const GACHA_CAPSULE_POP_SFX_SRC = 'assets/audio/gacha_capsule_pop.mp3';
 const GACHA_REWARD_REVEAL_SFX_SRC = 'assets/audio/gacha_reward_reveal.mp3';
+const BUFFER_MATCH_SFX_SRC = GACHA_CAPSULE_POP_SFX_SRC;
 /**
  * 暂存盘全满时的紧迫警告音；建议 0.4–0.6s 双音节"叮叮 / 铛铛"短促 stinger，
  * mono / 干声 / 无尾混响。文件不存在时 onError 静默兜底，不影响玩法。
@@ -136,6 +137,10 @@ class AudioManagerClass {
 
   playBufferPanicSound(): void {
     this.playSoundEffect(BUFFER_PANIC_SFX_SRC, 0.8);
+  }
+
+  playBufferMatchSound(): void {
+    this.playSoundEffect(BUFFER_MATCH_SFX_SRC, 0.55);
   }
 
   playBackgroundMusic(): void {

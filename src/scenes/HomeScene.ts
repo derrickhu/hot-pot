@@ -3,7 +3,9 @@ import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
+import { getDailyLimitedLevelForDate } from '@/config/dailyLimitedLevels';
 import { getBowlLevelIndex } from '@/game/BowlProgress';
+import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH } from '@/gameobjects/CoinBar';
 import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
 import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
@@ -13,15 +15,17 @@ import { warmupFriendRankContext } from '@/utils/friendRanking';
 import { TextureCache } from '@/utils/TextureCache';
 
 /** 首页图鉴入口：独立图标，不带按钮底框 */
-const HOME_CATALOG_ICON_TEXTURE = 'assets/images/home_catalog_icon.png';
+const HOME_CATALOG_ICON_TEXTURE = 'assets/images/home_footer_catalog_btn_v2.png';
 /** 首页排行榜入口：与图鉴同风格的独立图标 */
-const HOME_LEADERBOARD_ICON_TEXTURE = 'assets/images/home_leaderboard_icon.png';
+const HOME_LEADERBOARD_ICON_TEXTURE = 'assets/images/home_footer_rank_btn_v2.png';
 /** 首页扭蛋入口：与图鉴同风格的独立图标 */
-const HOME_GACHA_ICON_TEXTURE = 'assets/images/home_gacha_icon.png';
-/** 主按钮：绿色无字药丸 + 边饰（关卡标题由程序叠字） */
-const HOME_PLAY_BTN_TEXTURE = 'assets/images/home_play_btn.png';
-/** 果切挑战：与关卡按钮同构药丸、暖色；文字与图标已烘焙在贴图内 */
-const HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE = 'assets/images/home_fruit_slice_challenge_btn.png';
+const HOME_GACHA_ICON_TEXTURE = 'assets/images/home_footer_gacha_btn_v2.png';
+/** 首页设置入口：音乐 / 音效图形按钮 */
+const HOME_SETTINGS_ICON_TEXTURE = 'assets/images/home_footer_settings_audio_btn_v2.png';
+/** 首页三玩法入口：按钮、图标、标题、副标题均已烘焙在贴图内 */
+const HOME_PLAY_BTN_TEXTURE = 'assets/images/home_mode_btn_level_bowl_v2.png';
+const HOME_DAILY_LIMITED_BTN_TEXTURE = 'assets/images/home_mode_btn_daily_iced_drink_v2.png';
+const HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE = 'assets/images/home_mode_btn_fruit_slice_v2.png';
 /** 游戏字标「别捞水果」 */
 const HOME_LOGO_TITLE_TEXTURE = 'assets/images/game_logo_title.png';
 /** 游戏圈入口：靠底但仍需足够对比与点击区域（与微信原生按钮同尺寸基准） */
@@ -29,28 +33,28 @@ const GAME_CLUB_LOGIC_RECT = { width: 140, height: 50 } as const;
 
 /** 关卡药丸贴图目标逻辑宽度（与历史实现一致） */
 function homePlayEntryTargetWidth(): number {
-  return Math.min(480, Game.logicWidth * 0.62);
+  return homeModeEntryTargetWidth();
 }
 
-/**
- * 果切药丸是副玩法入口，需明显小于主关卡药丸（贴图缩放、布局、兜底矢量共用）。
- */
-const HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE = 0.68;
+function homeModeEntryTargetWidth(): number {
+  return Math.min(600, Game.logicWidth * 0.8);
+}
 
 function homeFruitSliceEntryTargetWidth(): number {
-  return homePlayEntryTargetWidth() * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE;
+  return homeModeEntryTargetWidth();
 }
 
 /** 底部图鉴/排行榜内置图标的较长边目标尺寸，保持醒目但弱于主按钮。 */
 function homeCatalogIconDisplayTarget(): number {
-  return Math.round(Math.min(96, Math.max(76, Game.logicWidth * 0.13)));
+  return Math.round(Math.min(86, Math.max(72, Game.logicWidth * 0.115)));
 }
 
-/** 底部图标卡片（白色圆角背板）尺寸：保持两张卡片并排居中且不与主按钮抢视觉。 */
+/** 底部图标入口尺寸：放在统一圆角底栏内，不再绘制独立卡片。 */
 const HOME_FOOTER_CARD_W = 156;
 const HOME_FOOTER_CARD_H = 168;
-/** 底部图标卡片两两之间的水平间距 */
-const HOME_FOOTER_CARD_GAP = 28;
+const HOME_FOOTER_BAR_H = 150;
+const HOME_FOOTER_NAV_CELL_W = 150;
+const HOME_FOOTER_NAV_CELL_H = 136;
 
 /** 主页：夏日底图 + 进入关卡 */
 export class HomeScene implements Scene {
@@ -61,21 +65,26 @@ export class HomeScene implements Scene {
   private readonly homeFooterSlots: PIXI.Container[] = [];
   private readonly leaderboardEntryRoot = new PIXI.Container();
   private readonly gachaEntryRoot = new PIXI.Container();
+  private readonly settingsEntryRoot = new PIXI.Container();
   private readonly homeCoinBar = new CoinBar();
   /** 进入关卡：贴图或紫底兜底 */
   private readonly playEntryRoot = new PIXI.Container();
   private playEntryBg!: PIXI.Graphics;
   private playEntryTitle!: PIXI.Text;
   private playEntrySprite: PIXI.Sprite | null = null;
+  private readonly playEntryTag = new PIXI.Container();
   /** 果切无尽：暖色药丸贴图（字与图标在贴图内；无贴图时程序叠字兜底） */
   private readonly fruitSliceEntryRoot = new PIXI.Container();
   private fruitSliceEntryBg!: PIXI.Graphics;
   private fruitSliceEntryTitle!: PIXI.Text;
   private fruitSliceEntrySprite: PIXI.Sprite | null = null;
+  private readonly fruitSliceEntryTag = new PIXI.Container();
   /** 每日限定玩法：临时程序绘制入口 */
   private readonly dailyLimitedEntryRoot = new PIXI.Container();
   private dailyLimitedEntryBg!: PIXI.Graphics;
   private dailyLimitedEntryTitle!: PIXI.Text;
+  private dailyLimitedEntrySprite: PIXI.Sprite | null = null;
+  private readonly dailyLimitedEntryTag = new PIXI.Container();
   /** 顶栏与主按钮之间的 Logo 区（有贴图再显示） */
   private readonly homeLogoRoot = new PIXI.Container();
   private readonly homeLogoSprite = new PIXI.Sprite();
@@ -83,11 +92,13 @@ export class HomeScene implements Scene {
   private homeLogoMaxHeight = 0;
   private bgFill!: PIXI.Graphics;
   private gradFill!: PIXI.Graphics;
+  private readonly footerNavBg = new PIXI.Graphics();
   private readonly gameClubFallbackRoot = new PIXI.Container();
   private gameClubButton: ReturnType<NonNullable<typeof wx.createGameClubButton>> | null = null;
   private enteringBowl = false;
   private enteringDailyLimited = false;
   private enteringFruitSlice = false;
+  private enteringGacha = false;
 
   constructor() {
     this.settingsOverlay = new SettingsPauseOverlay(Game.logicWidth, Game.logicHeight, {
@@ -96,7 +107,7 @@ export class HomeScene implements Scene {
       },
       onHome: () => {},
       onContinue: () => {},
-    });
+    }, { mode: 'home' });
     this.build();
     void this.loadHomeBackdrop(Game.logicWidth, Game.logicHeight);
     void this.loadHomeCatalogIcon();
@@ -104,7 +115,9 @@ export class HomeScene implements Scene {
 
   onEnter(): void {
     this.refreshPlayEntryTitle();
+    this.refreshModeEntryTags();
     this.homeCoinBar.refresh();
+    this.refreshModeEntryTags();
     this.layoutHomeMainColumn();
     this.bringGameClubAboveHomeUi();
     this.syncGameClubNativeButton();
@@ -134,23 +147,53 @@ export class HomeScene implements Scene {
     this.playEntryTitle.text = `第${getBowlLevelIndex() + 1}关`;
   }
 
+  private refreshModeEntryTags(): void {
+    this.updateModeEntryTag(this.playEntryTag, [
+      { text: '第', color: 0x2f681b },
+      { text: `${getBowlLevelIndex() + 1}`, color: 0xf08a18 },
+      { text: '关', color: 0x2f681b },
+    ], 0xf7fff1, 0x4c9e2d);
+    this.updateModeEntryTag(
+      this.dailyLimitedEntryTag,
+      [
+        { text: '今日饮品：', color: 0x185a86 },
+        { text: getDailyLimitedLevelForDate().drinkName, color: 0xe95b2f },
+      ],
+      0xf1fbff,
+      0x278fd0,
+    );
+    this.updateModeEntryTag(
+      this.fruitSliceEntryTag,
+      [
+        { text: '当前最高分：', color: 0x8a3d10 },
+        { text: `${getFruitSliceBestScore()}`, color: 0xe83324 },
+      ],
+      0xfff5df,
+      0xf08a1b,
+    );
+  }
+
   private async loadHomeBackdrop(width: number, height: number): Promise<void> {
     await Promise.all([
       TextureCache.load('__home_bg', 'assets/images/home_bg_summer.jpg'),
       TextureCache.load('home_play_btn', HOME_PLAY_BTN_TEXTURE),
+      TextureCache.load('home_daily_limited_btn', HOME_DAILY_LIMITED_BTN_TEXTURE),
       TextureCache.load('home_fruit_slice_challenge_btn', HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE),
       TextureCache.load('game_logo_title', HOME_LOGO_TITLE_TEXTURE),
       TextureCache.load('home_leaderboard_icon', HOME_LEADERBOARD_ICON_TEXTURE),
       TextureCache.load('home_gacha_icon', HOME_GACHA_ICON_TEXTURE),
+      TextureCache.load('home_settings_icon', HOME_SETTINGS_ICON_TEXTURE),
       TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
     ]);
     const tex = TextureCache.get('__home_bg');
     if (!tex) {
       this.applyPlayEntryArt();
+      this.applyDailyLimitedEntryArt();
       this.applyFruitSliceEntryArt();
       this.applyHomeLogoTitle();
       this.refreshGeneratedFooterIcons();
       this.homeCoinBar.refreshIcon();
+      this.refreshModeEntryTags();
       this.layoutHomeMainColumn();
       this.bringGameClubAboveHomeUi();
       return;
@@ -162,10 +205,12 @@ export class HomeScene implements Scene {
     this.container.removeChild(this.bgFill);
     this.container.removeChild(this.gradFill);
     this.applyPlayEntryArt();
+    this.applyDailyLimitedEntryArt();
     this.applyFruitSliceEntryArt();
     this.applyHomeLogoTitle();
     this.refreshGeneratedFooterIcons();
     this.homeCoinBar.refreshIcon();
+    this.refreshModeEntryTags();
     this.layoutHomeMainColumn();
     this.bringGameClubAboveHomeUi();
   }
@@ -183,10 +228,64 @@ export class HomeScene implements Scene {
     this.homeLogoRoot.visible = true;
   }
 
-  /** 主按钮：优先绿色无字贴图，失败则紫底 */
+  private updateModeEntryTag(
+    tag: PIXI.Container,
+    parts: Array<{ text: string; color: number }>,
+    fill: number,
+    stroke: number,
+  ): void {
+    tag.removeChildren();
+
+    const labelRoot = new PIXI.Container();
+    const labelTexts = parts.map((part) => {
+      const t = new PIXI.Text(part.text, {
+        fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+        fontSize: 20,
+        fill: part.color,
+        fontWeight: '900',
+        stroke: 0xffffff,
+        strokeThickness: 3,
+        lineJoin: 'round',
+      });
+      t.anchor.set(0, 0.5);
+      t.resolution = 2;
+      return t;
+    });
+
+    let totalW = 0;
+    for (const t of labelTexts) {
+      t.position.set(totalW, 0);
+      labelRoot.addChild(t);
+      totalW += t.width;
+    }
+    labelRoot.pivot.set(totalW / 2, 0);
+
+    const padX = 14;
+    const padY = 6;
+    const labelH = Math.max(...labelTexts.map((t) => t.height), 24);
+    const bgW = Math.ceil(totalW + padX * 2);
+    const bgH = Math.ceil(labelH + padY * 2);
+
+    const shadow = new PIXI.Graphics();
+    shadow.beginFill(0x1b4f55, 0.16);
+    shadow.drawRoundedRect(-bgW / 2 + 2, -bgH / 2 + 3, bgW, bgH, bgH / 2);
+    shadow.endFill();
+    tag.addChild(shadow);
+
+    const bg = new PIXI.Graphics();
+    bg.beginFill(fill, 0.96);
+    bg.lineStyle(3, stroke, 1);
+    bg.drawRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, bgH / 2);
+    bg.endFill();
+    tag.addChild(bg);
+    tag.addChild(labelRoot);
+  }
+
+  /** 主按钮：优先使用已烘焙文字贴图，失败则回到程序叠字兜底 */
   private applyPlayEntryArt(): void {
     const tex = TextureCache.get('home_play_btn');
     if (!tex) {
+      this.playEntryTitle.visible = true;
       this.playEntryTitle.style.fill = 0xfff4c2;
       this.playEntryTitle.style.stroke = 0x5a2a19;
       this.playEntryTitle.style.strokeThickness = 6;
@@ -195,10 +294,7 @@ export class HomeScene implements Scene {
       this.playEntryRoot.hitArea = new PIXI.Rectangle(-220, -52, 440, 104);
       return;
     }
-    this.playEntryTitle.style.fill = 0xfff4c2;
-    this.playEntryTitle.style.stroke = 0x1b5965;
-    this.playEntryTitle.style.strokeThickness = 6;
-    this.playEntryTitle.style.dropShadow = false;
+    this.playEntryTitle.visible = false;
     if (this.playEntryBg.parent) {
       this.playEntryRoot.removeChild(this.playEntryBg);
     }
@@ -212,19 +308,41 @@ export class HomeScene implements Scene {
     const s = targetW / tex.width;
     this.playEntrySprite.scale.set(s);
     const halfH = (tex.height * s) / 2;
-    /**
-     * 贴图 945×390 中，药丸边框水平中心在源图 ~466.5（几何中心 472.5，左偏 ~6 源像素），
-     * 垂直中心在源图 ~208（几何中心 195，下偏 ~13 源像素）。同时左上角柠檬装饰视觉重量
-     * 明显大于右下角小草莓，文字置于贴图几何中心会显得偏左偏上。下面先按几何把文字对齐到
-     * 药丸真实中心，再叠加视觉补偿：X 方向往右多推一点抵消左上柠檬装饰的视觉重量，
-     * Y 方向往上稍稍偏一点匹配药丸顶部高光，让"第N关"看起来稳稳落在按钮正中央。
-     */
-    const titleOffsetX = Math.round((-6 + 22) * s); // 几何 + 柠檬视觉补偿
-    const titleOffsetY = Math.round((13 - 8) * s); // 几何 + 顶部高光视觉补偿
-    this.playEntryTitle.position.set(titleOffsetX, titleOffsetY);
     const hitPadX = 20;
     const hitPadY = 14;
     this.playEntryRoot.hitArea = new PIXI.Rectangle(
+      -targetW / 2 - hitPadX,
+      -halfH - hitPadY,
+      targetW + hitPadX * 2,
+      halfH * 2 + hitPadY * 2,
+    );
+  }
+
+  /** 每日限定：优先使用已烘焙文字贴图，失败则回到程序绘制兜底 */
+  private applyDailyLimitedEntryArt(): void {
+    const tex = TextureCache.get('home_daily_limited_btn');
+    if (!tex) {
+      this.dailyLimitedEntryTitle.visible = true;
+      this.dailyLimitedEntryRoot.hitArea = new PIXI.Rectangle(-176, -52, 352, 104);
+      return;
+    }
+    this.dailyLimitedEntryTitle.visible = false;
+    if (this.dailyLimitedEntryBg.parent) {
+      this.dailyLimitedEntryRoot.removeChild(this.dailyLimitedEntryBg);
+    }
+    if (!this.dailyLimitedEntrySprite) {
+      this.dailyLimitedEntrySprite = new PIXI.Sprite();
+      this.dailyLimitedEntrySprite.anchor.set(0.5);
+      this.dailyLimitedEntryRoot.addChildAt(this.dailyLimitedEntrySprite, 0);
+    }
+    this.dailyLimitedEntrySprite.texture = tex;
+    const targetW = homeModeEntryTargetWidth();
+    const s = targetW / tex.width;
+    this.dailyLimitedEntrySprite.scale.set(s);
+    const halfH = (tex.height * s) / 2;
+    const hitPadX = 20;
+    const hitPadY = 14;
+    this.dailyLimitedEntryRoot.hitArea = new PIXI.Rectangle(
       -targetW / 2 - hitPadX,
       -halfH - hitPadY,
       targetW + hitPadX * 2,
@@ -242,8 +360,8 @@ export class HomeScene implements Scene {
       this.fruitSliceEntryTitle.style.strokeThickness = 6;
       this.fruitSliceEntryTitle.style.dropShadow = false;
       this.fruitSliceEntryTitle.position.set(0, -3);
-      const hw = Math.round(220 * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE);
-      const hh = Math.round(52 * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE);
+      const hw = 220;
+      const hh = 52;
       this.fruitSliceEntryRoot.hitArea = new PIXI.Rectangle(-hw, -hh, hw * 2, hh * 2);
       return;
     }
@@ -272,6 +390,15 @@ export class HomeScene implements Scene {
     );
   }
 
+  private positionModeEntryTag(tag: PIXI.Container, targetW: number, halfH: number, xInset: number): void {
+    const bounds = tag.getLocalBounds();
+    const tagHalfW = bounds.width > 0 ? bounds.width / 2 : 72;
+    tag.position.set(
+      Math.round(targetW / 2 - tagHalfW - 38 + xInset),
+      Math.round(-halfH + 28),
+    );
+  }
+
   /** 主按钮柱（关卡 + 果切）与底栏图鉴、游戏圈纵向位置 */
   private layoutHomeMainColumn(): void {
     const W = Game.logicWidth;
@@ -279,7 +406,7 @@ export class HomeScene implements Scene {
     const top = Game.safeTop;
     const contentTop = top + 8;
     const bottomBarTop = H - 100;
-    const playY = contentTop + (bottomBarTop - contentTop) * 0.5;
+    const playY = contentTop + Math.min(520, Math.max(410, (bottomBarTop - contentTop) * 0.31));
 
     let playHalf = 52;
     if (
@@ -309,42 +436,76 @@ export class HomeScene implements Scene {
       fruitHalf = 52;
     }
 
-    const dailyHalf = 44;
-    const gap = 14;
+    let dailyHalf = 44;
+    if (
+      this.dailyLimitedEntrySprite?.texture
+      && this.dailyLimitedEntrySprite.texture !== PIXI.Texture.EMPTY
+      && this.dailyLimitedEntrySprite.texture.width > 2
+    ) {
+      const tw = this.dailyLimitedEntrySprite.texture.width;
+      const targetW = homeModeEntryTargetWidth();
+      const s = targetW / tw;
+      dailyHalf = (this.dailyLimitedEntrySprite.texture.height * s) / 2;
+    } else if (this.dailyLimitedEntryBg.parent) {
+      dailyHalf = 44;
+    }
+
+    const gap = 24;
     this.playEntryRoot.position.set(W / 2, playY);
+    this.positionModeEntryTag(this.playEntryTag, homePlayEntryTargetWidth(), playHalf, 0);
     const dailyY = playY + playHalf + gap + dailyHalf;
     this.dailyLimitedEntryRoot.position.set(W / 2, dailyY);
+    this.positionModeEntryTag(this.dailyLimitedEntryTag, homeModeEntryTargetWidth(), dailyHalf, -6);
     const fruitY = dailyY + dailyHalf + gap + fruitHalf;
     this.fruitSliceEntryRoot.position.set(W / 2, fruitY);
+    this.positionModeEntryTag(this.fruitSliceEntryTag, homeFruitSliceEntryTargetWidth(), fruitHalf, -4);
 
-    /** 底部入口：宽屏三卡并排；窄屏扭蛋居中，排行榜 / 图鉴左右并排。 */
-    const cardCenterY = Math.round(fruitY + fruitHalf + 24 + HOME_FOOTER_CARD_H / 2);
-    const threeCardGap = 18;
-    const threeCardW = HOME_FOOTER_CARD_W * 3 + threeCardGap * 2;
-    const useThreeCards = threeCardW <= W - 24;
-    const cardLeftX = useThreeCards
-      ? Math.round(W / 2 - HOME_FOOTER_CARD_W - threeCardGap)
-      : Math.round(W / 2 - (HOME_FOOTER_CARD_W + HOME_FOOTER_CARD_GAP) / 2);
-    const cardMiddleX = Math.round(W / 2);
-    const cardRightX = useThreeCards
-      ? Math.round(W / 2 + HOME_FOOTER_CARD_W + threeCardGap)
-      : Math.round(W / 2 + (HOME_FOOTER_CARD_W + HOME_FOOTER_CARD_GAP) / 2);
-    const gachaY = useThreeCards
-      ? cardCenterY
-      : Math.round(fruitY + fruitHalf + 20 + HOME_FOOTER_CARD_H / 2);
-    const sideCardY = useThreeCards
-      ? cardCenterY
-      : Math.round(gachaY + HOME_FOOTER_CARD_H + 16);
+    /** 底部入口：参考原型图，四个图标放在同一个奶油色圆角底栏内。 */
+    const footerBarW = Math.min(650, W - 56);
+    const footerBarCenterY = Math.round(fruitY + fruitHalf + 34 + HOME_FOOTER_BAR_H / 2);
+    const footerCellGap = footerBarW / 4;
+    const footerLeft = W / 2 - footerBarW / 2;
+    const footerY = footerBarCenterY;
+
+    this.footerNavBg.clear();
+    this.footerNavBg.beginFill(0x3d6c6c, 0.16);
+    this.footerNavBg.drawRoundedRect(
+      W / 2 - footerBarW / 2 + 5,
+      footerY - HOME_FOOTER_BAR_H / 2 + 8,
+      footerBarW,
+      HOME_FOOTER_BAR_H,
+      36,
+    );
+    this.footerNavBg.endFill();
+    this.footerNavBg.beginFill(0xfff5df, 0.96);
+    this.footerNavBg.lineStyle(4, 0xe0d1b8, 1);
+    this.footerNavBg.drawRoundedRect(
+      W / 2 - footerBarW / 2,
+      footerY - HOME_FOOTER_BAR_H / 2,
+      footerBarW,
+      HOME_FOOTER_BAR_H,
+      36,
+    );
+    this.footerNavBg.endFill();
+    this.footerNavBg.lineStyle(2, 0xffffff, 0.85);
+    this.footerNavBg.drawRoundedRect(
+      W / 2 - footerBarW / 2 + 8,
+      footerY - HOME_FOOTER_BAR_H / 2 + 8,
+      footerBarW - 16,
+      HOME_FOOTER_BAR_H - 16,
+      30,
+    );
 
     const bookSlot = this.homeFooterSlots[0];
     if (bookSlot) {
-      bookSlot.position.set(cardRightX, sideCardY);
+      bookSlot.position.set(Math.round(footerLeft + footerCellGap * 2.5), footerY);
     }
-    this.leaderboardEntryRoot.position.set(cardLeftX, sideCardY);
-    this.gachaEntryRoot.position.set(cardMiddleX, gachaY);
+    this.leaderboardEntryRoot.position.set(Math.round(footerLeft + footerCellGap * 0.5), footerY);
+    this.gachaEntryRoot.position.set(Math.round(footerLeft + footerCellGap * 1.5), footerY);
+    this.settingsEntryRoot.position.set(Math.round(footerLeft + footerCellGap * 3.5), footerY);
 
-    /** 游戏圈紧贴屏幕底部，并与图标卡片留出足够呼吸感 */
-    const gameClubMinY = Math.max(sideCardY, gachaY) + HOME_FOOTER_CARD_H / 2 + 36;
+    /** 游戏圈紧贴屏幕底部，并与底栏留出足够呼吸感 */
+    const gameClubMinY = footerY + HOME_FOOTER_BAR_H / 2 + 24;
     const gameClubY = Math.min(H - 48, Math.max(gameClubMinY, H - 76));
     this.gameClubFallbackRoot.position.set(Math.round(W * 0.5), gameClubY);
 
@@ -353,42 +514,29 @@ export class HomeScene implements Scene {
   /** 图鉴入口：白色卡片底 + 草莓贴图（无贴图时落入 emoji 兜底） */
   private async loadHomeCatalogIcon(): Promise<void> {
     await TextureCache.load('home_catalog_icon', HOME_CATALOG_ICON_TEXTURE);
-    const tex = TextureCache.get('home_catalog_icon');
     for (let i = 0; i < this.homeFooterSlots.length; i += 1) {
       const slot = this.homeFooterSlots[i];
       if (!slot) {
         continue;
       }
-      slot.removeChildren();
-      slot.addChild(this.createFooterCardBackdrop());
-
-      const iconArea = new PIXI.Container();
-      iconArea.position.set(0, -HOME_FOOTER_CARD_H / 2 + 70);
-      slot.addChild(iconArea);
-
-      if (tex) {
-        const sp = new PIXI.Sprite(tex);
-        sp.anchor.set(0.5);
-        const target = Math.min(82, homeCatalogIconDisplayTarget());
-        const sc = target / Math.max(tex.width, tex.height);
-        sp.scale.set(sc);
-        iconArea.addChild(sp);
-      } else {
-        const e = new PIXI.Text('🍓', { fontSize: 70 });
-        e.anchor.set(0.5);
-        e.resolution = 2;
-        iconArea.addChild(e);
-      }
-
-      const label = this.createFooterCardLabel('图鉴', 0xa14a0d);
-      label.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
-      slot.addChild(label);
+      this.mountFooterNavButton(
+        slot,
+        'home_catalog_icon',
+        () => {
+          const e = new PIXI.Text('🍓', { fontSize: 70 });
+          e.anchor.set(0.5);
+          e.resolution = 2;
+          return e;
+        },
+        '图鉴',
+        0xa14a0d,
+      );
 
       slot.hitArea = new PIXI.Rectangle(
-        -HOME_FOOTER_CARD_W / 2 - 6,
-        -HOME_FOOTER_CARD_H / 2 - 6,
-        HOME_FOOTER_CARD_W + 12,
-        HOME_FOOTER_CARD_H + 12,
+        -HOME_FOOTER_NAV_CELL_W / 2,
+        -HOME_FOOTER_NAV_CELL_H / 2,
+        HOME_FOOTER_NAV_CELL_W,
+        HOME_FOOTER_NAV_CELL_H,
       );
     }
     this.layoutHomeMainColumn();
@@ -417,10 +565,10 @@ export class HomeScene implements Scene {
     const bottomBarTop = H - 100;
     const btnW = 440;
     const btnH = 104;
-    const fruitBtnW = Math.round(btnW * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE);
-    const fruitBtnH = Math.round(btnH * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE);
-    const fruitBtnR = Math.max(18, Math.round(30 * HOME_FRUIT_SLICE_BTN_DISPLAY_SCALE));
-    const playY = contentTop + (bottomBarTop - contentTop) * 0.5;
+    const fruitBtnW = btnW;
+    const fruitBtnH = btnH;
+    const fruitBtnR = 30;
+    const playY = contentTop + Math.min(520, Math.max(410, (bottomBarTop - contentTop) * 0.31));
     const logoBandTop = contentTop + 40;
     const logoBandBottom = playY - btnH / 2 - 20;
     this.homeLogoMaxWidth = Math.round(W * 0.68);
@@ -453,6 +601,7 @@ export class HomeScene implements Scene {
     this.playEntryTitle.resolution = 2;
     this.playEntryTitle.position.set(0, 0);
     this.playEntryRoot.addChild(this.playEntryTitle);
+    this.playEntryRoot.addChild(this.playEntryTag);
     this.playEntryRoot.hitArea = new PIXI.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH);
     this.playEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
@@ -481,6 +630,7 @@ export class HomeScene implements Scene {
     this.dailyLimitedEntryTitle.anchor.set(0.5);
     this.dailyLimitedEntryTitle.resolution = 2;
     this.dailyLimitedEntryRoot.addChild(this.dailyLimitedEntryTitle);
+    this.dailyLimitedEntryRoot.addChild(this.dailyLimitedEntryTag);
     this.dailyLimitedEntryRoot.hitArea = new PIXI.Rectangle(-176, -52, 352, 104);
     this.dailyLimitedEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
@@ -511,6 +661,7 @@ export class HomeScene implements Scene {
     this.fruitSliceEntryTitle.position.set(0, -3);
     this.fruitSliceEntryTitle.visible = false;
     this.fruitSliceEntryRoot.addChild(this.fruitSliceEntryTitle);
+    this.fruitSliceEntryRoot.addChild(this.fruitSliceEntryTag);
     this.fruitSliceEntryRoot.hitArea = new PIXI.Rectangle(
       -fruitBtnW / 2,
       -fruitBtnH / 2,
@@ -523,26 +674,31 @@ export class HomeScene implements Scene {
     });
     this.container.addChild(this.fruitSliceEntryRoot);
 
-    /** 底部两张卡片入口：左排行榜 / 右图鉴；与「果切挑战」上下相接 */
+    this.container.addChild(this.footerNavBg);
+
+    /** 底部入口：排行榜 / 扭蛋 / 图鉴 / 设置，参考原型图统一放入底栏 */
     const bookSlot = new PIXI.Container();
     bookSlot.position.set(Math.round(W * 0.62), Math.max(playY + 220, H - 200));
     bookSlot.eventMode = 'static';
     bookSlot.cursor = 'pointer';
     bookSlot.hitArea = new PIXI.Rectangle(
-      -HOME_FOOTER_CARD_W / 2 - 6,
-      -HOME_FOOTER_CARD_H / 2 - 6,
-      HOME_FOOTER_CARD_W + 12,
-      HOME_FOOTER_CARD_H + 12,
+      -HOME_FOOTER_NAV_CELL_W / 2,
+      -HOME_FOOTER_NAV_CELL_H / 2,
+      HOME_FOOTER_NAV_CELL_W,
+      HOME_FOOTER_NAV_CELL_H,
     );
-    bookSlot.addChild(this.createFooterCardBackdrop());
-    const bookFallbackIcon = new PIXI.Text('🍓', { fontSize: 70 });
-    bookFallbackIcon.anchor.set(0.5);
-    bookFallbackIcon.resolution = 2;
-    bookFallbackIcon.position.set(0, -HOME_FOOTER_CARD_H / 2 + 70);
-    bookSlot.addChild(bookFallbackIcon);
-    const bookLabel = this.createFooterCardLabel('图鉴', 0xa14a0d);
-    bookLabel.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
-    bookSlot.addChild(bookLabel);
+    this.mountFooterNavButton(
+      bookSlot,
+      'home_catalog_icon',
+      () => {
+        const e = new PIXI.Text('🍓', { fontSize: 70 });
+        e.anchor.set(0.5);
+        e.resolution = 2;
+        return e;
+      },
+      '图鉴',
+      0xa14a0d,
+    );
     bookSlot.on('pointertap', () => {
       AudioManager.playButtonSound();
       SceneManager.switchTo('catalog');
@@ -555,21 +711,21 @@ export class HomeScene implements Scene {
     this.gachaEntryRoot.eventMode = 'static';
     this.gachaEntryRoot.cursor = 'pointer';
     this.gachaEntryRoot.hitArea = new PIXI.Rectangle(
-      -HOME_FOOTER_CARD_W / 2 - 6,
-      -HOME_FOOTER_CARD_H / 2 - 6,
-      HOME_FOOTER_CARD_W + 12,
-      HOME_FOOTER_CARD_H + 12,
+      -HOME_FOOTER_NAV_CELL_W / 2,
+      -HOME_FOOTER_NAV_CELL_H / 2,
+      HOME_FOOTER_NAV_CELL_W,
+      HOME_FOOTER_NAV_CELL_H,
     );
-    this.gachaEntryRoot.addChild(this.createFooterCardBackdrop());
-    const gachaIcon = this.createGachaCardIcon();
-    gachaIcon.position.set(0, -HOME_FOOTER_CARD_H / 2 + 64);
-    this.gachaEntryRoot.addChild(gachaIcon);
-    const gachaLabel = this.createFooterCardLabel('扭蛋', 0xb94a12);
-    gachaLabel.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
-    this.gachaEntryRoot.addChild(gachaLabel);
+    this.mountFooterNavButton(
+      this.gachaEntryRoot,
+      'home_gacha_icon',
+      () => this.createGachaCardIcon(),
+      '扭蛋',
+      0xb94a12,
+    );
     this.gachaEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
-      SceneManager.switchTo('gacha');
+      void this.enterGachaWithLoading();
     });
     this.container.addChild(this.gachaEntryRoot);
 
@@ -577,18 +733,18 @@ export class HomeScene implements Scene {
     this.leaderboardEntryRoot.eventMode = 'static';
     this.leaderboardEntryRoot.cursor = 'pointer';
     this.leaderboardEntryRoot.hitArea = new PIXI.Rectangle(
-      -HOME_FOOTER_CARD_W / 2 - 6,
-      -HOME_FOOTER_CARD_H / 2 - 6,
-      HOME_FOOTER_CARD_W + 12,
-      HOME_FOOTER_CARD_H + 12,
+      -HOME_FOOTER_NAV_CELL_W / 2,
+      -HOME_FOOTER_NAV_CELL_H / 2,
+      HOME_FOOTER_NAV_CELL_W,
+      HOME_FOOTER_NAV_CELL_H,
     );
-    this.leaderboardEntryRoot.addChild(this.createFooterCardBackdrop());
-    const rankIcon = this.createLeaderboardCardIcon();
-    rankIcon.position.set(0, -HOME_FOOTER_CARD_H / 2 + 72);
-    this.leaderboardEntryRoot.addChild(rankIcon);
-    const rankLabel = this.createFooterCardLabel('排行榜', 0x275f2d);
-    rankLabel.position.set(0, HOME_FOOTER_CARD_H / 2 - 28);
-    this.leaderboardEntryRoot.addChild(rankLabel);
+    this.mountFooterNavButton(
+      this.leaderboardEntryRoot,
+      'home_leaderboard_icon',
+      () => this.createLeaderboardCardIcon(),
+      '排行榜',
+      0x275f2d,
+    );
     /** 只在玩家主动点排行榜时触发隐私授权；首页不预创建微信授权按钮。 */
     this.leaderboardEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
@@ -596,6 +752,28 @@ export class HomeScene implements Scene {
       openLeaderboard(RANK_BOARD_BOWL);
     });
     this.container.addChild(this.leaderboardEntryRoot);
+
+    this.settingsEntryRoot.position.set(Math.round(W * 0.76), Math.max(playY + 220, H - 200));
+    this.settingsEntryRoot.eventMode = 'static';
+    this.settingsEntryRoot.cursor = 'pointer';
+    this.settingsEntryRoot.hitArea = new PIXI.Rectangle(
+      -HOME_FOOTER_NAV_CELL_W / 2,
+      -HOME_FOOTER_NAV_CELL_H / 2,
+      HOME_FOOTER_NAV_CELL_W,
+      HOME_FOOTER_NAV_CELL_H,
+    );
+    this.mountFooterNavButton(
+      this.settingsEntryRoot,
+      'home_settings_icon',
+      () => this.createSettingsCardIcon(),
+      '设置',
+      0x6f4b28,
+    );
+    this.settingsEntryRoot.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      this.settingsOverlay.visible = true;
+    });
+    this.container.addChild(this.settingsEntryRoot);
 
     /** 游戏圈：靠下装饰带，略抬高避免贴底被手势条/误触 */
     const provisionalSideY = Math.max(playY + 220, H - 160);
@@ -688,6 +866,34 @@ export class HomeScene implements Scene {
       }
       loadingOverlay.destroy();
       this.enteringDailyLimited = false;
+    }
+  }
+
+  private async enterGachaWithLoading(): Promise<void> {
+    if (this.enteringGacha) {
+      return;
+    }
+    this.enteringGacha = true;
+    this.hideGameClubNativeButton();
+    const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
+    Game.stage.addChild(loadingOverlay.container);
+    try {
+      loadingOverlay.setProgress(0.16);
+      await loadingOverlay.loadAssets();
+      loadingOverlay.setProgress(0.46);
+      await SceneManager.prepare('gacha');
+      loadingOverlay.setProgress(1);
+      SceneManager.switchTo('gacha');
+    } catch (error) {
+      console.error('[HomeScene] enter gacha failed', error);
+      const api = typeof wx !== 'undefined' ? wx : null;
+      api?.showToast?.({ title: '加载失败，请重试', icon: 'none' });
+    } finally {
+      if (loadingOverlay.container.parent) {
+        loadingOverlay.container.parent.removeChild(loadingOverlay.container);
+      }
+      loadingOverlay.destroy();
+      this.enteringGacha = false;
     }
   }
 
@@ -851,79 +1057,81 @@ export class HomeScene implements Scene {
 
   /** 底部图标卡片的白色圆角背板（带阴影 + 卡片描边，所有底部入口共用） */
   private createFooterCardBackdrop(): PIXI.Container {
-    const root = new PIXI.Container();
-    const shadow = new PIXI.Graphics();
-    shadow.beginFill(0x274a4f, 0.18);
-    shadow.drawRoundedRect(
-      -HOME_FOOTER_CARD_W / 2 + 4,
-      -HOME_FOOTER_CARD_H / 2 + 8,
-      HOME_FOOTER_CARD_W,
-      HOME_FOOTER_CARD_H,
-      26,
-    );
-    shadow.endFill();
-    root.addChild(shadow);
-
-    const card = new PIXI.Graphics();
-    card.beginFill(0xffffff);
-    card.lineStyle(3, 0xc7e4d6, 1);
-    card.drawRoundedRect(
-      -HOME_FOOTER_CARD_W / 2,
-      -HOME_FOOTER_CARD_H / 2,
-      HOME_FOOTER_CARD_W,
-      HOME_FOOTER_CARD_H,
-      26,
-    );
-    card.endFill();
-    // 内侧次级描边，模拟参考 UI 的双层圆角
-    card.lineStyle(2, 0xeef9f1, 1);
-    card.drawRoundedRect(
-      -HOME_FOOTER_CARD_W / 2 + 5,
-      -HOME_FOOTER_CARD_H / 2 + 5,
-      HOME_FOOTER_CARD_W - 10,
-      HOME_FOOTER_CARD_H - 10,
-      22,
-    );
-    root.addChild(card);
-    return root;
+    // 占位层：底部入口现在共用一整条圆角底栏，单个入口不再绘制独立白卡。
+    return new PIXI.Container();
   }
 
   /** 底部卡片下方居中的彩色标签文字 */
   private createFooterCardLabel(text: string, color: number): PIXI.Text {
     const label = new PIXI.Text(text, {
       fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
-      fontSize: 26,
+      fontSize: 28,
       fill: color,
       fontWeight: '900',
-      stroke: 0xffffff,
-      strokeThickness: 4,
+      stroke: 0xfff4d8,
+      strokeThickness: 5,
       lineJoin: 'round',
-      letterSpacing: 2,
+      letterSpacing: 1,
     });
     label.anchor.set(0.5);
     label.resolution = 2;
     return label;
   }
 
-  private refreshGeneratedFooterIcons(): void {
-    this.replaceFooterIcon(this.gachaEntryRoot, this.createGachaCardIcon(), -HOME_FOOTER_CARD_H / 2 + 64);
-    this.replaceFooterIcon(this.leaderboardEntryRoot, this.createLeaderboardCardIcon(), -HOME_FOOTER_CARD_H / 2 + 72);
+  private mountFooterNavButton(
+    root: PIXI.Container,
+    textureKey: string,
+    fallbackIcon: () => PIXI.Container,
+    fallbackLabel: string,
+    fallbackColor: number,
+  ): void {
+    root.removeChildren();
+    root.addChild(this.createFooterCardBackdrop());
+
+    const textureButton = this.createFooterCardTextureIcon(textureKey);
+    if (textureButton) {
+      textureButton.position.set(0, -30);
+      root.addChild(textureButton);
+    } else {
+      const icon = fallbackIcon();
+      icon.position.set(0, -30);
+      root.addChild(icon);
+    }
+
+    const label = this.createFooterCardLabel(fallbackLabel, fallbackColor);
+    label.position.set(0, 45);
+    root.addChild(label);
   }
 
-  private replaceFooterIcon(root: PIXI.Container, icon: PIXI.Container, y: number): void {
-    const current = root.children[1];
-    if (current) {
-      root.removeChild(current);
-    }
-    icon.position.set(0, y);
-    root.addChildAt(icon, Math.min(1, root.children.length));
+  private refreshGeneratedFooterIcons(): void {
+    this.mountFooterNavButton(
+      this.gachaEntryRoot,
+      'home_gacha_icon',
+      () => this.createGachaCardIcon(),
+      '扭蛋',
+      0xb94a12,
+    );
+    this.mountFooterNavButton(
+      this.leaderboardEntryRoot,
+      'home_leaderboard_icon',
+      () => this.createLeaderboardCardIcon(),
+      '排行榜',
+      0x275f2d,
+    );
+    this.mountFooterNavButton(
+      this.settingsEntryRoot,
+      'home_settings_icon',
+      () => this.createSettingsCardIcon(),
+      '设置',
+      0x6f4b28,
+    );
   }
 
   /** 扭蛋入口图标：金币和胶囊球，保持无需贴图即可显示。 */
   private createGachaCardIcon(): PIXI.Container {
     const icon = this.createFooterCardTextureIcon('home_gacha_icon');
     if (icon) {
-      return this.withGachaPromoTag(icon);
+      return icon;
     }
 
     const root = new PIXI.Container();
@@ -999,6 +1207,32 @@ export class HomeScene implements Scene {
     return root;
   }
 
+  /** 设置入口图标：优先复用现有齿轮贴图。 */
+  private createSettingsCardIcon(): PIXI.Container {
+    const icon = this.createFooterCardTextureIcon('home_settings_icon');
+    if (icon) {
+      return icon;
+    }
+
+    const root = new PIXI.Container();
+    const gear = new PIXI.Graphics();
+    gear.beginFill(0xf2bf66);
+    gear.lineStyle(4, 0x6f4b28, 1);
+    for (let i = 0; i < 8; i += 1) {
+      const a = (Math.PI * 2 * i) / 8;
+      const x = Math.cos(a) * 34;
+      const y = Math.sin(a) * 34;
+      gear.drawRoundedRect(x - 8, y - 8, 16, 16, 4);
+    }
+    gear.drawCircle(0, 0, 34);
+    gear.endFill();
+    gear.beginFill(0xfff7df);
+    gear.drawCircle(0, 0, 13);
+    gear.endFill();
+    root.addChild(gear);
+    return root;
+  }
+
   /** 排行榜卡片图标：绿色柱状图 + 顶部金色奖杯小角标 */
   private createLeaderboardCardIcon(): PIXI.Container {
     const icon = this.createFooterCardTextureIcon('home_leaderboard_icon');
@@ -1049,8 +1283,12 @@ export class HomeScene implements Scene {
     const root = new PIXI.Container();
     const sp = new PIXI.Sprite(tex);
     sp.anchor.set(0.5);
-    const target = Math.min(82, homeCatalogIconDisplayTarget());
-    const sc = target / Math.max(tex.width, tex.height);
+    const target = homeCatalogIconDisplayTarget();
+    const sc = Math.min(
+      target / Math.max(tex.width, tex.height),
+      (HOME_FOOTER_NAV_CELL_W - 8) / tex.width,
+      (HOME_FOOTER_NAV_CELL_H - 8) / tex.height,
+    );
     sp.scale.set(sc);
     root.addChild(sp);
     return root;

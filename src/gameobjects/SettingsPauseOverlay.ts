@@ -7,16 +7,26 @@ export interface SettingsPauseCallbacks {
   onContinue: () => void;
 }
 
+export interface SettingsPauseOptions {
+  mode?: 'full' | 'home';
+}
+
 /** 设置 / 暂停面板（剪贴板风格） */
 export class SettingsPauseOverlay extends PIXI.Container {
   private readonly musicOn = { value: AudioManager.isMusicEnabled() };
   private readonly soundOn = { value: AudioManager.isSoundEnabled() };
   private readonly vibrateOn = { value: true };
 
-  constructor(width: number, height: number, callbacks: SettingsPauseCallbacks) {
+  constructor(
+    width: number,
+    height: number,
+    callbacks: SettingsPauseCallbacks,
+    options: SettingsPauseOptions = {},
+  ) {
     super();
     this.visible = false;
     this.eventMode = 'static';
+    const isHomeMode = options.mode === 'home';
 
     const dim = new PIXI.Graphics();
     dim.beginFill(0x2a2118, 0.52);
@@ -27,7 +37,7 @@ export class SettingsPauseOverlay extends PIXI.Container {
     this.addChild(dim);
 
     const panelW = 420;
-    const panelH = 520;
+    const panelH = isHomeMode ? 300 : 520;
     const px = (width - panelW) / 2;
     const py = (height - panelH) / 2 - 20;
 
@@ -86,7 +96,7 @@ export class SettingsPauseOverlay extends PIXI.Container {
 
     const inner = new PIXI.Graphics();
     inner.beginFill(0xfff3d6);
-    inner.drawRoundedRect(px + 28, py + 112, panelW - 56, 168, 16);
+    inner.drawRoundedRect(px + 28, py + 112, panelW - 56, isHomeMode ? 116 : 168, 16);
     inner.endFill();
     this.addChild(inner);
 
@@ -98,6 +108,9 @@ export class SettingsPauseOverlay extends PIXI.Container {
     this.addToggleRow(width / 2, ty, '音效', this.soundOn, (enabled) => {
       AudioManager.setSoundEnabled(enabled);
     });
+    if (isHomeMode) {
+      return;
+    }
     ty += 52;
     this.addToggleRow(width / 2, ty, '震动', this.vibrateOn);
 

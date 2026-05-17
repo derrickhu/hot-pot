@@ -1,0 +1,28 @@
+Generate one square 3x3 equal grid image for mobile mini-game fruit assets. Strictly 3 columns and 3 rows, nine equal cells, clear light divider lines, pale warm cream background. One centered fruit subject in each cell, generous padding, no subject crossing cell boundaries.
+
+Art style: 2D hand-drawn cartoon food icon, same style as casual fruit hot-pot / fruit slicing mini-game assets, transparent-background friendly, top-down slightly angled 3/4 view, compact rounded shapes, bold dark brown outline, smaller inner color outline when useful, saturated appetizing colors, soft cel shading, small glossy highlights, no realistic photo texture, no hard 3D render.
+
+Important asset constraints:
+- Each row is exactly one fruit species.
+- Column 1 is a whole fruit.
+- Columns 2 and 3 are cut surfaces, slices, wedges, cubes, or opened pieces chosen to clearly show that fruit's most recognizable features.
+- Cut pieces should be bite-sized game ingredients, not huge plated halves unless the fruit needs a half-open form to show seeds.
+- Use no plates, bowls, forks, knives, hands, table, leaves as decoration except natural fruit stems/leaves.
+- NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no UI.
+
+## Batch B: pomegranate / yangjiaomi melon / hawthorn
+
+Row 1 POMEGRANATE:
+1. Whole pomegranate, round ruby red fruit with small crown calyx, slightly faceted rind.
+2. Open pomegranate wedge, ruby seed arils packed inside, pale membrane lines, thick red rind.
+3. Small cluster of loose pomegranate arils, jewel-like red beads grouped as one bite-sized subject.
+
+Row 2 YANGJIAOMI MELON:
+1. Whole Chinese yangjiaomi melon, long slender horn-shaped pale green melon, tapered curved ends, subtle light stripes.
+2. Cross-section round slice, pale green rind ring, white-green juicy flesh, small seed cavity.
+3. Small melon wedge or cube chunk, pale green rind edge, white-green flesh, refreshing crisp look.
+
+Row 3 HAWTHORN:
+1. Whole hawthorn berry, small round bright red fruit, tiny stem and blossom end, dotted skin.
+2. Hawthorn half, red peel, pale yellow flesh, brown seed core visible.
+3. Candied-looking hawthorn wedge or small slices, red skin edge and pale flesh, no skewer, no sugar stick.

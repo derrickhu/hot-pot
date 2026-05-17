@@ -11,7 +11,7 @@
     "showShadowRootInWxmlPanel": false,
     "showES6CompileOption": false,
     "compileHotReLoad": false,
-    "bigPackageSizeSupport": false,
+    "bigPackageSizeSupport": true,
     "useApiHook": true,
     "checkInvalidKey": true,
     "useStaticServer": false,

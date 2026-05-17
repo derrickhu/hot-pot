@@ -1,0 +1,22 @@
+Generate one standalone bottom navigation graphic button for a cute summer fruit WeChat mini game.
+
+Content:
+- Main icon: cute gacha / capsule draw icon, colorful capsule ball, gold coin, sparkle.
+- Label text exactly two Chinese characters: 扭蛋
+- Add a BIG, clearly readable badge above the icon with exactly four Chinese characters: 金币抽奖.
+- Badge style: bright orange-red rounded banner or speech bubble, cream/yellow text, thick warm brown outline, very eye-catching.
+
+Style:
+- Cute polished 2D hand-painted cartoon mobile game UI.
+- Free-standing icon above label.
+- NO square tile, NO rounded rectangle card, NO white box, NO button backplate.
+- Thick dark warm outline, soft highlights, rounded shapes.
+- Label style: thick rounded Chinese UI font, dark brown fill, cream outline, readable at small mobile size.
+
+Clean cutout:
+- Put the button on a perfectly flat solid bright magenta background RGB #ff00ff.
+- Do NOT generate transparency or checkerboard.
+- Do not use magenta inside the icon, badge, or text.
+- Keep safe margin around the badge, icon, and label.
+- Generate ONLY these Chinese strings: 金币抽奖, 扭蛋.
+- NO English letters, NO numbers, NO watermark, NO extra text.

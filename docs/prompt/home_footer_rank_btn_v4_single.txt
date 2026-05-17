@@ -1,0 +1,19 @@
+Generate one standalone bottom navigation graphic button for a cute summer fruit WeChat mini game.
+
+Content:
+- Icon: leaderboard / ranking icon, three glossy green vertical bars of different heights with a small golden trophy.
+- Label text exactly three Chinese characters: 排行榜
+
+Style:
+- Match the provided reference leaderboard style: cute polished 2D hand-painted cartoon mobile game UI.
+- Free-standing icon above label.
+- NO square tile, NO rounded rectangle card, NO white box, NO button backplate.
+- Thick dark warm outline, soft highlights, rounded shapes.
+- Label style: thick rounded Chinese UI font, dark brown / dark green fill, cream outline, readable at small mobile size.
+
+Clean cutout:
+- Put the button on a perfectly flat solid bright magenta background RGB #ff00ff.
+- Do NOT generate transparency or checkerboard.
+- Do not use magenta inside the icon or text.
+- Keep safe margin around the icon and label.
+- NO English letters, NO numbers, NO watermark, NO extra text.

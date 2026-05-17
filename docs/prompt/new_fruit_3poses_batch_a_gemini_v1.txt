@@ -1,0 +1,28 @@
+Generate one square 3x3 equal grid image for mobile mini-game fruit assets. Strictly 3 columns and 3 rows, nine equal cells, clear light divider lines, pale warm cream background. One centered fruit subject in each cell, generous padding, no subject crossing cell boundaries.
+
+Art style: 2D hand-drawn cartoon food icon, same style as casual fruit hot-pot / fruit slicing mini-game assets, transparent-background friendly, top-down slightly angled 3/4 view, compact rounded shapes, bold dark brown outline, smaller inner color outline when useful, saturated appetizing colors, soft cel shading, small glossy highlights, no realistic photo texture, no hard 3D render.
+
+Important asset constraints:
+- Each row is exactly one fruit species.
+- Column 1 is a whole fruit.
+- Columns 2 and 3 are cut surfaces, slices, wedges, cubes, or opened pieces chosen to clearly show that fruit's most recognizable features.
+- Cut pieces should be bite-sized game ingredients, not huge plated halves unless the fruit needs a half-open form to show seeds.
+- Use no plates, bowls, forks, knives, hands, table, leaves as decoration except natural fruit stems/leaves.
+- NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no UI.
+
+## Batch A: mangosteen / pear / avocado
+
+Row 1 MANGOSTEEN:
+1. Whole mangosteen, round deep purple rind, green calyx cap on top, glossy thick shell, compact icon silhouette.
+2. Open mangosteen half, thick purple rind split open, white segmented flesh lobes visible like garlic cloves, creamy center, bite-sized.
+3. A few white mangosteen flesh segments removed from rind, soft rounded lobes with tiny hint of purple rind edge, different angle.
+
+Row 2 PEAR:
+1. Whole Asian pear or yellow-green pear, plump teardrop shape, tiny brown stem, faint speckles.
+2. Pear wedge slice, pale cream flesh, thin yellow-green skin edge, small seed cavity detail, juicy highlight.
+3. Small pear cubes or thick chunk pieces, pale flesh with one skin edge, different angle and same scale.
+
+Row 3 AVOCADO:
+1. Whole avocado, dark green pebbled oval skin, pear-like oval silhouette.
+2. Half avocado with green flesh and large brown pit, creamy yellow-green center, dark green skin rim.
+3. Avocado slice or cube chunk without pit, smooth green gradient, skin edge visible, different angle.

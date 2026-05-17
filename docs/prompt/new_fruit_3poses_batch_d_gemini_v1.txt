@@ -1,0 +1,28 @@
+Generate one square 3x3 equal grid image for mobile mini-game fruit assets. Strictly 3 columns and 3 rows, nine equal cells, clear light divider lines, pale warm cream background. One centered fruit subject in each cell, generous padding, no subject crossing cell boundaries.
+
+Art style: 2D hand-drawn cartoon food icon, same style as casual fruit hot-pot / fruit slicing mini-game assets, transparent-background friendly, top-down slightly angled 3/4 view, compact rounded shapes, bold dark brown outline, smaller inner color outline when useful, saturated appetizing colors, soft cel shading, small glossy highlights, no realistic photo texture, no hard 3D render.
+
+Important asset constraints:
+- Each row is exactly one fruit species.
+- Column 1 is a whole fruit.
+- Columns 2 and 3 are cut surfaces, slices, wedges, cubes, or opened pieces chosen to clearly show that fruit's most recognizable features.
+- Cut pieces should be bite-sized game ingredients, not huge plated halves unless the fruit needs a half-open form to show seeds.
+- Use no plates, bowls, forks, knives, hands, table, leaves as decoration except natural fruit stems/leaves.
+- NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no UI.
+
+## Batch D: papaya / fig / apricot
+
+Row 1 PAPAYA:
+1. Whole papaya, elongated orange-yellow fruit with green-yellow mottled skin, smooth rounded ends.
+2. Papaya half, orange flesh, central cavity filled with many black seeds, green-yellow rind edge.
+3. Papaya cube or wedge, bright orange flesh with thin rind edge, juicy highlight.
+
+Row 2 FIG:
+1. Whole fig, pear-shaped purple-green fruit, small stem, subtle skin stripes.
+2. Cut fig half, deep red jammy interior with many tiny seeds, pale rind ring.
+3. Fig wedge, red seeded interior and purple-green skin edge, different angle.
+
+Row 3 APRICOT:
+1. Whole apricot, small round orange fruit, soft blush, central crease line, tiny stem.
+2. Apricot half, golden orange flesh, one brown pit visible, soft fuzzy skin edge.
+3. Apricot wedge or chunky slice, orange flesh with skin edge, different angle.

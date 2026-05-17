@@ -5,6 +5,7 @@ import { PersistService } from '@/core/PersistService';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { getCatalogSlots, type CatalogSlot } from '@/config/fruitCatalog';
+import { DAILY_LIMITED_LEVELS } from '@/config/dailyLimitedLevels';
 import { BOWL_BADGES, type BowlBadgeDef } from '@/config/bowlBadges';
 import { getMaxUnlockedBowlBadgeLevelNumber } from '@/game/BowlProgress';
 import { mountBowlBadgeIcon } from '@/gameobjects/BowlBadgeIcon';
@@ -52,8 +53,6 @@ const CHROME_TEX_TAB_ACTIVE = 'subpackages/bowl_game/assets/images/catalog/catal
 const CHROME_TEX_TAB_INACTIVE = 'subpackages/bowl_game/assets/images/catalog/catalog_tab_inactive.png';
 const CHROME_TEX_ITEM_CARD = 'subpackages/bowl_game/assets/images/catalog/catalog_item_card.png';
 const DAILY_LIMITED_REWARD_STATE_KEY = 'hot_pot_daily_limited_reward_v1';
-const DAILY_RECIPE_CARD_TEXTURE_KEY = 'catalog_daily_recipe_pineapple_sprite_slush';
-const DAILY_RECIPE_CARD_PATH = 'subpackages/bowl_game/assets/images/daily_limited/pineapple_sprite_slush_recipe_card_v2.png';
 
 /** 底板 PNG 内已经画好的"图鉴"标题 / 返回按钮在缩到 logicWidth 后的近似坐标 */
 const PAINTED_BACK_X = 80;
@@ -650,16 +649,14 @@ export class CatalogScene implements Scene {
   private getDrinkRecipeSlots(): DrinkRecipeCatalogSlot[] {
     const state = PersistService.readJSON<DailyLimitedRewardState>(DAILY_LIMITED_REWARD_STATE_KEY);
     const claimed = state?.claimedRecipeDateByTheme ?? {};
-    return [
-      {
-        themeId: 'pineapple_ice',
-        title: '菠萝冰',
-        subtitle: '菠萝雪碧冰沙',
-        textureKey: DAILY_RECIPE_CARD_TEXTURE_KEY,
-        asset: DAILY_RECIPE_CARD_PATH,
-        unlocked: !!claimed.pineapple_ice,
-      },
-    ];
+    return DAILY_LIMITED_LEVELS.map((level) => ({
+      themeId: level.themeId,
+      title: level.recipeCard.catalogTitle,
+      subtitle: level.recipeCard.catalogSubtitle,
+      textureKey: level.recipeCard.textureKey,
+      asset: level.recipeCard.path,
+      unlocked: !!claimed[level.themeId],
+    }));
   }
 
   private buildDrinkRecipeGrid(slots: DrinkRecipeCatalogSlot[]): void {
@@ -708,7 +705,7 @@ export class CatalogScene implements Scene {
       cell.hitArea = new PIXI.Rectangle(-cellW / 2, 0, cellW, iconH + labelBlockH);
       cell.on('pointertap', () => {
         AudioManager.playButtonSound();
-        this.showRecipePreview();
+        this.showRecipePreview(slot);
       });
 
       const recipeTex = TextureCache.get(slot.textureKey);
@@ -737,8 +734,8 @@ export class CatalogScene implements Scene {
     });
   }
 
-  private showRecipePreview(): void {
-    const tex = TextureCache.get(DAILY_RECIPE_CARD_TEXTURE_KEY);
+  private showRecipePreview(slot: DrinkRecipeCatalogSlot): void {
+    const tex = TextureCache.get(slot.textureKey);
     if (!tex) {
       return;
     }

@@ -193,6 +193,10 @@ export class GachaScene implements Scene {
     return this.gachaTexturesPromise;
   }
 
+  async prepare(): Promise<void> {
+    await this.ensureGachaTextures();
+  }
+
   /** 预加载本场景全部贴图，每张失败都允许，运行时各自走兜底。 */
   private async preloadGachaTextures(): Promise<void> {
     await loadBowlSubpackage();

@@ -1,5 +1,12 @@
 import * as PIXI from 'pixi.js';
-import { getDailyLimitedLevel, type DailyThemeLevelDef } from '@/config/dailyLimitedLevels';
+import {
+  DAILY_LIMITED_LEVELS,
+  DAILY_LIMITED_MIN_STACK_CARDS,
+  getDailyLimitedLevelForDate,
+  getDailyLimitedTargetCount,
+  getDailyLimitedTargetFruitIds,
+  type DailyThemeLevelDef,
+} from '@/config/dailyLimitedLevels';
 import { FRUIT_MAP, type FruitId } from '@/config/fruits';
 import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
@@ -8,6 +15,7 @@ import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { addCoins } from '@/game/Wallet';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH, createCoinIcon } from '@/gameobjects/CoinBar';
+import { BOWL_COMMON_MODAL_PANEL_ASSET, BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY } from '@/gameobjects/BowlMechanicIntroOverlay';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { TextureCache } from '@/utils/TextureCache';
@@ -42,6 +50,16 @@ interface DailyLimitedRewardState {
   claimedRecipeDateByTheme: Record<string, string>;
 }
 
+interface DailyLimitedRuleIntroState {
+  seenDateByTheme: Record<string, string>;
+}
+
+interface DailyBowlSlot {
+  fruitId: FruitId;
+  start: number;
+  capacity: number;
+}
+
 const CARD_COLS = 9;
 const CARD_W = 70;
 const CARD_H = 76;
@@ -52,10 +70,10 @@ const FLAT_ROWS = 3;
 const FLAT_CARD_COUNT = FLAT_COLS * FLAT_ROWS;
 const ICE_BOWL_COUNT = 5;
 const ICE_BOWL_CAPACITY = 3;
-const STACK_DISTRACTOR_COPIES = 10;
 const DAILY_LIMITED_CLEAR_REWARD_COINS = 50;
 const DAILY_LIMITED_REPEAT_CLEAR_REWARD_COINS = 5;
 const DAILY_LIMITED_REWARD_STATE_KEY = 'hot_pot_daily_limited_reward_v1';
+const DAILY_LIMITED_RULE_INTRO_STATE_KEY = 'hot_pot_daily_limited_rule_intro_v1';
 const DAILY_TEXTURE_PREFIX = 'daily_limited_fruit_';
 const DAILY_BG_VARIANTS = [
   {
@@ -65,6 +83,14 @@ const DAILY_BG_VARIANTS = [
   {
     key: 'daily_limited_bg_tropical_orchard',
     path: 'subpackages/bowl_game/assets/images/daily_limited/bg_tropical_orchard_v2.png',
+  },
+  {
+    key: 'daily_limited_bg_bright_sunny_meadow',
+    path: 'subpackages/bowl_game/assets/images/daily_limited/daily_limited_bg_bright_sunny_meadow_v1.jpg',
+  },
+  {
+    key: 'daily_limited_bg_bright_candy_creek',
+    path: 'subpackages/bowl_game/assets/images/daily_limited/daily_limited_bg_bright_candy_creek_v1.jpg',
   },
 ] as const;
 const DAILY_BOARD_FRAME_VARIANTS = [
@@ -88,13 +114,12 @@ const DAILY_TOOL_PANELS_TEXTURE_KEY = 'daily_limited_tool_panels_sheet';
 const DAILY_TOOL_PANELS_PATH = 'subpackages/bowl_game/assets/images/daily_limited/tool_panels_sheet_v1.png';
 const DAILY_FREE_BUTTON_TEXTURE_KEY = 'daily_limited_ui_panel_free_btn';
 const DAILY_FREE_BUTTON_PATH = 'subpackages/bowl_game/assets/images/ui_panel_free_btn.png';
-const DAILY_RECIPE_CARD_TEXTURE_KEY = 'daily_limited_pineapple_sprite_slush_recipe_card';
-const DAILY_RECIPE_CARD_PATH = 'subpackages/bowl_game/assets/images/daily_limited/pineapple_sprite_slush_recipe_card_v2.png';
 const DAILY_CLEAR_BANNER_TEXTURE_KEY = 'daily_limited_clear_banner';
 const DAILY_CLEAR_BANNER_PATH = 'subpackages/bowl_game/assets/images/daily_limited/daily_limited_clear_banner_v1.png';
 const DAILY_SHARE_BUTTON_TEXTURE_KEY = 'daily_limited_badge_share_reward_button';
 const DAILY_SHARE_BUTTON_PATH = 'subpackages/bowl_game/assets/images/badge_share_reward_button.png';
 const DAILY_TOOL_KINDS: readonly DailyToolKind[] = ['shuffle', 'undo', 'lift'];
+const DAILY_TARGET_ENCOURAGEMENTS = ['赞', '太棒了', '完美', '果茶制作中', '清爽加一', '继续加油'] as const;
 
 function seededRandom(seed: number): () => number {
   let value = seed >>> 0;
@@ -142,13 +167,18 @@ function pickDailyVariant<T>(variants: readonly T[], scope: string, themeId: str
   return variants[seed % variants.length];
 }
 
+function destroyContainerChildren(container: PIXI.Container): void {
+  const children = container.removeChildren();
+  children.forEach((child) => child.destroy({ children: true }));
+}
+
 export class DailyLimitedScene implements Scene {
   readonly name = 'dailyLimited';
   readonly container = new PIXI.Container();
 
-  private readonly level: DailyThemeLevelDef = getDailyLimitedLevel(0);
-  private readonly dailyBackground = pickDailyVariant(DAILY_BG_VARIANTS, 'background', this.level.themeId);
-  private readonly dailyBoardFrame = pickDailyVariant(DAILY_BOARD_FRAME_VARIANTS, 'board-frame', this.level.themeId);
+  private level: DailyThemeLevelDef = getDailyLimitedLevelForDate();
+  private dailyBackground = pickDailyVariant(DAILY_BG_VARIANTS, 'background', this.level.themeId);
+  private dailyBoardFrame = pickDailyVariant(DAILY_BOARD_FRAME_VARIANTS, 'board-frame', this.level.themeId);
   private readonly bgLayer = new PIXI.Container();
   private readonly boardFrameLayer = new PIXI.Container();
   private readonly cardLayer = new PIXI.Container();
@@ -159,6 +189,14 @@ export class DailyLimitedScene implements Scene {
   private readonly overlayLayer = new PIXI.Container();
   private readonly backButtonSprite = new PIXI.Sprite();
   private readonly coinBar = new CoinBar();
+  private readonly titleText = new PIXI.Text('', {
+    fontSize: 44,
+    fill: 0xfff3b1,
+    fontWeight: '900',
+    stroke: 0x235a7a,
+    strokeThickness: 7,
+    lineJoin: 'round',
+  });
   private readonly hintText = new PIXI.Text('', {
     fontSize: 24,
     fill: 0x5d3a1a,
@@ -187,6 +225,9 @@ export class DailyLimitedScene implements Scene {
   private unlockBufferAdBusy = false;
   private toolRewardedAdBusy = false;
   private nextLiftCardId = 1;
+  private bufferMatchTimer: ReturnType<typeof window.setTimeout> | null = null;
+  private readonly targetHintTickers = new Set<() => void>();
+  private readonly transientTickers = new Set<() => void>();
 
   constructor() {
     this.buildStaticUi();
@@ -204,7 +245,7 @@ export class DailyLimitedScene implements Scene {
 
   onEnter(): void {
     warmupRewardedAd(DAILY_LIMITED_REWARDED_AD_UNIT_ID);
-    void this.prepare().then(() => {
+    void this.syncLevelForToday().then(() => this.prepare()).then(() => {
       this.applyBackground();
       this.renderMainBoardFrame();
       if (!this.roundStarted || this.roundEnded) {
@@ -212,7 +253,40 @@ export class DailyLimitedScene implements Scene {
       } else {
         this.renderAll();
       }
+      this.showDailyRuleIntroIfNeeded();
     });
+  }
+
+  onExit(): void {
+    this.stopTransientAnimations();
+    destroyContainerChildren(this.cardLayer);
+    destroyContainerChildren(this.liftLayer);
+    destroyContainerChildren(this.iceBowlLayer);
+    destroyContainerChildren(this.bufferLayer);
+    destroyContainerChildren(this.overlayLayer);
+  }
+
+  private async syncLevelForToday(): Promise<void> {
+    const todayLevel = getDailyLimitedLevelForDate();
+    if (todayLevel.themeId === this.level.themeId) {
+      return;
+    }
+
+    this.level = todayLevel;
+    this.roundStarted = false;
+    this.roundEnded = false;
+    this.overlayLayer.removeChildren();
+    this.titleText.text = todayLevel.themeName;
+    this.hintText.text = todayLevel.positioningText;
+
+    if (this.loaded) {
+      await this.loadThemeAssets(todayLevel);
+      this.applyBackground();
+      this.renderMainBoardFrame();
+    } else {
+      this.dailyBackground = pickDailyVariant(DAILY_BG_VARIANTS, 'background', todayLevel.themeId);
+      this.dailyBoardFrame = pickDailyVariant(DAILY_BOARD_FRAME_VARIANTS, 'board-frame', todayLevel.themeId);
+    }
   }
 
   private async preloadAssets(): Promise<void> {
@@ -225,9 +299,10 @@ export class DailyLimitedScene implements Scene {
       TextureCache.load(DAILY_TOOL_BUTTONS_TEXTURE_KEY, DAILY_TOOL_BUTTONS_PATH),
       TextureCache.load(DAILY_TOOL_PANELS_TEXTURE_KEY, DAILY_TOOL_PANELS_PATH),
       TextureCache.load(DAILY_FREE_BUTTON_TEXTURE_KEY, DAILY_FREE_BUTTON_PATH),
-      TextureCache.load(DAILY_RECIPE_CARD_TEXTURE_KEY, DAILY_RECIPE_CARD_PATH),
+      TextureCache.load(this.level.recipeCard.textureKey, this.level.recipeCard.path),
       TextureCache.load(DAILY_CLEAR_BANNER_TEXTURE_KEY, DAILY_CLEAR_BANNER_PATH),
       TextureCache.load(DAILY_SHARE_BUTTON_TEXTURE_KEY, DAILY_SHARE_BUTTON_PATH),
+      TextureCache.load(BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY, BOWL_COMMON_MODAL_PANEL_ASSET),
       TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
       ...this.level.fruitIds.map((fruitId) => {
         const fruit = FRUIT_MAP[fruitId];
@@ -240,6 +315,54 @@ export class DailyLimitedScene implements Scene {
     this.applyBackButtonTexture();
     this.coinBar.refreshIcon();
     this.mountToolButtons();
+  }
+
+  private async loadThemeAssets(level: DailyThemeLevelDef): Promise<void> {
+    this.dailyBackground = pickDailyVariant(DAILY_BG_VARIANTS, 'background', level.themeId);
+    this.dailyBoardFrame = pickDailyVariant(DAILY_BOARD_FRAME_VARIANTS, 'board-frame', level.themeId);
+    await Promise.all([
+      TextureCache.load(this.dailyBackground.key, this.dailyBackground.path),
+      TextureCache.load(this.dailyBoardFrame.key, this.dailyBoardFrame.path),
+      TextureCache.load(level.recipeCard.textureKey, level.recipeCard.path),
+      ...level.fruitIds.map((fruitId) => TextureCache.load(textureKey(fruitId), FRUIT_MAP[fruitId].asset)),
+    ]);
+  }
+
+  private async switchThemeByGm(level: DailyThemeLevelDef): Promise<void> {
+    this.level = level;
+    await this.loadThemeAssets(level);
+    this.titleText.text = level.themeName;
+    this.hintText.text = level.positioningText;
+    this.applyBackground();
+    this.renderMainBoardFrame();
+    this.overlayLayer.removeChildren();
+    this.startRound();
+  }
+
+  private readDailyRuleIntroState(): DailyLimitedRuleIntroState {
+    const stored = PersistService.readJSON<Partial<DailyLimitedRuleIntroState>>(DAILY_LIMITED_RULE_INTRO_STATE_KEY);
+    return {
+      seenDateByTheme: {
+        ...(stored?.seenDateByTheme ?? {}),
+      },
+    };
+  }
+
+  private writeDailyRuleIntroState(state: DailyLimitedRuleIntroState): void {
+    PersistService.writeJSON(DAILY_LIMITED_RULE_INTRO_STATE_KEY, {
+      seenDateByTheme: { ...state.seenDateByTheme },
+    });
+  }
+
+  private hasSeenDailyRuleIntroToday(): boolean {
+    const state = this.readDailyRuleIntroState();
+    return state.seenDateByTheme[this.level.themeId] === getLocalDayKey();
+  }
+
+  private markDailyRuleIntroSeenToday(): void {
+    const state = this.readDailyRuleIntroState();
+    state.seenDateByTheme[this.level.themeId] = getLocalDayKey();
+    this.writeDailyRuleIntroState(state);
   }
 
   private buildStaticUi(): void {
@@ -271,31 +394,24 @@ export class DailyLimitedScene implements Scene {
     this.container.addChild(this.coinBar);
     this.coinBar.refresh();
 
-    const gmClear = this.createPillButton('GM通关', 132, 48, 0xff7f50, 0x9d3b20);
+    const gmClear = this.createPillButton('GM测试', 132, 48, 0xff7f50, 0x9d3b20);
     gmClear.position.set(W - 94, top + 104);
     gmClear.on('pointertap', () => {
       AudioManager.playButtonSound();
-      this.completeRoundByGm();
+      this.showGmPanel();
     });
     this.container.addChild(gmClear);
 
-    const title = new PIXI.Text(this.level.themeName, {
-      fontSize: 44,
-      fill: 0xfff3b1,
-      fontWeight: '900',
-      stroke: 0x235a7a,
-      strokeThickness: 7,
-      lineJoin: 'round',
-    });
-    title.anchor.set(0.5);
-    title.resolution = 2;
-    title.position.set(W / 2, top + 56);
-    this.container.addChild(title);
+    this.titleText.text = this.level.themeName;
+    this.titleText.anchor.set(0.5);
+    this.titleText.resolution = 2;
+    this.titleText.position.set(W / 2, top + 72);
+    this.container.addChild(this.titleText);
 
     this.hintText.text = this.level.positioningText;
     this.hintText.anchor.set(0.5);
     this.hintText.resolution = 2;
-    this.hintText.position.set(W / 2, top + 108);
+    this.hintText.position.set(W / 2, top + 122);
     this.container.addChild(this.hintText);
 
     const boardTop = this.boardTop();
@@ -427,22 +543,46 @@ export class DailyLimitedScene implements Scene {
   }
 
   private generateCardDeal(): { flat: FruitId[]; stack: FruitId[] } {
-    const targetSet = new Set<FruitId>(this.level.targetFruitIds);
+    const targetSet = new Set<FruitId>(this.targetFruitIds());
+    const distractors = this.level.fruitIds.filter((fruitId) => !targetSet.has(fruitId));
     const flatPool: FruitId[] = [];
     const stackCards: FruitId[] = [];
-    const primaryTarget = this.level.targetFruitIds[0];
-    for (let i = 0; i < this.level.targetCopies; i += 1) {
-      stackCards.push(primaryTarget);
-    }
-    for (const fruitId of this.level.fruitIds) {
-      if (targetSet.has(fruitId)) {
-        continue;
+
+    for (const target of this.level.targets) {
+      for (let i = 0; i < target.cardCopies; i += 1) {
+        stackCards.push(target.fruitId);
       }
+    }
+
+    for (const fruitId of distractors) {
       flatPool.push(fruitId, fruitId, fruitId);
-      for (let i = 0; i < STACK_DISTRACTOR_COPIES; i += 1) {
-        stackCards.push(fruitId);
+    }
+
+    const desiredStackCards = Math.max(
+      DAILY_LIMITED_MIN_STACK_CARDS,
+      stackCards.length,
+      this.level.totalStackCards ?? DAILY_LIMITED_MIN_STACK_CARDS,
+    );
+    let distractorIndex = 0;
+    while (stackCards.length + 3 <= desiredStackCards && distractors.length > 0) {
+      const fruitId = distractors[distractorIndex % distractors.length]!;
+      stackCards.push(fruitId, fruitId, fruitId);
+      distractorIndex += 1;
+    }
+    while (stackCards.length < desiredStackCards && distractors.length > 0) {
+      stackCards.push(distractors[distractorIndex % distractors.length]!);
+      distractorIndex += 1;
+    }
+
+    while (flatPool.length < FLAT_CARD_COUNT && distractors.length > 0) {
+      for (const fruitId of distractors) {
+        if (flatPool.length >= FLAT_CARD_COUNT) {
+          break;
+        }
+        flatPool.push(fruitId);
       }
     }
+
     return {
       flat: shuffleWithSeed(flatPool, this.level.layoutSeed + 17).slice(0, FLAT_CARD_COUNT),
       stack: shuffleWithSeed(stackCards, this.level.layoutSeed + 31),
@@ -483,12 +623,8 @@ export class DailyLimitedScene implements Scene {
       .sort((a, b) => (a.depthIndex - b.depthIndex) || (a.columnIndex - b.columnIndex));
 
     const y = this.flatAreaY();
-    const rowCount = Math.max(
-      FLAT_ROWS,
-      lifted.reduce((maxRow, card) => Math.max(maxRow, card.depthIndex + 1), 0),
-    );
     const panelW = FLAT_COLS * CARD_W + (FLAT_COLS - 1) * CARD_GAP + 30;
-    const panelH = rowCount * CARD_H + (rowCount - 1) * 8 + 30;
+    const panelH = FLAT_ROWS * CARD_H + (FLAT_ROWS - 1) * 8 + 30;
     const panel = new PIXI.Graphics();
     const panelX = (Game.logicWidth - panelW) / 2;
     const panelY = y - 15;
@@ -610,25 +746,33 @@ export class DailyLimitedScene implements Scene {
 
   private createCardView(card: CardState, clickable: boolean): PIXI.Container {
     const root = new PIXI.Container();
+    const shouldHintTarget = clickable && this.isTargetFruit(card.fruitId);
 
     const lift = new PIXI.Graphics();
-    lift.beginFill(0x31551d, 0.18);
+    lift.beginFill(shouldHintTarget ? 0x63d85f : 0x31551d, shouldHintTarget ? 0.42 : 0.18);
     lift.drawRoundedRect(1.5, 2.5, CARD_W - 1, CARD_H - 1, 8);
     lift.endFill();
     root.addChild(lift);
 
     const cardBg = new PIXI.Graphics();
-    cardBg.beginFill(0xfff8df, 1);
-    cardBg.lineStyle(2, 0x4f8c2e, 1);
+    cardBg.beginFill(shouldHintTarget ? 0xdfff9f : 0xfff8df, 1);
+    cardBg.lineStyle(shouldHintTarget ? 4 : 2, shouldHintTarget ? 0x2f9a35 : 0x4f8c2e, 1);
     cardBg.drawRoundedRect(0.5, 0.5, CARD_W - 2, CARD_H - 2, 8);
     cardBg.endFill();
-    cardBg.lineStyle(1, 0xffffff, 0.75);
+    cardBg.lineStyle(1, shouldHintTarget ? 0xf2ffe6 : 0xffffff, 0.75);
     cardBg.moveTo(8, 6);
     cardBg.lineTo(CARD_W - 8, 6);
-    cardBg.lineStyle(1, 0xd9d49b, 0.6);
+    cardBg.lineStyle(1, shouldHintTarget ? 0x7bcf51 : 0xd9d49b, 0.6);
     cardBg.moveTo(8, CARD_H - 7);
     cardBg.lineTo(CARD_W - 8, CARD_H - 7);
     root.addChild(cardBg);
+
+    if (shouldHintTarget) {
+      const glow = new PIXI.Graphics();
+      glow.lineStyle(3, 0xa6ff64, 0.96);
+      glow.drawRoundedRect(2.5, 2.5, CARD_W - 6, CARD_H - 6, 8);
+      root.addChild(glow);
+    }
 
     const icon = this.createFruitIcon(card.fruitId, 55);
     icon.position.set(CARD_W / 2, CARD_H / 2 + 1);
@@ -643,7 +787,30 @@ export class DailyLimitedScene implements Scene {
         this.onCardTap(card.id);
       });
     }
+    if (shouldHintTarget) {
+      this.attachTargetCardHint(root);
+    }
     return root;
+  }
+
+  private attachTargetCardHint(root: PIXI.Container): void {
+    const startedAt = performance.now();
+    let baseY: number | null = null;
+    const tick = () => {
+      if (root.destroyed || !root.parent) {
+        PIXI.Ticker.shared.remove(tick);
+        return;
+      }
+      if (baseY === null) {
+        baseY = root.y;
+      }
+      const elapsed = performance.now() - startedAt;
+      const wave = Math.sin(elapsed / 170);
+      root.y = baseY - Math.max(0, wave) * 5;
+      const scale = 1 + Math.max(0, wave) * 0.035;
+      root.scale.set(scale);
+    };
+    PIXI.Ticker.shared.add(tick);
   }
 
   private createFruitIcon(fruitId: FruitId, size: number): PIXI.Container {
@@ -697,7 +864,8 @@ export class DailyLimitedScene implements Scene {
       this.collected += 1;
       this.collectedByFruit[card.fruitId] = (this.collectedByFruit[card.fruitId] ?? 0) + 1;
       AudioManager.playScoopSound();
-      if (this.collected >= this.level.targetCount) {
+      this.showTargetCollectEncouragement(card.fruitId, this.collectedByFruit[card.fruitId] ?? 1);
+      if (this.collected >= this.targetCount()) {
         this.renderAll();
         this.finishRound(true);
         return;
@@ -792,7 +960,7 @@ export class DailyLimitedScene implements Scene {
       return { iconHolder, stars };
     });
 
-    AudioManager.playOrderCompleteSound();
+    AudioManager.playBufferMatchSound();
 
     const duration = 540;
     const start = performance.now();
@@ -899,17 +1067,259 @@ export class DailyLimitedScene implements Scene {
     }
     this.bufferMatchResolving = false;
     this.animatingBufferMatchIndexes = [];
-    this.collected = this.level.targetCount;
+    this.collected = this.targetCount();
     this.collectedByFruit = {};
-    let remaining = this.level.targetCount;
-    this.level.targetFruitIds.forEach((fruitId, index) => {
-      const slotsLeft = this.level.targetFruitIds.length - index;
-      const count = index === this.level.targetFruitIds.length - 1 ? remaining : Math.ceil(remaining / slotsLeft);
-      this.collectedByFruit[fruitId] = count;
-      remaining -= count;
+    this.level.targets.forEach((target) => {
+      this.collectedByFruit[target.fruitId] = target.requiredCount;
     });
     this.renderAll();
     this.finishRound(true);
+  }
+
+  private showGmPanel(): void {
+    const W = Game.logicWidth;
+    const H = Game.logicHeight;
+    this.overlayLayer.removeChildren();
+
+    const dim = new PIXI.Graphics();
+    dim.beginFill(0x0d0b08, 0.58);
+    dim.drawRect(0, 0, W, H);
+    dim.endFill();
+    dim.eventMode = 'static';
+    dim.on('pointertap', () => {
+      this.overlayLayer.removeChildren();
+    });
+    this.overlayLayer.addChild(dim);
+
+    const panelW = Math.min(620, W - 70);
+    const panelH = Math.min(720, 220 + DAILY_LIMITED_LEVELS.length * 76);
+    const panelX = (W - panelW) / 2;
+    const panelY = (H - panelH) / 2;
+    const panel = new PIXI.Graphics();
+    panel.beginFill(0xfff7e6, 1);
+    panel.lineStyle(6, 0xc27c38, 1);
+    panel.drawRoundedRect(panelX, panelY, panelW, panelH, 28);
+    panel.endFill();
+    this.overlayLayer.addChild(panel);
+
+    const title = new PIXI.Text('GM测试', {
+      fontSize: 36,
+      fill: 0x5a2c15,
+      fontWeight: '900',
+    });
+    title.anchor.set(0.5);
+    title.resolution = 2;
+    title.position.set(W / 2, panelY + 46);
+    this.overlayLayer.addChild(title);
+
+    const clear = this.createPillButton('一键通关', 210, 60, 0xff7f50, 0x9d3b20);
+    clear.position.set(W / 2, panelY + 112);
+    clear.on('pointertap', (event: PIXI.FederatedPointerEvent) => {
+      event.stopPropagation();
+      AudioManager.playButtonSound();
+      this.overlayLayer.removeChildren();
+      this.completeRoundByGm();
+    });
+    this.overlayLayer.addChild(clear);
+
+    DAILY_LIMITED_LEVELS.forEach((level, index) => {
+      const y = panelY + 188 + index * 70;
+      if (y > panelY + panelH - 48) {
+        return;
+      }
+      const selected = level.themeId === this.level.themeId;
+      const btn = this.createPillButton(
+        `${level.dayOfMonth}日 ${level.drinkName}${selected ? ' 当前' : ''}`,
+        panelW - 92,
+        54,
+        selected ? 0x80c96d : 0x72b7e8,
+        selected ? 0x31722e : 0x226a9c,
+      );
+      btn.position.set(W / 2, y);
+      btn.on('pointertap', (event: PIXI.FederatedPointerEvent) => {
+        event.stopPropagation();
+        AudioManager.playButtonSound();
+        void this.switchThemeByGm(level);
+      });
+      this.overlayLayer.addChild(btn);
+    });
+  }
+
+  private showDailyRuleIntroIfNeeded(): void {
+    if (this.roundEnded || this.hasSeenDailyRuleIntroToday()) {
+      return;
+    }
+    this.showDailyRuleIntroPanel();
+  }
+
+  private showDailyRuleIntroPanel(): void {
+    const W = Game.logicWidth;
+    const H = Game.logicHeight;
+    this.overlayLayer.removeChildren();
+
+    const dim = new PIXI.Graphics();
+    dim.beginFill(0x1a130c, 0.62);
+    dim.drawRect(0, 0, W, H);
+    dim.endFill();
+    dim.eventMode = 'static';
+    this.overlayLayer.addChild(dim);
+
+    const panelW = Math.min(660, W - 54);
+    const panelH = 610;
+    const panelX = (W - panelW) / 2;
+    const panelY = (H - panelH) / 2;
+    const panel = this.createCommonModalPanel(panelW, panelH);
+    panel.position.set(panelX, panelY);
+    this.overlayLayer.addChild(panel);
+
+    const title = new PIXI.Text('今日限定规则', {
+      fontSize: 42,
+      fill: 0xfff0c4,
+      fontWeight: '900',
+      stroke: 0x7a2d18,
+      strokeThickness: 6,
+      lineJoin: 'round',
+    });
+    title.anchor.set(0.5);
+    title.resolution = 2;
+    title.position.set(W / 2, panelY + 76);
+    this.overlayLayer.addChild(title);
+
+    const introLine1 = new PIXI.Container();
+    const introPrefix = new PIXI.Text('为了做出 ', {
+      fontSize: 28,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x5a3218,
+      strokeThickness: 4,
+    });
+    introPrefix.anchor.set(0, 0.5);
+    introPrefix.resolution = 2;
+    const introDrink = new PIXI.Text(`「${this.level.drinkName}」`, {
+      fontSize: 30,
+      fill: 0xfff06a,
+      fontWeight: '900',
+      stroke: 0x7a2d18,
+      strokeThickness: 5,
+      lineJoin: 'round',
+    });
+    introDrink.anchor.set(0, 0.5);
+    introDrink.resolution = 2;
+    const introLine1W = introPrefix.width + introDrink.width;
+    introPrefix.position.set(-introLine1W / 2, 0);
+    introDrink.position.set(introPrefix.x + introPrefix.width, 0);
+    introLine1.addChild(introPrefix, introDrink);
+    introLine1.position.set(W / 2, panelY + 156);
+    this.overlayLayer.addChild(introLine1);
+
+    const introLine2 = new PIXI.Text('找出下方目标水果，放入冰碗', {
+      fontSize: 28,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x5a3218,
+      strokeThickness: 4,
+      align: 'center',
+    });
+    introLine2.anchor.set(0.5);
+    introLine2.resolution = 2;
+    introLine2.position.set(W / 2, panelY + 205);
+    this.overlayLayer.addChild(introLine2);
+
+    const targetsTitle = new PIXI.Text('目标水果', {
+      fontSize: 28,
+      fill: 0xfff5d0,
+      fontWeight: '900',
+      stroke: 0x7a2d18,
+      strokeThickness: 5,
+    });
+    targetsTitle.anchor.set(0.5);
+    targetsTitle.resolution = 2;
+    targetsTitle.position.set(W / 2, panelY + 270);
+    this.overlayLayer.addChild(targetsTitle);
+
+    const targetRow = this.createRuleTargetFruitRow(panelW - 96);
+    targetRow.position.set(W / 2, panelY + 360);
+    this.overlayLayer.addChild(targetRow);
+
+    const tip = new PIXI.Text('非目标水果会先进暂存栏\n同水果集满 3 个会自动消除', {
+      fontSize: 21,
+      fill: 0xffefd0,
+      fontWeight: '900',
+      stroke: 0x5a3218,
+      strokeThickness: 4,
+      align: 'center',
+      lineHeight: 32,
+      wordWrap: true,
+      wordWrapWidth: panelW - 88,
+    });
+    tip.anchor.set(0.5);
+    tip.resolution = 2;
+    tip.position.set(W / 2, panelY + 466);
+    this.overlayLayer.addChild(tip);
+
+    const start = this.createPillButton('开始挑战', 230, 70, 0x79d64b, 0x2f7a26);
+    start.position.set(W / 2, panelY + panelH - 76);
+    start.on('pointertap', (event: PIXI.FederatedPointerEvent) => {
+      event.stopPropagation();
+      AudioManager.playButtonSound();
+      this.markDailyRuleIntroSeenToday();
+      this.overlayLayer.removeChildren();
+    });
+    this.overlayLayer.addChild(start);
+  }
+
+  private createRuleTargetFruitRow(maxWidth: number): PIXI.Container {
+    const root = new PIXI.Container();
+    const cardW = Math.min(150, Math.max(116, (maxWidth - (this.level.targets.length - 1) * 18) / this.level.targets.length));
+    const cardH = 128;
+    const gap = 18;
+    const totalW = this.level.targets.length * cardW + (this.level.targets.length - 1) * gap;
+    const startX = -totalW / 2;
+
+    this.level.targets.forEach((target, index) => {
+      const fruit = FRUIT_MAP[target.fruitId];
+      const card = new PIXI.Container();
+      card.position.set(startX + index * (cardW + gap), -cardH / 2);
+
+      const bg = new PIXI.Graphics();
+      bg.beginFill(0xfff6df, 0.96);
+      bg.lineStyle(4, 0xf0c36f, 1);
+      bg.drawRoundedRect(0, 0, cardW, cardH, 20);
+      bg.endFill();
+      card.addChild(bg);
+
+      const icon = this.createFruitIcon(target.fruitId, 70);
+      icon.position.set(cardW / 2, 42);
+      card.addChild(icon);
+
+      const label = new PIXI.Text(fruit.label, {
+        fontSize: 22,
+        fill: 0x5b3218,
+        fontWeight: '900',
+        align: 'center',
+        stroke: 0xffffff,
+        strokeThickness: 3,
+      });
+      label.anchor.set(0.5);
+      label.resolution = 2;
+      label.position.set(cardW / 2, 86);
+      card.addChild(label);
+
+      const count = new PIXI.Text(`收集 ${target.requiredCount}`, {
+        fontSize: 20,
+        fill: 0x8b4b20,
+        fontWeight: '900',
+        align: 'center',
+      });
+      count.anchor.set(0.5);
+      count.resolution = 2;
+      count.position.set(cardW / 2, 112);
+      card.addChild(count);
+
+      root.addChild(card);
+    });
+
+    return root;
   }
 
   private topStackCard(columnIndex: number): CardState | null {
@@ -926,7 +1336,15 @@ export class DailyLimitedScene implements Scene {
   }
 
   private isTargetFruit(fruitId: FruitId): boolean {
-    return this.level.targetFruitIds.includes(fruitId);
+    return this.targetFruitIds().includes(fruitId);
+  }
+
+  private targetFruitIds(): readonly FruitId[] {
+    return getDailyLimitedTargetFruitIds(this.level);
+  }
+
+  private targetCount(): number {
+    return getDailyLimitedTargetCount(this.level);
   }
 
   private activeBufferSize(): number {
@@ -960,6 +1378,14 @@ export class DailyLimitedScene implements Scene {
 
   private useTool(kind: DailyToolKind): void {
     if (this.roundEnded || this.bufferMatchResolving || this.toolCounts[kind] <= 0 || this.toolRewardedAdBusy) {
+      if (this.toolCounts[kind] <= 0) {
+        this.toast('本局使用次数已用完');
+      }
+      return;
+    }
+    const unavailableReason = this.getToolUnavailableReason(kind);
+    if (unavailableReason) {
+      this.toast(unavailableReason);
       return;
     }
     this.showToolHelpPanel(kind);
@@ -967,6 +1393,11 @@ export class DailyLimitedScene implements Scene {
 
   private async useToolWithRewardedAd(kind: DailyToolKind): Promise<void> {
     if (this.roundEnded || this.bufferMatchResolving || this.toolCounts[kind] <= 0 || this.toolRewardedAdBusy) {
+      return;
+    }
+    const unavailableReason = this.getToolUnavailableReason(kind);
+    if (unavailableReason) {
+      this.toast(unavailableReason);
       return;
     }
     this.toolRewardedAdBusy = true;
@@ -1123,9 +1554,14 @@ export class DailyLimitedScene implements Scene {
     if (this.buffer.length <= 0) {
       return;
     }
-    const lifted = this.buffer.splice(Math.max(0, this.buffer.length - 3));
-    lifted.forEach((fruitId) => {
-      const slot = this.findFlatEmptySlot();
+    const emptySlots = this.findFlatEmptySlots();
+    if (emptySlots.length <= 0) {
+      return;
+    }
+    const liftCount = Math.min(3, this.buffer.length, emptySlots.length);
+    const lifted = this.buffer.splice(this.buffer.length - liftCount);
+    lifted.forEach((fruitId, index) => {
+      const slot = emptySlots[index]!;
       this.cards.push({
         id: `lift_${this.nextLiftCardId}`,
         fruitId,
@@ -1141,25 +1577,39 @@ export class DailyLimitedScene implements Scene {
     this.renderAll();
   }
 
-  private findFlatEmptySlot(): { columnIndex: number; depthIndex: number } {
+  private getToolUnavailableReason(kind: DailyToolKind): string | null {
+    if (kind === 'undo') {
+      return this.history.length <= 0 ? '还没有可撤销的操作' : null;
+    }
+    if (kind === 'lift') {
+      if (this.buffer.length <= 0) {
+        return '暂存栏没有水果可上移';
+      }
+      if (this.findFlatEmptySlots().length <= 0) {
+        return '上方区域已满，不能上移';
+      }
+      return null;
+    }
+    const remaining = this.cards.filter((card) => !card.removed);
+    return remaining.length < 2 ? '当前没有可洗牌的卡片' : null;
+  }
+
+  private findFlatEmptySlots(): Array<{ columnIndex: number; depthIndex: number }> {
     const occupied = new Set(
       this.cards
         .filter((card) => card.zone === 'lift' && !card.removed)
         .map((card) => `${card.depthIndex}:${card.columnIndex}`),
     );
-    for (let row = 0; row < FLAT_ROWS + 4; row += 1) {
+    const slots: Array<{ columnIndex: number; depthIndex: number }> = [];
+    for (let row = 0; row < FLAT_ROWS; row += 1) {
       for (let col = 0; col < FLAT_COLS; col += 1) {
         const key = `${row}:${col}`;
         if (!occupied.has(key)) {
-          return { columnIndex: col, depthIndex: row };
+          slots.push({ columnIndex: col, depthIndex: row });
         }
       }
     }
-    const fallbackIndex = this.cards.filter((card) => card.zone === 'lift').length;
-    return {
-      columnIndex: fallbackIndex % FLAT_COLS,
-      depthIndex: Math.floor(fallbackIndex / FLAT_COLS),
-    };
+    return slots;
   }
 
   private mountToolButtons(): void {
@@ -1230,14 +1680,15 @@ export class DailyLimitedScene implements Scene {
   private updateToolButtons(): void {
     for (const view of this.toolViews.values()) {
       const count = this.toolCounts[view.kind];
+      const available = count > 0 && !this.getToolUnavailableReason(view.kind);
       if (view.bg) {
         view.bg.clear();
-        view.bg.beginFill(count > 0 ? 0xb77a3a : 0x7b6658, 1);
-        view.bg.lineStyle(5, count > 0 ? 0xf8d28b : 0xbca995, 1);
+        view.bg.beginFill(available ? 0xb77a3a : 0x7b6658, 1);
+        view.bg.lineStyle(5, available ? 0xf8d28b : 0xbca995, 1);
         view.bg.drawCircle(0, 0, 58);
         view.bg.endFill();
       }
-      view.root.alpha = count > 0 ? 1 : 0.55;
+      view.root.alpha = available ? 1 : 0.55;
     }
   }
 
@@ -1247,19 +1698,31 @@ export class DailyLimitedScene implements Scene {
     const y = this.bowlY();
     const bowlW = 118;
     const gap = 12;
-    const totalW = ICE_BOWL_COUNT * bowlW + (ICE_BOWL_COUNT - 1) * gap;
+    const bowlSlots = this.getBowlSlots();
+    const totalW = bowlSlots.length * bowlW + (bowlSlots.length - 1) * gap;
     const startX = Math.round((W - totalW) / 2);
-    const bowlOrdinalsByFruit = new Map<FruitId, number>();
 
-    for (let i = 0; i < ICE_BOWL_COUNT; i += 1) {
+    for (let i = 0; i < bowlSlots.length; i += 1) {
+      const slot = bowlSlots[i]!;
       const x = startX + i * (bowlW + gap) + bowlW / 2;
-      const targetFruit = this.level.targetFruitIds[i % this.level.targetFruitIds.length];
-      const ordinal = bowlOrdinalsByFruit.get(targetFruit) ?? 0;
-      bowlOrdinalsByFruit.set(targetFruit, ordinal + 1);
-      const targetCollected = this.collectedByFruit[targetFruit] ?? 0;
-      const filled = Math.max(0, Math.min(ICE_BOWL_CAPACITY, targetCollected - ordinal * ICE_BOWL_CAPACITY));
-      this.iceBowlLayer.addChild(this.createIceBowlView(x, y, bowlW, filled, targetFruit));
+      const targetCollected = this.collectedByFruit[slot.fruitId] ?? 0;
+      const filled = Math.max(0, Math.min(slot.capacity, targetCollected - slot.start));
+      this.iceBowlLayer.addChild(this.createIceBowlView(x, y, bowlW, filled, slot));
     }
+  }
+
+  private getBowlSlots(): DailyBowlSlot[] {
+    const slots: DailyBowlSlot[] = [];
+    for (const target of this.level.targets) {
+      for (let start = 0; start < target.requiredCount; start += ICE_BOWL_CAPACITY) {
+        slots.push({
+          fruitId: target.fruitId,
+          start,
+          capacity: ICE_BOWL_CAPACITY,
+        });
+      }
+    }
+    return slots;
   }
 
   private createIceBowlView(
@@ -1267,7 +1730,7 @@ export class DailyLimitedScene implements Scene {
     y: number,
     width: number,
     filledCount: number,
-    targetFruit: FruitId,
+    slot: DailyBowlSlot,
   ): PIXI.Container {
     const root = new PIXI.Container();
     const tex = TextureCache.get(DAILY_ICE_BOWL_TEXTURE_KEY);
@@ -1300,34 +1763,92 @@ export class DailyLimitedScene implements Scene {
     }
 
     const fruitPositions = [
-      { x: x - 22, y: y + 30 },
-      { x, y: y + 22 },
-      { x: x + 22, y: y + 31 },
+      { x: x - 22, y: y - 2 },
+      { x, y: y - 10 },
+      { x: x + 22, y: y - 1 },
     ];
-    for (let i = 0; i < filledCount; i += 1) {
+    for (let i = 0; i < Math.min(filledCount, fruitPositions.length); i += 1) {
       const pos = fruitPositions[i];
-      const icon = this.createFruitIcon(targetFruit, 32);
+      const icon = this.createFruitIcon(slot.fruitId, 42);
       icon.position.set(pos.x, pos.y);
       icon.alpha = 0.92;
       root.addChild(icon);
     }
 
-    const countIcon = this.createFruitIcon(targetFruit, 22);
-    countIcon.position.set(x - 20, y + 90);
+    const countIcon = this.createFruitIcon(slot.fruitId, 30);
+    countIcon.position.set(x - 26, y + 88);
     root.addChild(countIcon);
 
     const count = new PIXI.Text(`${filledCount}/${ICE_BOWL_CAPACITY}`, {
-      fontSize: 18,
+      fontSize: 24,
       fill: 0x20718a,
       fontWeight: '900',
       stroke: 0xffffff,
-      strokeThickness: 3,
+      strokeThickness: 4,
     });
     count.anchor.set(0.5);
     count.resolution = 2;
-    count.position.set(x + 12, y + 90);
+    count.position.set(x + 17, y + 88);
     root.addChild(count);
     return root;
+  }
+
+  private showTargetCollectEncouragement(fruitId: FruitId, collectedForFruit: number): void {
+    const center = this.bowlSlotCenterForFruit(fruitId, collectedForFruit);
+    const randomIndex = Math.floor(Math.random() * DAILY_TARGET_ENCOURAGEMENTS.length);
+    const text = new PIXI.Text(DAILY_TARGET_ENCOURAGEMENTS[randomIndex]!, {
+      fontSize: 30,
+      fill: 0xfff6a3,
+      fontWeight: '900',
+      stroke: 0x7a3d16,
+      strokeThickness: 5,
+      lineJoin: 'round',
+    });
+    text.anchor.set(0.5);
+    text.resolution = 2;
+    text.position.set(center.x + (Math.random() - 0.5) * 42, center.y - 42);
+    text.scale.set(0.82);
+    this.overlayLayer.addChild(text);
+
+    const duration = 780;
+    const start = performance.now();
+    const startY = text.y;
+    const tick = () => {
+      const progress = Math.min(1, (performance.now() - start) / duration);
+      const easeOut = 1 - (1 - progress) * (1 - progress);
+      text.y = startY - easeOut * 58;
+      text.scale.set(0.82 + Math.sin(Math.min(1, progress / 0.28) * Math.PI) * 0.18);
+      text.alpha = progress < 0.58 ? 1 : Math.max(0, 1 - (progress - 0.58) / 0.42);
+      if (progress >= 1) {
+        PIXI.Ticker.shared.remove(tick);
+        if (text.parent) {
+          text.parent.removeChild(text);
+        }
+        text.destroy();
+      }
+    };
+    PIXI.Ticker.shared.add(tick);
+  }
+
+  private bowlSlotCenterForFruit(fruitId: FruitId, collectedForFruit: number): { x: number; y: number } {
+    const bowlW = 118;
+    const gap = 12;
+    const bowlSlots = this.getBowlSlots();
+    const totalW = bowlSlots.length * bowlW + (bowlSlots.length - 1) * gap;
+    const startX = Math.round((Game.logicWidth - totalW) / 2);
+    const collectedIndex = Math.max(0, collectedForFruit - 1);
+    const slotIndex = Math.max(
+      0,
+      bowlSlots.findIndex((slot) => (
+        slot.fruitId === fruitId
+        && collectedIndex >= slot.start
+        && collectedIndex < slot.start + slot.capacity
+      )),
+    );
+    return {
+      x: startX + slotIndex * (bowlW + gap) + bowlW / 2,
+      y: this.bowlY() + 24,
+    };
   }
 
   private showResultOverlay(success: boolean): void {
@@ -1355,23 +1876,20 @@ export class DailyLimitedScene implements Scene {
       return;
     }
 
-    const panelW = Math.min(620, W - 64);
-    const panelH = 400;
+    const panelW = Math.min(660, W - 56);
+    const panelH = 420;
     const panelX = (W - panelW) / 2;
     const panelY = (H - panelH) / 2;
-    const panel = new PIXI.Graphics();
-    panel.beginFill(0xfff8e8, 1);
-    panel.lineStyle(10, 0xc47634, 1);
-    panel.drawRoundedRect(panelX, panelY, panelW, panelH, 30);
-    panel.endFill();
+    const panel = this.createCommonModalPanel(panelW, panelH);
+    panel.position.set(panelX, panelY);
     this.overlayLayer.addChild(panel);
 
-    const title = new PIXI.Text('冰碗没装满', {
+    const title = new PIXI.Text('挑战失败', {
       fontSize: 42,
-      fill: 0xb44428,
+      fill: 0xfff0c4,
       fontWeight: '900',
-      stroke: 0xffffff,
-      strokeThickness: 5,
+      stroke: 0x7a2d18,
+      strokeThickness: 6,
     });
     title.anchor.set(0.5);
     title.resolution = 2;
@@ -1379,15 +1897,15 @@ export class DailyLimitedScene implements Scene {
     this.overlayLayer.addChild(title);
 
     const body = new PIXI.Text(
-      '底部格子已经放满了，继续收集目标水果片再试一次吧。',
+      '底部格子已经放满了\n继续收集目标水果片再试一次吧',
       {
         fontSize: 28,
-        fill: 0x6b4320,
-        fontWeight: '700',
+        fill: 0xffffff,
+        fontWeight: '800',
+        stroke: 0x5a3218,
+        strokeThickness: 4,
         align: 'center',
-        wordWrap: true,
-        wordWrapWidth: panelW - 86,
-        lineHeight: 42,
+        lineHeight: 46,
       },
     );
     body.anchor.set(0.5);
@@ -1410,6 +1928,18 @@ export class DailyLimitedScene implements Scene {
       SceneManager.switchTo('home');
     });
     this.overlayLayer.addChild(home);
+  }
+
+  private createCommonModalPanel(width: number, height: number): PIXI.Container {
+    const root = new PIXI.Container();
+    const tex = TextureCache.get(BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY);
+    if (tex) {
+      const panel = new PIXI.NineSlicePlane(tex, 200, 110, 200, 110);
+      panel.width = width;
+      panel.height = height;
+      root.addChild(panel);
+    }
+    return root;
   }
 
   private showDailyClearRewardOverlay(W: number, H: number): void {
@@ -1441,14 +1971,6 @@ export class DailyLimitedScene implements Scene {
       this.overlayLayer.addChild(title);
     }
 
-    const aura = new PIXI.Graphics();
-    aura.beginFill(0xfff1a6, 0.16);
-    aura.drawCircle(centerX, H * 0.44, 190);
-    aura.endFill();
-    aura.lineStyle(3, 0xffffff, 0.2);
-    aura.drawCircle(centerX, H * 0.44, 154);
-    this.overlayLayer.addChild(aura);
-
     this.overlayLayer.addChild(this.createFloatingReward(centerX - 104, H * 0.45, '金币', `+${DAILY_LIMITED_CLEAR_REWARD_COINS}`, createCoinIcon(56)));
     this.overlayLayer.addChild(this.createRecipeFloatingReward(centerX + 118, H * 0.45));
 
@@ -1457,15 +1979,27 @@ export class DailyLimitedScene implements Scene {
     share.on('pointertap', () => {
       AudioManager.playButtonSound();
       const ok = shareGame({
-        title: '菠萝雪碧冰沙制作方法，酸甜清爽一口降温！',
-        imageUrl: DAILY_RECIPE_CARD_PATH,
-        query: 'from=share&entry=daily_limited_recipe',
+        title: this.level.recipeCard.shareTitle,
+        imageUrl: this.level.recipeCard.path,
+        query: `from=share&entry=daily_limited_recipe&theme=${this.level.themeId}`,
       });
       if (!ok) {
         this.toast('请在微信小游戏中分享');
       }
     });
     this.overlayLayer.addChild(share);
+
+    const shareTip = new PIXI.Text('把制作方法分享给亲友，共享美味吧', {
+      fontSize: 22,
+      fill: 0xfff4d6,
+      fontWeight: '800',
+      stroke: 0x4c2a15,
+      strokeThickness: 4,
+    });
+    shareTip.anchor.set(0.5);
+    shareTip.resolution = 2;
+    shareTip.position.set(centerX, H * 0.77);
+    this.overlayLayer.addChild(shareTip);
 
     const hint = new PIXI.Text('点击空白处返回首页', {
       fontSize: 22,
@@ -1491,14 +2025,6 @@ export class DailyLimitedScene implements Scene {
       banner.position.set(centerX, bannerY);
       this.overlayLayer.addChild(banner);
     }
-
-    const aura = new PIXI.Graphics();
-    aura.beginFill(0xfff1a6, 0.16);
-    aura.drawCircle(centerX, H * 0.45, 150);
-    aura.endFill();
-    aura.lineStyle(3, 0xffffff, 0.2);
-    aura.drawCircle(centerX, H * 0.45, 116);
-    this.overlayLayer.addChild(aura);
 
     this.overlayLayer.addChild(this.createFloatingReward(centerX, H * 0.43, '金币', `+${this.lastClearRewardCoins}`, createCoinIcon(58)));
 
@@ -1533,27 +2059,7 @@ export class DailyLimitedScene implements Scene {
     const root = new PIXI.Container();
     root.position.set(x, y);
 
-    const glow = new PIXI.Graphics();
-    glow.beginFill(0xfff0a6, 0.22);
-    glow.drawCircle(0, -22, 76);
-    glow.endFill();
-    glow.lineStyle(3, 0xffffff, 0.28);
-    glow.drawCircle(0, -22, 58);
-    root.addChild(glow);
-
-    for (const [dx, dy] of [[-58, -52], [56, -46], [-42, 34], [52, 26]] as const) {
-      const sparkle = new PIXI.Text('✦', {
-        fontSize: 22,
-        fill: 0xfff7b6,
-        fontWeight: '900',
-        stroke: 0x7a4a22,
-        strokeThickness: 2,
-      });
-      sparkle.anchor.set(0.5);
-      sparkle.resolution = 2;
-      sparkle.position.set(dx, dy - 22);
-      root.addChild(sparkle);
-    }
+    root.addChild(this.createUnlockRewardFx(0, -24));
 
     icon.position.set(0, -28);
     root.addChild(icon);
@@ -1582,19 +2088,67 @@ export class DailyLimitedScene implements Scene {
     return root;
   }
 
+  private createUnlockRewardFx(x: number, y: number): PIXI.Container {
+    const root = new PIXI.Container();
+    root.position.set(x, y);
+
+    const glow = new PIXI.Graphics();
+    glow.beginFill(0xfff0a6, 0.1);
+    glow.drawCircle(0, 0, 86);
+    glow.endFill();
+    glow.beginFill(0xffffff, 0.12);
+    glow.drawCircle(0, 0, 54);
+    glow.endFill();
+    glow.lineStyle(3, 0xfff7c5, 0.36);
+    glow.drawCircle(0, 0, 76);
+    root.addChild(glow);
+
+    const rays = new PIXI.Graphics();
+    rays.lineStyle(5, 0xfff2a6, 0.62);
+    for (let i = 0; i < 8; i += 1) {
+      const angle = (Math.PI * 2 * i) / 8;
+      const inner = 62;
+      const outer = i % 2 === 0 ? 108 : 94;
+      rays.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+      rays.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+    }
+    root.addChild(rays);
+
+    const diamond = (dx: number, dy: number, size: number, alpha: number) => {
+      const g = new PIXI.Graphics();
+      g.beginFill(0xfff6c6, alpha);
+      g.moveTo(0, -size);
+      g.lineTo(size, 0);
+      g.lineTo(0, size);
+      g.lineTo(-size, 0);
+      g.closePath();
+      g.endFill();
+      g.position.set(dx, dy);
+      root.addChild(g);
+    };
+    diamond(-82, -54, 10, 0.9);
+    diamond(82, -50, 9, 0.86);
+    diamond(-72, 54, 8, 0.78);
+    diamond(74, 46, 9, 0.82);
+    diamond(0, -106, 7, 0.76);
+    diamond(0, 98, 6, 0.68);
+
+    return root;
+  }
+
   private createRecipeFloatingReward(x: number, y: number): PIXI.Container {
     const icon = new PIXI.Container();
-    const tex = TextureCache.get(DAILY_RECIPE_CARD_TEXTURE_KEY);
+    const tex = TextureCache.get(this.level.recipeCard.textureKey);
     if (tex) {
       const sp = new PIXI.Sprite(tex);
       sp.anchor.set(0.5);
       sp.scale.set(118 / Math.max(tex.width, tex.height));
       icon.addChild(sp);
     } else {
-      const fallback = this.createFruitIcon('pineapple', 72);
+      const fallback = this.createFruitIcon(this.level.targets[0]?.fruitId ?? 'pineapple', 72);
       icon.addChild(fallback);
     }
-    const root = this.createFloatingReward(x, y, '制作方法', '菠萝冰', icon);
+    const root = this.createFloatingReward(x, y, '制作方法', this.level.drinkName, icon);
     root.eventMode = 'static';
     root.cursor = 'pointer';
     root.hitArea = new PIXI.Rectangle(-86, -112, 172, 220);
@@ -1619,7 +2173,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private showRecipeCardPreview(): void {
-    const tex = TextureCache.get(DAILY_RECIPE_CARD_TEXTURE_KEY);
+    const tex = TextureCache.get(this.level.recipeCard.textureKey);
     if (!tex) {
       return;
     }

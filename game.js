@@ -1,5 +1,7 @@
 var _diagMsgs = [];
 var _diagStart = Date.now();
+var _diagModalShowing = false;
+var _diagModalShown = false;
 
 function _diag(msg) {
   var line = '[' + (Date.now() - _diagStart) + 'ms] ' + msg;
@@ -9,11 +11,22 @@ function _diag(msg) {
 
 function _showDiag() {
   try {
+    if (_diagModalShowing || _diagModalShown) {
+      return;
+    }
     if (typeof wx !== 'undefined' && wx.showModal) {
+      _diagModalShowing = true;
+      _diagModalShown = true;
       wx.showModal({
         title: '启动诊断',
         content: _diagMsgs.join('\n'),
-        showCancel: false
+        showCancel: false,
+        fail: function(err) {
+          try { console.warn('[diag] showModal failed', err); } catch (_) {}
+        },
+        complete: function() {
+          _diagModalShowing = false;
+        }
       });
     }
   } catch (_) {}

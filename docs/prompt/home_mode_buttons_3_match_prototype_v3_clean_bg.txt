@@ -1,0 +1,67 @@
+Image editing / asset generation task.
+
+Use the provided reference image as the strict visual style target. Create three isolated button assets that match the reference prototype's button style: same rounded pill shape, saturated lime-green / sky-blue / orange-yellow gradients, glossy top highlights, thick cream rim, dark teal outer outline, thick white Chinese title with dark outline, smaller subtitle below, and right-side circular forward arrow badge.
+
+IMPORTANT BACKGROUND REQUIREMENT FOR CLEAN CUTOUT:
+- Do NOT generate transparency.
+- Do NOT generate a checkerboard transparency preview.
+- Do NOT generate gray-white squares, patterned background, UI scene background, fruit scene background, or any texture behind the buttons.
+- Put the three buttons on one perfectly flat, solid, uniform bright magenta background: RGB #ff00ff.
+- The magenta background must be a single flat color all the way to the image edges.
+- No shadows, glows, blur, reflections, or semi-transparent pixels outside the outer dark teal button outline. Keep the button edge crisp so the background can be removed cleanly.
+- Do not use magenta anywhere inside the buttons, icons, text, rim, or arrow badge.
+
+Canvas:
+- Single PNG sprite sheet for review.
+- Exactly THREE large horizontal rounded pill buttons stacked vertically in one column.
+- Only the three buttons on the solid magenta background.
+- Leave clear spacing around and between the buttons so each can be cropped later.
+
+STRICT STYLE MATCH:
+- Match the reference prototype's three big mode buttons as closely as possible.
+- Keep the same button proportions, rounded corners, shiny top highlight, cream inner border, dark teal outer border, and right-side circular arrow button.
+- The right badge MUST be a forward arrow ">" like the reference, NOT a refresh icon, NOT a circular arrow.
+- Keep the same color families as the reference:
+  1. top button: bright lime-green gradient,
+  2. middle button: saturated sky-blue gradient,
+  3. bottom button: warm orange-yellow gradient.
+- Use the same thick white Chinese title style with dark teal / blue / warm brown outline and soft inner shadow, matching the reference.
+- Use the same smaller subtitle style below the title, matching the reference.
+- Do not make the style darker, flatter, more realistic, or more metallic than the reference.
+
+Button 1, top, green:
+- LEFT ICON: cute fruit bowl with a wooden spoon scooping fruit from the bowl.
+- The icon must clearly communicate "scoop fruit from a bowl". It must NOT be a knife cutting watermelon.
+- MAIN TITLE text, exactly four Chinese characters: 闯关模式
+- SUBTITLE text, exactly eight Chinese characters with one space in the middle: 捞果配对 解锁新关
+- Right badge: white forward arrow ">" inside a green circular button, same as reference style.
+
+Button 2, middle, blue:
+- LEFT ICON: beautiful iced fruit drink in a transparent glass cup, with ice cubes, citrus slice, strawberry, mint leaf, and straw.
+- The icon must clearly communicate refreshing daily limited special drink / daily challenge. It must NOT be a calendar.
+- MAIN TITLE text, exactly four Chinese characters: 每日限定
+- SUBTITLE text, exactly eight Chinese characters with one space in the middle: 今日特饮 限时挑战
+- Right badge: white forward arrow ">" inside a blue circular button, same as reference style.
+
+Button 3, bottom, orange:
+- LEFT ICON: knife slicing fruit, with watermelon / orange / kiwi and small juice splash.
+- The icon must clearly communicate fruit slicing challenge.
+- MAIN TITLE text, exactly four Chinese characters: 果切挑战
+- SUBTITLE text, exactly eight Chinese characters with one space in the middle: 连切水果 冲击高分
+- Right badge: white forward arrow ">" inside an orange circular button, same as reference style.
+
+STRICT TEXT RULES:
+- Generate ONLY these Chinese strings:
+  闯关模式
+  捞果配对 解锁新关
+  每日限定
+  今日特饮 限时挑战
+  果切挑战
+  连切水果 冲击高分
+- Chinese characters must be complete, correct, clear, and readable. No malformed glyphs, no missing strokes.
+- NO English letters, NO random numbers, NO watermark, NO logo, NO QR code, NO extra Chinese words.
+
+Composition details:
+- Icon on the left, title and subtitle centered in the text area, arrow badge on the right.
+- Keep alignment identical across the three buttons.
+- Make all three buttons feel like official assets from the same home screen prototype.

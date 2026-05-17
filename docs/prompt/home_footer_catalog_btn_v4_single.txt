@@ -1,0 +1,20 @@
+Generate one standalone bottom navigation graphic button for a cute summer fruit WeChat mini game.
+
+Content:
+- Icon: fruit collection book / fruit atlas, small cream notebook with a strawberry on the cover, slightly tilted.
+- Label text exactly two Chinese characters: 图鉴
+
+Style:
+- Cute polished 2D hand-painted cartoon mobile game UI.
+- Free-standing icon above label.
+- NO square tile, NO rounded rectangle card, NO white box, NO button backplate.
+- Thick dark warm outline, soft highlights, rounded shapes.
+- Label style: thick rounded Chinese UI font, dark brown fill, cream outline, readable at small mobile size.
+
+Clean cutout:
+- Put the button on a perfectly flat solid bright magenta background RGB #ff00ff.
+- Do NOT generate transparency or checkerboard.
+- Do not use magenta inside the icon or text.
+- Keep safe margin around the icon and label.
+- Generate ONLY this Chinese string: 图鉴.
+- NO English letters, NO numbers, NO watermark, NO extra text.
