@@ -2134,9 +2134,24 @@ export class DailyLimitedScene implements Scene {
     remaining.forEach((card, index) => {
       card.fruitId = fruitIds[index];
     });
+    this.compactRemainingStackCards();
     this.toolCounts.shuffle -= 1;
     AudioManager.playOrderCompleteSound();
+    destroyContainerChildren(this.cardLayer);
+    this.clearStackRenderCache();
     this.renderAll();
+  }
+
+  private compactRemainingStackCards(): void {
+    const stackCards = this.cards
+      .filter((card) => card.zone === 'stack' && !card.removed)
+      .sort((a, b) => (a.depthIndex - b.depthIndex) || (a.columnIndex - b.columnIndex));
+    stackCards.forEach((card, index) => {
+      // 洗牌后必须把剩余堆叠卡重新压紧。之前只换 fruitId，不改原来的
+      // column/depth，已经被点掉的位置会留下空洞，所以看起来像“间距不齐”。
+      card.columnIndex = index % CARD_COLS;
+      card.depthIndex = Math.floor(index / CARD_COLS);
+    });
   }
 
   private undoLastClick(): void {
