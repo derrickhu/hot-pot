@@ -72,6 +72,11 @@ const GRID_GAP = 14;
 const GRID_COLS = 3;
 const ROW_GAP_Y = 22;
 
+function destroyContainerChildren(container: PIXI.Container): void {
+  const children = container.removeChildren();
+  children.forEach((child) => child.destroy({ children: true }));
+}
+
 /** 图鉴：水果图鉴 / 徽章图鉴 / 冰饮制作 */
 export class CatalogScene implements Scene {
   readonly name = 'catalog';
@@ -103,6 +108,9 @@ export class CatalogScene implements Scene {
   private dragStartY = 0;
   private dragStartScrollY = 0;
   private domDragCleanup: (() => void) | null = null;
+  private readonly loadedContentTextureKeys = new Set<string>();
+  private recipePreview: PIXI.Container | null = null;
+  private active = false;
 
   constructor() {
     this.computeLayout();
@@ -139,6 +147,7 @@ export class CatalogScene implements Scene {
   }
 
   onEnter(): void {
+    this.active = true;
     this.loadedTabs.delete('drink');
     void this.preloadAndBuild(this.activeTab);
     // 进入图鉴时尝试展示插屏广告；微信平台自带频次限制，业务侧无需节流
@@ -146,7 +155,13 @@ export class CatalogScene implements Scene {
   }
 
   onExit(): void {
+    this.active = false;
     this.stopCatalogDrag();
+    this.destroyRecipePreview();
+    destroyContainerChildren(this.gridRoot);
+    TextureCache.unloadMany(this.loadedContentTextureKeys);
+    this.loadedContentTextureKeys.clear();
+    this.loadedTabs.clear();
   }
 
   private computeLayout(): void {
@@ -388,27 +403,37 @@ export class CatalogScene implements Scene {
           const loads = slots
             .filter((slot) => slot.unlocked)
             .flatMap((slot) =>
-              slot.assetCandidates.map((asset, index) => TextureCache.load(this.catalogTextureKey(slot, index), asset)),
+              slot.assetCandidates.map((asset, index) => this.loadContentTexture(this.catalogTextureKey(slot, index), asset)),
             );
           await Promise.all(loads);
         } else if (tab === 'badge') {
           await Promise.all(
-            BOWL_BADGES.map((badge) => TextureCache.load(this.badgeTextureKey(badge), badge.asset)),
+            BOWL_BADGES.map((badge) => this.loadContentTexture(this.badgeTextureKey(badge), badge.asset)),
           );
         } else {
-          const loads = this.getDrinkRecipeSlots()
-            .filter((slot) => slot.unlocked)
-            .map((slot) => TextureCache.load(slot.textureKey, slot.asset));
-          await Promise.all(loads);
+          // 菜谱卡是竖版大图，列表里不预加载；点击预览时按需加载，关闭后释放。
         }
         this.loadedTabs.add(tab);
       }
-      if (tab === this.activeTab && this.chromeReady) {
+      if (this.active && tab === this.activeTab && this.chromeReady) {
         this.buildActiveGrid();
       }
     } finally {
+      if (!this.active) {
+        TextureCache.unloadMany(this.loadedContentTextureKeys);
+        this.loadedContentTextureKeys.clear();
+        this.loadedTabs.clear();
+      }
       this.loading = false;
     }
+  }
+
+  private async loadContentTexture(key: string, asset: string): Promise<PIXI.Texture | null> {
+    const texture = await TextureCache.load(key, asset);
+    if (texture) {
+      this.loadedContentTextureKeys.add(key);
+    }
+    return texture;
   }
 
   private buildScrollArea(): void {
@@ -509,7 +534,7 @@ export class CatalogScene implements Scene {
   }
 
   private buildFruitGrid(slots: CatalogSlot[]): void {
-    this.gridRoot.removeChildren();
+    destroyContainerChildren(this.gridRoot);
 
     const W = Game.logicWidth;
     const cellW = (W - GRID_PAD_X * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
@@ -593,7 +618,7 @@ export class CatalogScene implements Scene {
   }
 
   private buildBadgeGrid(slots: BadgeCatalogSlot[]): void {
-    this.gridRoot.removeChildren();
+    destroyContainerChildren(this.gridRoot);
 
     const W = Game.logicWidth;
     const cellW = (W - GRID_PAD_X * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
@@ -660,7 +685,7 @@ export class CatalogScene implements Scene {
   }
 
   private buildDrinkRecipeGrid(slots: DrinkRecipeCatalogSlot[]): void {
-    this.gridRoot.removeChildren();
+    destroyContainerChildren(this.gridRoot);
 
     if (slots.length === 0) {
       this.maxScrollY = 0;
@@ -705,17 +730,29 @@ export class CatalogScene implements Scene {
       cell.hitArea = new PIXI.Rectangle(-cellW / 2, 0, cellW, iconH + labelBlockH);
       cell.on('pointertap', () => {
         AudioManager.playButtonSound();
-        this.showRecipePreview(slot);
+        void this.showRecipePreview(slot);
       });
 
-      const recipeTex = TextureCache.get(slot.textureKey);
-      if (recipeTex) {
-        const sp = new PIXI.Sprite(recipeTex);
-        sp.anchor.set(0.5);
-        sp.scale.set(Math.min((cellW * 0.9) / recipeTex.width, (iconH * 0.9) / recipeTex.height));
-        sp.position.set(0, iconH / 2);
-        cell.addChild(sp);
-      }
+      const card = new PIXI.Graphics();
+      card.beginFill(0xfff6dd, 0.98);
+      card.lineStyle(4, 0xd68b4a, 0.95);
+      card.drawRoundedRect(-cellW * 0.36, iconH * 0.08, cellW * 0.72, iconH * 0.84, 18);
+      card.endFill();
+      card.beginFill(0xffdf8e, 0.86);
+      card.drawRoundedRect(-cellW * 0.25, iconH * 0.18, cellW * 0.5, 22, 11);
+      card.endFill();
+      cell.addChild(card);
+      const recipeMark = new PIXI.Text('制作', {
+        fontSize: 28,
+        fill: 0xa14a0d,
+        fontWeight: '900',
+        stroke: 0xffffff,
+        strokeThickness: 4,
+      });
+      recipeMark.anchor.set(0.5);
+      recipeMark.resolution = 2;
+      recipeMark.position.set(0, iconH * 0.48);
+      cell.addChild(recipeMark);
 
       const title = this.createCellLabel(slot.title, true, 18);
       title.position.set(0, iconH + 6);
@@ -734,14 +771,21 @@ export class CatalogScene implements Scene {
     });
   }
 
-  private showRecipePreview(slot: DrinkRecipeCatalogSlot): void {
-    const tex = TextureCache.get(slot.textureKey);
+  private async showRecipePreview(slot: DrinkRecipeCatalogSlot): Promise<void> {
+    const tex = TextureCache.get(slot.textureKey) ?? await this.loadContentTexture(slot.textureKey, slot.asset);
     if (!tex) {
+      return;
+    }
+    if (!this.active) {
+      TextureCache.unload(slot.textureKey);
+      this.loadedContentTextureKeys.delete(slot.textureKey);
       return;
     }
     const W = Game.logicWidth;
     const H = Game.logicHeight;
+    this.destroyRecipePreview();
     const preview = new PIXI.Container();
+    this.recipePreview = preview;
     preview.eventMode = 'static';
     preview.cursor = 'pointer';
     const dim = new PIXI.Graphics();
@@ -781,10 +825,22 @@ export class CatalogScene implements Scene {
     close.position.set(W / 2, H * 0.92);
     preview.addChild(close);
     preview.on('pointertap', () => {
-      this.container.removeChild(preview);
-      preview.destroy({ children: true });
+      this.destroyRecipePreview();
+      TextureCache.unload(slot.textureKey);
+      this.loadedContentTextureKeys.delete(slot.textureKey);
     });
     this.container.addChild(preview);
+  }
+
+  private destroyRecipePreview(): void {
+    if (!this.recipePreview) {
+      return;
+    }
+    if (this.recipePreview.parent) {
+      this.recipePreview.parent.removeChild(this.recipePreview);
+    }
+    this.recipePreview.destroy({ children: true });
+    this.recipePreview = null;
   }
 
   private createCellLabel(text: string, unlocked: boolean, fontSize = 22): PIXI.Text {

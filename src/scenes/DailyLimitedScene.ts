@@ -228,6 +228,9 @@ export class DailyLimitedScene implements Scene {
   private bufferMatchTimer: ReturnType<typeof window.setTimeout> | null = null;
   private readonly targetHintTickers = new Set<() => void>();
   private readonly transientTickers = new Set<() => void>();
+  private readonly loadedTextureKeys = new Set<string>();
+  private enterToken = 0;
+  private roundDealSeed = 0;
 
   constructor() {
     this.buildStaticUi();
@@ -244,8 +247,14 @@ export class DailyLimitedScene implements Scene {
   }
 
   onEnter(): void {
+    const token = this.enterToken + 1;
+    this.enterToken = token;
     warmupRewardedAd(DAILY_LIMITED_REWARDED_AD_UNIT_ID);
     void this.syncLevelForToday().then(() => this.prepare()).then(() => {
+      if (token !== this.enterToken || !this.container.parent) {
+        this.releaseSceneTextures();
+        return;
+      }
       this.applyBackground();
       this.renderMainBoardFrame();
       if (!this.roundStarted || this.roundEnded) {
@@ -258,12 +267,55 @@ export class DailyLimitedScene implements Scene {
   }
 
   onExit(): void {
+    this.enterToken += 1;
     this.stopTransientAnimations();
     destroyContainerChildren(this.cardLayer);
     destroyContainerChildren(this.liftLayer);
     destroyContainerChildren(this.iceBowlLayer);
     destroyContainerChildren(this.bufferLayer);
+    destroyContainerChildren(this.toolLayer);
     destroyContainerChildren(this.overlayLayer);
+    this.toolViews.clear();
+    this.backButtonSprite.texture = PIXI.Texture.EMPTY;
+    this.releaseSceneTextures();
+  }
+
+  private stopTransientAnimations(): void {
+    if (this.bufferMatchTimer !== null) {
+      window.clearTimeout(this.bufferMatchTimer);
+      this.bufferMatchTimer = null;
+    }
+    this.targetHintTickers.forEach((tick) => PIXI.Ticker.shared.remove(tick));
+    this.targetHintTickers.clear();
+    this.transientTickers.forEach((tick) => PIXI.Ticker.shared.remove(tick));
+    this.transientTickers.clear();
+    this.animatingBufferMatchIndexes = [];
+    this.bufferMatchResolving = false;
+  }
+
+  private addTransientTicker(tick: () => void): void {
+    this.transientTickers.add(tick);
+    PIXI.Ticker.shared.add(tick);
+  }
+
+  private removeTransientTicker(tick: () => void): void {
+    PIXI.Ticker.shared.remove(tick);
+    this.transientTickers.delete(tick);
+  }
+
+  private async loadSceneTexture(key: string, path: string): Promise<PIXI.Texture | null> {
+    const texture = await TextureCache.load(key, path);
+    if (texture) {
+      this.loadedTextureKeys.add(key);
+    }
+    return texture;
+  }
+
+  private releaseSceneTextures(): void {
+    TextureCache.unloadMany(this.loadedTextureKeys);
+    this.loadedTextureKeys.clear();
+    this.loaded = false;
+    this.loadingPromise = null;
   }
 
   private async syncLevelForToday(): Promise<void> {
@@ -275,7 +327,7 @@ export class DailyLimitedScene implements Scene {
     this.level = todayLevel;
     this.roundStarted = false;
     this.roundEnded = false;
-    this.overlayLayer.removeChildren();
+    destroyContainerChildren(this.overlayLayer);
     this.titleText.text = todayLevel.themeName;
     this.hintText.text = todayLevel.positioningText;
 
@@ -292,21 +344,21 @@ export class DailyLimitedScene implements Scene {
   private async preloadAssets(): Promise<void> {
     await loadBowlSubpackage();
     await Promise.all([
-      TextureCache.load(this.dailyBackground.key, this.dailyBackground.path),
-      TextureCache.load(this.dailyBoardFrame.key, this.dailyBoardFrame.path),
-      TextureCache.load(DAILY_ICE_BOWL_TEXTURE_KEY, DAILY_ICE_BOWL_PATH),
-      TextureCache.load(DAILY_BACK_BUTTON_TEXTURE_KEY, DAILY_BACK_BUTTON_PATH),
-      TextureCache.load(DAILY_TOOL_BUTTONS_TEXTURE_KEY, DAILY_TOOL_BUTTONS_PATH),
-      TextureCache.load(DAILY_TOOL_PANELS_TEXTURE_KEY, DAILY_TOOL_PANELS_PATH),
-      TextureCache.load(DAILY_FREE_BUTTON_TEXTURE_KEY, DAILY_FREE_BUTTON_PATH),
-      TextureCache.load(this.level.recipeCard.textureKey, this.level.recipeCard.path),
-      TextureCache.load(DAILY_CLEAR_BANNER_TEXTURE_KEY, DAILY_CLEAR_BANNER_PATH),
-      TextureCache.load(DAILY_SHARE_BUTTON_TEXTURE_KEY, DAILY_SHARE_BUTTON_PATH),
+      this.loadSceneTexture(this.dailyBackground.key, this.dailyBackground.path),
+      this.loadSceneTexture(this.dailyBoardFrame.key, this.dailyBoardFrame.path),
+      this.loadSceneTexture(DAILY_ICE_BOWL_TEXTURE_KEY, DAILY_ICE_BOWL_PATH),
+      this.loadSceneTexture(DAILY_BACK_BUTTON_TEXTURE_KEY, DAILY_BACK_BUTTON_PATH),
+      this.loadSceneTexture(DAILY_TOOL_BUTTONS_TEXTURE_KEY, DAILY_TOOL_BUTTONS_PATH),
+      this.loadSceneTexture(DAILY_TOOL_PANELS_TEXTURE_KEY, DAILY_TOOL_PANELS_PATH),
+      this.loadSceneTexture(DAILY_FREE_BUTTON_TEXTURE_KEY, DAILY_FREE_BUTTON_PATH),
+      this.loadSceneTexture(this.level.recipeCard.textureKey, this.level.recipeCard.path),
+      this.loadSceneTexture(DAILY_CLEAR_BANNER_TEXTURE_KEY, DAILY_CLEAR_BANNER_PATH),
+      this.loadSceneTexture(DAILY_SHARE_BUTTON_TEXTURE_KEY, DAILY_SHARE_BUTTON_PATH),
       TextureCache.load(BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY, BOWL_COMMON_MODAL_PANEL_ASSET),
       TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
       ...this.level.fruitIds.map((fruitId) => {
         const fruit = FRUIT_MAP[fruitId];
-        return TextureCache.load(textureKey(fruitId), fruit.asset);
+        return this.loadSceneTexture(textureKey(fruitId), fruit.asset);
       }),
     ]);
     this.loaded = true;
@@ -321,10 +373,10 @@ export class DailyLimitedScene implements Scene {
     this.dailyBackground = pickDailyVariant(DAILY_BG_VARIANTS, 'background', level.themeId);
     this.dailyBoardFrame = pickDailyVariant(DAILY_BOARD_FRAME_VARIANTS, 'board-frame', level.themeId);
     await Promise.all([
-      TextureCache.load(this.dailyBackground.key, this.dailyBackground.path),
-      TextureCache.load(this.dailyBoardFrame.key, this.dailyBoardFrame.path),
-      TextureCache.load(level.recipeCard.textureKey, level.recipeCard.path),
-      ...level.fruitIds.map((fruitId) => TextureCache.load(textureKey(fruitId), FRUIT_MAP[fruitId].asset)),
+      this.loadSceneTexture(this.dailyBackground.key, this.dailyBackground.path),
+      this.loadSceneTexture(this.dailyBoardFrame.key, this.dailyBoardFrame.path),
+      this.loadSceneTexture(level.recipeCard.textureKey, level.recipeCard.path),
+      ...level.fruitIds.map((fruitId) => this.loadSceneTexture(textureKey(fruitId), FRUIT_MAP[fruitId].asset)),
     ]);
   }
 
@@ -335,7 +387,7 @@ export class DailyLimitedScene implements Scene {
     this.hintText.text = level.positioningText;
     this.applyBackground();
     this.renderMainBoardFrame();
-    this.overlayLayer.removeChildren();
+    destroyContainerChildren(this.overlayLayer);
     this.startRound();
   }
 
@@ -437,7 +489,7 @@ export class DailyLimitedScene implements Scene {
 
     const W = Game.logicWidth;
     const H = Game.logicHeight;
-    this.bgLayer.removeChildren();
+    destroyContainerChildren(this.bgLayer);
     const sp = new PIXI.Sprite(tex);
     const scale = Math.max(W / tex.width, H / tex.height);
     sp.scale.set(scale);
@@ -467,7 +519,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private renderMainBoardFrame(): void {
-    this.boardFrameLayer.removeChildren();
+    destroyContainerChildren(this.boardFrameLayer);
     const frame = this.createBoardFrameView(-2, this.boardTop() - 4, Game.logicWidth + 4, this.boardHeight() + 8);
     this.boardFrameLayer.addChild(frame);
   }
@@ -511,7 +563,8 @@ export class DailyLimitedScene implements Scene {
     this.cards.length = 0;
     this.buffer.length = 0;
     this.history.length = 0;
-    this.overlayLayer.removeChildren();
+    this.roundDealSeed = hashString(`${this.level.themeId}|${Date.now()}|${Math.random()}`);
+    destroyContainerChildren(this.overlayLayer);
     this.toolCounts = {
       shuffle: this.level.toolCounts.shuffle,
       undo: this.level.toolCounts.undo,
@@ -584,8 +637,8 @@ export class DailyLimitedScene implements Scene {
     }
 
     return {
-      flat: shuffleWithSeed(flatPool, this.level.layoutSeed + 17).slice(0, FLAT_CARD_COUNT),
-      stack: shuffleWithSeed(stackCards, this.level.layoutSeed + 31),
+      flat: shuffleWithSeed(flatPool, this.roundDealSeed + 17).slice(0, FLAT_CARD_COUNT),
+      stack: shuffleWithSeed(stackCards, this.roundDealSeed + 31),
     };
   }
 
@@ -598,7 +651,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private renderCards(): void {
-    this.cardLayer.removeChildren();
+    destroyContainerChildren(this.cardLayer);
     const boardTop = this.boardTop();
     const startX = Math.round((Game.logicWidth - (CARD_COLS * CARD_W + (CARD_COLS - 1) * CARD_GAP)) / 2);
     for (let col = 0; col < CARD_COLS; col += 1) {
@@ -617,7 +670,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private renderLiftCards(): void {
-    this.liftLayer.removeChildren();
+    destroyContainerChildren(this.liftLayer);
     const lifted = this.cards
       .filter((card) => card.zone === 'lift' && !card.removed)
       .sort((a, b) => (a.depthIndex - b.depthIndex) || (a.columnIndex - b.columnIndex));
@@ -647,7 +700,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private renderBuffer(): void {
-    this.bufferLayer.removeChildren();
+    destroyContainerChildren(this.bufferLayer);
     const W = Game.logicWidth;
     const slotSize = 76;
     const gap = 8;
@@ -797,8 +850,9 @@ export class DailyLimitedScene implements Scene {
     const startedAt = performance.now();
     let baseY: number | null = null;
     const tick = () => {
-      if (root.destroyed || !root.parent) {
+      if (root.destroyed || !root.parent || !this.container.parent) {
         PIXI.Ticker.shared.remove(tick);
+        this.targetHintTickers.delete(tick);
         return;
       }
       if (baseY === null) {
@@ -810,6 +864,7 @@ export class DailyLimitedScene implements Scene {
       const scale = 1 + Math.max(0, wave) * 0.035;
       root.scale.set(scale);
     };
+    this.targetHintTickers.add(tick);
     PIXI.Ticker.shared.add(tick);
   }
 
@@ -911,7 +966,8 @@ export class DailyLimitedScene implements Scene {
 
   private scheduleBufferMatchResolve(matchIndexes: readonly number[]): void {
     this.bufferMatchResolving = true;
-    window.setTimeout(() => {
+    this.bufferMatchTimer = window.setTimeout(() => {
+      this.bufferMatchTimer = null;
       this.playBufferMatchAnimation(matchIndexes);
     }, 220);
   }
@@ -968,6 +1024,17 @@ export class DailyLimitedScene implements Scene {
     const easeOut = (t: number): number => 1 - (1 - t) * (1 - t);
 
     const tick = () => {
+      if (!this.container.parent) {
+        this.removeTransientTicker(tick);
+        if (fxLayer.parent) {
+          fxLayer.parent.removeChild(fxLayer);
+        }
+        fxLayer.destroy({ children: true });
+        this.animatingBufferMatchIndexes = [];
+        this.bufferMatchResolving = false;
+        return;
+      }
+
       const elapsed = performance.now() - start;
       const progress = Math.min(1, elapsed / duration);
 
@@ -994,7 +1061,7 @@ export class DailyLimitedScene implements Scene {
       }
 
       if (progress >= 1) {
-        PIXI.Ticker.shared.remove(tick);
+        this.removeTransientTicker(tick);
         if (fxLayer.parent) {
           fxLayer.parent.removeChild(fxLayer);
         }
@@ -1012,7 +1079,7 @@ export class DailyLimitedScene implements Scene {
       }
     };
 
-    PIXI.Ticker.shared.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private finishRound(success: boolean): void {
@@ -1079,7 +1146,7 @@ export class DailyLimitedScene implements Scene {
   private showGmPanel(): void {
     const W = Game.logicWidth;
     const H = Game.logicHeight;
-    this.overlayLayer.removeChildren();
+    destroyContainerChildren(this.overlayLayer);
 
     const dim = new PIXI.Graphics();
     dim.beginFill(0x0d0b08, 0.58);
@@ -1087,7 +1154,7 @@ export class DailyLimitedScene implements Scene {
     dim.endFill();
     dim.eventMode = 'static';
     dim.on('pointertap', () => {
-      this.overlayLayer.removeChildren();
+      destroyContainerChildren(this.overlayLayer);
     });
     this.overlayLayer.addChild(dim);
 
@@ -1117,7 +1184,7 @@ export class DailyLimitedScene implements Scene {
     clear.on('pointertap', (event: PIXI.FederatedPointerEvent) => {
       event.stopPropagation();
       AudioManager.playButtonSound();
-      this.overlayLayer.removeChildren();
+      destroyContainerChildren(this.overlayLayer);
       this.completeRoundByGm();
     });
     this.overlayLayer.addChild(clear);
@@ -1155,7 +1222,7 @@ export class DailyLimitedScene implements Scene {
   private showDailyRuleIntroPanel(): void {
     const W = Game.logicWidth;
     const H = Game.logicHeight;
-    this.overlayLayer.removeChildren();
+    destroyContainerChildren(this.overlayLayer);
 
     const dim = new PIXI.Graphics();
     dim.beginFill(0x1a130c, 0.62);
@@ -1263,7 +1330,7 @@ export class DailyLimitedScene implements Scene {
       event.stopPropagation();
       AudioManager.playButtonSound();
       this.markDailyRuleIntroSeenToday();
-      this.overlayLayer.removeChildren();
+      destroyContainerChildren(this.overlayLayer);
     });
     this.overlayLayer.addChild(start);
   }
@@ -1613,7 +1680,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private mountToolButtons(): void {
-    this.toolLayer.removeChildren();
+    destroyContainerChildren(this.toolLayer);
     this.toolViews.clear();
     const buttons: Array<{ kind: DailyToolKind; label: string; icon: string }> = [
       { kind: 'shuffle', label: '洗牌', icon: '↻' },
@@ -1693,7 +1760,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private renderIceBowls(): void {
-    this.iceBowlLayer.removeChildren();
+    destroyContainerChildren(this.iceBowlLayer);
     const W = Game.logicWidth;
     const y = this.bowlY();
     const bowlW = 118;
@@ -1814,20 +1881,30 @@ export class DailyLimitedScene implements Scene {
     const start = performance.now();
     const startY = text.y;
     const tick = () => {
+      if (!this.container.parent || text.destroyed) {
+        this.removeTransientTicker(tick);
+        if (!text.destroyed) {
+          if (text.parent) {
+            text.parent.removeChild(text);
+          }
+          text.destroy();
+        }
+        return;
+      }
       const progress = Math.min(1, (performance.now() - start) / duration);
       const easeOut = 1 - (1 - progress) * (1 - progress);
       text.y = startY - easeOut * 58;
       text.scale.set(0.82 + Math.sin(Math.min(1, progress / 0.28) * Math.PI) * 0.18);
       text.alpha = progress < 0.58 ? 1 : Math.max(0, 1 - (progress - 0.58) / 0.42);
       if (progress >= 1) {
-        PIXI.Ticker.shared.remove(tick);
+        this.removeTransientTicker(tick);
         if (text.parent) {
           text.parent.removeChild(text);
         }
         text.destroy();
       }
     };
-    PIXI.Ticker.shared.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private bowlSlotCenterForFruit(fruitId: FruitId, collectedForFruit: number): { x: number; y: number } {
@@ -1854,7 +1931,7 @@ export class DailyLimitedScene implements Scene {
   private showResultOverlay(success: boolean): void {
     const W = Game.logicWidth;
     const H = Game.logicHeight;
-    this.overlayLayer.removeChildren();
+    destroyContainerChildren(this.overlayLayer);
 
     const dim = new PIXI.Graphics();
     dim.beginFill(0x1b260f, 0.62);

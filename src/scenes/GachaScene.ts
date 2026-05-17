@@ -111,6 +111,7 @@ export class GachaScene implements Scene {
   private readonly gmCoinButtonRoot = new PIXI.Container();
   private readonly resultLayer = new PIXI.Container();
   private readonly tick = (delta: number): void => this.updateAnimation(delta);
+  private readonly transientTickers = new Set<(delta: number) => void>();
   private animationTime = 0;
   /** 抽奖整体阶段：idle / shake / drop / result */
   private phase: 'idle' | 'shake' | 'drop' | 'result' = 'idle';
@@ -231,11 +232,27 @@ export class GachaScene implements Scene {
 
   onExit(): void {
     PIXI.Ticker.shared.remove(this.tick);
+    this.stopTransientTickers();
     this.clearResultLayer();
   }
 
   /** Scene 接口的 update 由 SceneManager 调用，但本场景动画使用 PIXI ticker，避免依赖。 */
   update(_dt: number): void {}
+
+  private addTransientTicker(tick: (delta: number) => void): void {
+    this.transientTickers.add(tick);
+    PIXI.Ticker.shared.add(tick);
+  }
+
+  private removeTransientTicker(tick: (delta: number) => void): void {
+    PIXI.Ticker.shared.remove(tick);
+    this.transientTickers.delete(tick);
+  }
+
+  private stopTransientTickers(): void {
+    this.transientTickers.forEach((tick) => PIXI.Ticker.shared.remove(tick));
+    this.transientTickers.clear();
+  }
 
   private build(): void {
     const W = Game.logicWidth;
@@ -943,12 +960,12 @@ export class GachaScene implements Scene {
       toast.alpha = Math.max(0, 1 - Math.max(0, elapsed - 1.0) * 1.6);
       toast.y = H * 0.34 - elapsed * 24;
       if (elapsed > 1.7) {
-        PIXI.Ticker.shared.remove(tick);
+        this.removeTransientTicker(tick);
         toast.parent?.removeChild(toast);
         toast.destroy({ children: true });
       }
     };
-    PIXI.Ticker.shared.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private startShakePhase(): void {
@@ -985,7 +1002,7 @@ export class GachaScene implements Scene {
     const duration = 0.85;
     const tick = (delta: number): void => {
       if (egg.destroyed) {
-        PIXI.Ticker.shared.remove(tick);
+        this.removeTransientTicker(tick);
         return;
       }
       elapsed += delta / 60;
@@ -996,13 +1013,13 @@ export class GachaScene implements Scene {
       egg.scale.set(0.6 + 1.6 * ease);
       egg.rotation += delta * 0.04;
       if (p >= 1) {
-        PIXI.Ticker.shared.remove(tick);
+        this.removeTransientTicker(tick);
         egg.parent?.removeChild(egg);
         egg.destroy({ children: true });
         this.commitResultOverlay();
       }
     };
-    PIXI.Ticker.shared.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private commitResultOverlay(): void {
@@ -1129,7 +1146,7 @@ export class GachaScene implements Scene {
     title.y -= 14;
     const localTick = (delta: number): void => {
       if (closing || root.destroyed) {
-        PIXI.Ticker.shared.remove(localTick);
+        this.removeTransientTicker(localTick);
         return;
       }
       elapsed += delta / 60;
@@ -1150,14 +1167,14 @@ export class GachaScene implements Scene {
       }
       closeHint.alpha = 0.6 + Math.sin(t * 4.2) * 0.4;
     };
-    PIXI.Ticker.shared.add(localTick);
+    this.addTransientTicker(localTick);
 
     root.on('pointertap', () => {
       if (closing) {
         return;
       }
       closing = true;
-      PIXI.Ticker.shared.remove(localTick);
+      this.removeTransientTicker(localTick);
       AudioManager.playButtonSound();
       this.clearResultLayer();
       this.phase = 'idle';

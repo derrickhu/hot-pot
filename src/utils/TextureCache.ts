@@ -8,6 +8,32 @@ class TextureCacheClass {
     return this.cache.get(key) || null;
   }
 
+  unload(key: string): void {
+    const texture = this.cache.get(key);
+    if (!texture) {
+      this.failed.delete(key);
+      return;
+    }
+    this.cache.delete(key);
+    this.failed.delete(key);
+    try {
+      texture.destroy(true);
+    } catch (error) {
+      console.warn('[TextureCache] destroy texture failed', key, error);
+    }
+  }
+
+  unloadMany(keys: Iterable<string>): void {
+    for (const key of keys) {
+      this.unload(key);
+    }
+  }
+
+  unloadByPrefix(prefix: string): void {
+    const keys = [...this.cache.keys()].filter((key) => key.startsWith(prefix));
+    this.unloadMany(keys);
+  }
+
   /** 主图 + 可选变体（同一水果不同切图），变体键为 `${fruitId}__v0` … */
   async loadFruitTextures(
     fruitId: string,
