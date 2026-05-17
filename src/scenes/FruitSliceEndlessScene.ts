@@ -3331,9 +3331,12 @@ export class FruitSliceEndlessScene implements Scene {
       this.reviveUsed = true;
       this.gameOver = false;
       this.warningLine.alpha = 0;
+      this.gridWarningLine.alpha = 0;
       this.warningOverflowT = 0;
+      this.gridWarningOverflowT = 0;
       this.hideEndOverlay();
       this.clearPipeStackForRevive();
+      this.clearGridOverflowFruitsForRevive();
       this.updateHud();
       this.spawnCenterBanner('复活成功');
     } finally {
@@ -3348,6 +3351,33 @@ export class FruitSliceEndlessScene implements Scene {
       entry.node.destroy({ children: true });
     }
     this.pipeStack.length = 0;
+  }
+
+  private clearGridOverflowFruitsForRevive(): void {
+    const lineY = this.gridWarningLineY();
+    const overflowNodes = this.fruits.filter((node) => {
+      if (node.state !== 'fixed' && node.state !== 'settled') {
+        return false;
+      }
+      const currentBottom = node.y + node.radius;
+      const projectedBottom = (node.__slideTo ?? node.y) + node.radius;
+      return Math.max(currentBottom, projectedBottom) >= lineY;
+    });
+
+    if (overflowNodes.length === 0) {
+      return;
+    }
+
+    for (const node of overflowNodes) {
+      const idx = this.fruits.indexOf(node);
+      if (idx >= 0) {
+        this.fruits.splice(idx, 1);
+      }
+      this.spawnSliceBurst(node.fruitId, node.x, node.y);
+      node.parent?.removeChild(node);
+      node.destroy({ children: true });
+    }
+    this.refreshFruitDepth();
   }
 
   private hideEndOverlay(): void {

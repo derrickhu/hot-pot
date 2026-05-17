@@ -13,7 +13,7 @@ import { Game } from '@/core/Game';
 import { PersistService } from '@/core/PersistService';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
-import { addCoins } from '@/game/Wallet';
+import { addCoins, spendCoins } from '@/game/Wallet';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH, createCoinIcon } from '@/gameobjects/CoinBar';
 import { BOWL_COMMON_MODAL_PANEL_ASSET, BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY } from '@/gameobjects/BowlMechanicIntroOverlay';
 import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
@@ -80,6 +80,7 @@ const ICE_BOWL_COUNT = 5;
 const ICE_BOWL_CAPACITY = 3;
 const DAILY_LIMITED_CLEAR_REWARD_COINS = 50;
 const DAILY_LIMITED_REPEAT_CLEAR_REWARD_COINS = 5;
+const DAILY_LIMITED_TOOL_COIN_COST = 10;
 const DAILY_LIMITED_REWARD_STATE_KEY = 'hot_pot_daily_limited_reward_v1';
 const DAILY_LIMITED_RULE_INTRO_STATE_KEY = 'hot_pot_daily_limited_rule_intro_v1';
 const DAILY_TEXTURE_PREFIX = 'daily_limited_fruit_';
@@ -120,8 +121,6 @@ const DAILY_TOOL_BUTTONS_TEXTURE_KEY = 'daily_limited_tool_buttons_sheet';
 const DAILY_TOOL_BUTTONS_PATH = 'subpackages/bowl_game/assets/images/daily_limited/tool_buttons_sheet_v1.png';
 const DAILY_TOOL_PANELS_TEXTURE_KEY = 'daily_limited_tool_panels_sheet';
 const DAILY_TOOL_PANELS_PATH = 'subpackages/bowl_game/assets/images/daily_limited/tool_panels_sheet_v1.png';
-const DAILY_FREE_BUTTON_TEXTURE_KEY = 'daily_limited_ui_panel_free_btn';
-const DAILY_FREE_BUTTON_PATH = 'subpackages/bowl_game/assets/images/ui_panel_free_btn.png';
 const DAILY_CLEAR_BANNER_TEXTURE_KEY = 'daily_limited_clear_banner';
 const DAILY_CLEAR_BANNER_PATH = 'subpackages/bowl_game/assets/images/daily_limited/daily_limited_clear_banner_v1.png';
 const DAILY_SHARE_BUTTON_TEXTURE_KEY = 'daily_limited_badge_share_reward_button';
@@ -416,7 +415,6 @@ export class DailyLimitedScene implements Scene {
       this.loadSceneTexture(DAILY_BACK_BUTTON_TEXTURE_KEY, DAILY_BACK_BUTTON_PATH),
       this.loadSceneTexture(DAILY_TOOL_BUTTONS_TEXTURE_KEY, DAILY_TOOL_BUTTONS_PATH),
       this.loadSceneTexture(DAILY_TOOL_PANELS_TEXTURE_KEY, DAILY_TOOL_PANELS_PATH),
-      this.loadSceneTexture(DAILY_FREE_BUTTON_TEXTURE_KEY, DAILY_FREE_BUTTON_PATH),
       this.loadSceneTexture(this.level.recipeCard.textureKey, this.level.recipeCard.path),
       this.loadSceneTexture(DAILY_CLEAR_BANNER_TEXTURE_KEY, DAILY_CLEAR_BANNER_PATH),
       this.loadSceneTexture(DAILY_SHARE_BUTTON_TEXTURE_KEY, DAILY_SHARE_BUTTON_PATH),
@@ -1409,6 +1407,7 @@ export class DailyLimitedScene implements Scene {
         this.renderCards();
       }
       this.renderIceBowls();
+      this.updateToolButtons();
 
       const reachedGoal = this.collected >= this.targetCount();
       this.flyFruitToBowl(fruitId, fromPos, bowlSlotIndex, () => {
@@ -1451,6 +1450,7 @@ export class DailyLimitedScene implements Scene {
       this.renderCards();
     }
     this.renderBuffer();
+    this.updateToolButtons();
 
     this.flyFruitToBuffer(fruitId, fromPos, bufferIndex, () => {
       const cur = this.bufferIncomingHidden.get(bufferIndex) ?? 0;
@@ -2018,15 +2018,42 @@ export class DailyLimitedScene implements Scene {
         this.toast(result === 'skipped' ? '看完广告才能使用道具' : '广告加载失败，请稍后再试');
         return;
       }
-      if (kind === 'shuffle') {
-        this.shuffleRemainingCards();
-      } else if (kind === 'undo') {
-        this.undoLastClick();
-      } else {
-        this.liftBufferCards();
-      }
+      this.executeTool(kind);
     } finally {
       this.toolRewardedAdBusy = false;
+    }
+  }
+
+  private useToolWithCoins(kind: DailyToolKind): boolean {
+    if (this.roundEnded || this.bufferMatchResolving || this.toolCounts[kind] <= 0 || this.toolRewardedAdBusy) {
+      if (this.toolCounts[kind] <= 0) {
+        this.toast('本局使用次数已用完');
+      }
+      return false;
+    }
+    const unavailableReason = this.getToolUnavailableReason(kind);
+    if (unavailableReason) {
+      this.toast(unavailableReason);
+      return false;
+    }
+    const paid = spendCoins(DAILY_LIMITED_TOOL_COIN_COST);
+    if (!paid.ok) {
+      this.toast(`金币不足，需要${DAILY_LIMITED_TOOL_COIN_COST}金币`);
+      return false;
+    }
+    this.coinBar.refresh();
+    this.coinBar.bump();
+    this.executeTool(kind);
+    return true;
+  }
+
+  private executeTool(kind: DailyToolKind): void {
+    if (kind === 'shuffle') {
+      this.shuffleRemainingCards();
+    } else if (kind === 'undo') {
+      this.undoLastClick();
+    } else {
+      this.liftBufferCards();
     }
   }
 
@@ -2077,16 +2104,29 @@ export class DailyLimitedScene implements Scene {
     panel.addChild(sprite);
 
     const panelHalfH = (sheet.height * sc) / 2;
-    const action = this.createAdActionButton();
-    action.position.set(0, panelHalfH - 128);
-    action.on('pointertap', (e: PIXI.FederatedPointerEvent) => {
+    const coinAction = this.createToolCoinActionButton();
+    coinAction.position.set(0, panelHalfH - 174);
+    coinAction.on('pointertap', (e: PIXI.FederatedPointerEvent) => {
+      e.stopPropagation();
+      AudioManager.playButtonSound();
+      const used = this.useToolWithCoins(kind);
+      if (used) {
+        this.overlayLayer.removeChild(overlay);
+        overlay.destroy({ children: true });
+      }
+    });
+    panel.addChild(coinAction);
+
+    const adAction = this.createToolAdActionButton();
+    adAction.position.set(0, panelHalfH - 96);
+    adAction.on('pointertap', (e: PIXI.FederatedPointerEvent) => {
       e.stopPropagation();
       AudioManager.playButtonSound();
       this.overlayLayer.removeChild(overlay);
       overlay.destroy({ children: true });
       void this.useToolWithRewardedAd(kind);
     });
-    panel.addChild(action);
+    panel.addChild(adAction);
 
     const limit = this.level.toolCounts[kind];
     const used = Math.max(0, limit - this.toolCounts[kind]);
@@ -2099,27 +2139,85 @@ export class DailyLimitedScene implements Scene {
     });
     usageText.anchor.set(0.5);
     usageText.resolution = 2;
-    usageText.position.set(0, panelHalfH - 62);
+    usageText.position.set(0, panelHalfH + 38);
     panel.addChild(usageText);
 
     this.overlayLayer.addChild(overlay);
   }
 
-  private createAdActionButton(): PIXI.Container {
+  private createToolCoinActionButton(): PIXI.Container {
+    const root = this.createToolActionButtonBase(226, 60, 0xffc65a, 0xa86720);
+    /** 金币图标右缘到数字左缘 */
+    const iconToNumberGap = 14;
+    /** 数字与「金币购买」紧挨成一组 */
+    const numberToLabelGap = 3;
+
+    const coin = createCoinIcon(28);
+    const count = new PIXI.Text(String(DAILY_LIMITED_TOOL_COIN_COST), {
+      fontSize: 24,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x6b3a14,
+      strokeThickness: 4,
+    });
+    count.anchor.set(0, 0.5);
+    count.resolution = 2;
+
+    const label = new PIXI.Text('金币购买', {
+      fontSize: 24,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x6b3a14,
+      strokeThickness: 4,
+    });
+    label.anchor.set(0, 0.5);
+    label.resolution = 2;
+
+    const row = new PIXI.Container();
+    row.addChild(coin, count, label);
+
+    const coinBounds = coin.getLocalBounds();
+    const coinHalfW = Math.max(coinBounds.width * 0.5, 14);
+    let x = 0;
+    coin.position.set(x + coinHalfW, 0);
+    x += coinHalfW * 2 + iconToNumberGap;
+    count.position.set(x, 0);
+    x += count.width + numberToLabelGap;
+    label.position.set(x, 0);
+
+    const rowBounds = row.getBounds();
+    row.pivot.set(rowBounds.x + rowBounds.width / 2, rowBounds.y + rowBounds.height / 2);
+    root.addChild(row);
+    return root;
+  }
+
+  private createToolAdActionButton(): PIXI.Container {
+    const root = this.createToolActionButtonBase(226, 60, 0x65c7f7, 0x2d6f9f);
+    const label = new PIXI.Text('看广告获得', {
+      fontSize: 24,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x5a351f,
+      strokeThickness: 4,
+    });
+    label.anchor.set(0.5);
+    label.resolution = 2;
+    root.addChild(label);
+    return root;
+  }
+
+  private createToolActionButtonBase(width: number, height: number, fill: number, stroke: number): PIXI.Container {
     const root = new PIXI.Container();
     root.eventMode = 'static';
     root.cursor = 'pointer';
-    const tex = TextureCache.get(DAILY_FREE_BUTTON_TEXTURE_KEY);
-    if (tex) {
-      const sp = new PIXI.Sprite(tex);
-      sp.anchor.set(0.5);
-      const sc = Math.min(1, 300 / tex.width, 92 / tex.height);
-      sp.scale.set(sc);
-      root.hitArea = new PIXI.Rectangle((-tex.width * sc) / 2, (-tex.height * sc) / 2, tex.width * sc, tex.height * sc);
-      root.addChild(sp);
-      return root;
-    }
-    return this.createPillButton('观看广告', 230, 70, 0x65c7f7, 0x2d6f9f);
+    root.hitArea = new PIXI.Rectangle(-width / 2, -height / 2, width, height);
+    const bg = new PIXI.Graphics();
+    bg.beginFill(fill);
+    bg.lineStyle(4, stroke, 1);
+    bg.drawRoundedRect(-width / 2, -height / 2, width, height, height / 2);
+    bg.endFill();
+    root.addChild(bg);
+    return root;
   }
 
   private shuffleRemainingCards(): void {
