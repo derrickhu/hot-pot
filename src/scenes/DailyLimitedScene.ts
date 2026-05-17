@@ -275,7 +275,14 @@ export class DailyLimitedScene implements Scene {
   private toolRewardedAdBusy = false;
   private nextLiftCardId = 1;
   private bufferMatchTimer: ReturnType<typeof window.setTimeout> | null = null;
-  private readonly targetHintTickers = new Set<() => void>();
+  // 目标卡片的 hint glow 集合：让 ticker 只调一次 alpha 流转，不再修改卡片
+  // 本身的 scale / y。
+  // 历史教训：hint 不能修改 root.y 或 scale —— stack 区是 17px 步进堆叠，
+  // 上下浮动或缩放（即便 1~2px）都会让相邻列"露出条"高度看起来不一致
+  // （洗牌后多列同时是目标卡时尤其明显）。改为只让卡片内部的发光圈
+  // alpha 微微脉动，卡片本体位置 / 大小完全不变。
+  private readonly targetHintRoots = new Set<{ glow: PIXI.Graphics; phase: number }>();
+  private targetHintMasterTicker: (() => void) | null = null;
   private readonly transientTickers = new Set<() => void>();
   private readonly loadedTextureKeys = new Set<string>();
   private enterToken = 0;
@@ -339,8 +346,11 @@ export class DailyLimitedScene implements Scene {
       window.clearTimeout(this.bufferMatchTimer);
       this.bufferMatchTimer = null;
     }
-    this.targetHintTickers.forEach((tick) => PIXI.Ticker.shared.remove(tick));
-    this.targetHintTickers.clear();
+    if (this.targetHintMasterTicker) {
+      PIXI.Ticker.shared.remove(this.targetHintMasterTicker);
+      this.targetHintMasterTicker = null;
+    }
+    this.targetHintRoots.clear();
     this.transientTickers.forEach((tick) => PIXI.Ticker.shared.remove(tick));
     this.transientTickers.clear();
     this.animatingBufferMatchIndexes = [];
@@ -1252,11 +1262,13 @@ export class DailyLimitedScene implements Scene {
     cardBg.lineTo(CARD_W - 8, CARD_H - 7);
     root.addChild(cardBg);
 
+    let hintGlow: PIXI.Graphics | null = null;
     if (shouldHintTarget) {
       const glow = new PIXI.Graphics();
       glow.lineStyle(3, 0xa6ff64, 0.96);
       glow.drawRoundedRect(2.5, 2.5, CARD_W - 6, CARD_H - 6, 8);
       root.addChild(glow);
+      hintGlow = glow;
     }
 
     const icon = this.createFruitIcon(card.fruitId, 55);
@@ -1272,31 +1284,58 @@ export class DailyLimitedScene implements Scene {
         this.onCardTap(card.id);
       });
     }
-    if (shouldHintTarget) {
-      this.attachTargetCardHint(root);
+    if (shouldHintTarget && hintGlow) {
+      this.attachTargetCardHint(hintGlow);
     }
     return root;
   }
 
-  private attachTargetCardHint(root: PIXI.Container): void {
+  private attachTargetCardHint(glow: PIXI.Graphics): void {
+    // 把所有目标卡的发光圈节奏交给一个共享 ticker：每帧只算一次 sin，
+    // 应用到 glow.alpha。卡片本体（root）不动 scale / y，堆叠对齐稳定。
+    // phase 让不同卡片错相，整组目标卡不会"齐刷刷"地一起亮。
+    const entry = { glow, phase: this.targetHintRoots.size * 0.55 };
+    this.targetHintRoots.add(entry);
+    if (this.targetHintMasterTicker) {
+      return;
+    }
     const startedAt = performance.now();
-    let baseY: number | null = null;
     const tick = () => {
-      if (root.destroyed || !root.parent || !this.container.parent) {
-        PIXI.Ticker.shared.remove(tick);
-        this.targetHintTickers.delete(tick);
+      if (!this.container.parent) {
+        if (this.targetHintMasterTicker === tick) {
+          PIXI.Ticker.shared.remove(tick);
+          this.targetHintMasterTicker = null;
+        }
+        this.targetHintRoots.clear();
         return;
       }
-      if (baseY === null) {
-        baseY = root.y;
-      }
       const elapsed = performance.now() - startedAt;
-      const wave = Math.sin(elapsed / 170);
-      root.y = baseY - Math.max(0, wave) * 5;
-      const scale = 1 + Math.max(0, wave) * 0.035;
-      root.scale.set(scale);
+      const baseTime = elapsed / 220;
+      let toRemove: typeof entry[] | null = null;
+      for (const item of this.targetHintRoots) {
+        const g = item.glow;
+        if (g.destroyed || !g.parent) {
+          (toRemove ??= []).push(item);
+          continue;
+        }
+        // alpha 在 0.55 ~ 1.0 之间脉动，肉眼能看到亮度变化但卡片本体
+        // 大小 / 位置完全不动。
+        const wave = (Math.sin(baseTime + item.phase) + 1) * 0.5; // 0..1
+        g.alpha = 0.55 + wave * 0.45;
+      }
+      if (toRemove) {
+        for (const item of toRemove) {
+          this.targetHintRoots.delete(item);
+        }
+      }
+      if (this.targetHintRoots.size === 0) {
+        if (this.targetHintMasterTicker === tick) {
+          PIXI.Ticker.shared.remove(tick);
+          this.targetHintMasterTicker = null;
+        }
+      }
     };
-    this.targetHintTickers.add(tick);
+    this.targetHintMasterTicker = tick;
     PIXI.Ticker.shared.add(tick);
   }
 
@@ -1360,7 +1399,16 @@ export class DailyLimitedScene implements Scene {
         bowlSlotIndex,
         (this.bowlIncomingHidden.get(bowlSlotIndex) ?? 0) + 1,
       );
-      this.renderAll();
+      // 命中目标的同步刷新：只更新被点击区域所在的卡片层 + 冰碗占位状态。
+      // 缓存的 buffer / 工具栏不会改变，跳过避免无谓的 PIXI Graphics / Sprite
+      // 重建（这是点击卡顿的主要来源之一）。
+      this.refreshGameStateCaches();
+      if (card.zone === 'lift') {
+        this.renderLiftCards();
+      } else {
+        this.renderCards();
+      }
+      this.renderIceBowls();
 
       const reachedGoal = this.collected >= this.targetCount();
       this.flyFruitToBowl(fruitId, fromPos, bowlSlotIndex, () => {
@@ -1395,7 +1443,14 @@ export class DailyLimitedScene implements Scene {
       (this.bufferIncomingHidden.get(bufferIndex) ?? 0) + 1,
     );
     const matchIndexes = this.findBufferMatchIndexes();
-    this.renderAll();
+    // 同步刷新只更新被点的卡片层 + buffer：另一卡片层 / 冰碗 / 工具栏没变化。
+    this.refreshGameStateCaches();
+    if (card.zone === 'lift') {
+      this.renderLiftCards();
+    } else {
+      this.renderCards();
+    }
+    this.renderBuffer();
 
     this.flyFruitToBuffer(fruitId, fromPos, bufferIndex, () => {
       const cur = this.bufferIncomingHidden.get(bufferIndex) ?? 0;
@@ -1440,10 +1495,13 @@ export class DailyLimitedScene implements Scene {
 
   private scheduleBufferMatchResolve(matchIndexes: readonly number[]): void {
     this.bufferMatchResolving = true;
+    // 之前 220ms 的"看一眼第三张水果到位"延迟过长，叠加 540ms 动画后玩家
+    // 等接近 1 秒才看到消除完成。压到 60ms 给一个最小视觉缓冲，立刻进消除
+    // 动画，避免节奏被拖慢。
     this.bufferMatchTimer = window.setTimeout(() => {
       this.bufferMatchTimer = null;
       this.playBufferMatchAnimation(matchIndexes);
-    }, 220);
+    }, 60);
   }
 
   private playBufferMatchAnimation(matchIndexes: readonly number[]): void {
@@ -1492,7 +1550,9 @@ export class DailyLimitedScene implements Scene {
 
     AudioManager.playBufferMatchSound();
 
-    const duration = 540;
+    // 540ms 改 320ms：把"icon 放大 + 星星迸发 + 消失"压紧，
+    // 视觉节奏明显加快，玩家不再有"卡了一下"的等待感。
+    const duration = 320;
     const start = performance.now();
 
     const easeOut = (t: number): number => 1 - (1 - t) * (1 - t);
@@ -1512,12 +1572,12 @@ export class DailyLimitedScene implements Scene {
       const elapsed = performance.now() - start;
       const progress = Math.min(1, elapsed / duration);
 
-      const growT = Math.min(progress / 0.35, 1);
-      const fadeT = Math.max(0, (progress - 0.35) / 0.65);
+      const growT = Math.min(progress / 0.3, 1);
+      const fadeT = Math.max(0, (progress - 0.3) / 0.7);
       const iconScale = 1 + easeOut(growT) * 0.55;
       const iconAlpha = 1 - fadeT;
 
-      const starInT = Math.min(progress / 0.2, 1);
+      const starInT = Math.min(progress / 0.18, 1);
       const starOutT = Math.max(0, (progress - 0.4) / 0.6);
       const starScale = 0.5 + easeOut(starInT) * 0.7;
       const starAlpha = Math.max(0, Math.min(1, starInT) - starOutT);
