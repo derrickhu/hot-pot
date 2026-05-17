@@ -1,6 +1,6 @@
 import type { FruitId } from '@/config/fruits';
 
-export const DAILY_LIMITED_MIN_FRUIT_TYPES = 20;
+export const DAILY_LIMITED_MAX_FRUIT_TYPES = 20;
 export const DAILY_LIMITED_MIN_STACK_CARDS = 210;
 
 /** 每日限定每局每种道具（洗牌 / 撤销 / 抬起）各自可用次数上限 */
@@ -45,6 +45,26 @@ export interface DailyThemeLevelDef {
     readonly lift: number;
   };
   readonly layoutSeed: number;
+}
+
+export function getDailyLimitedPlayableFruitIds(level: DailyThemeLevelDef): readonly FruitId[] {
+  const result: FruitId[] = [];
+  const seen = new Set<FruitId>();
+  const push = (fruitId: FruitId): void => {
+    if (seen.has(fruitId) || result.length >= DAILY_LIMITED_MAX_FRUIT_TYPES) {
+      return;
+    }
+    seen.add(fruitId);
+    result.push(fruitId);
+  };
+  // 目标水果必须优先保留；剩余名额再补干扰水果，保证实际发牌种类不超过 20。
+  for (const target of level.targets) {
+    push(target.fruitId);
+  }
+  for (const fruitId of level.fruitIds) {
+    push(fruitId);
+  }
+  return result;
 }
 
 const DAILY_LIMITED_COMMON_FRUITS: readonly FruitId[] = [
@@ -1162,16 +1182,23 @@ function assertDailyLimitedLevelsValid(levels: readonly DailyThemeLevelDef[]): v
     if (level.targets.length < 1 || level.targets.length > 3) {
       throw new Error(`[dailyLimited] ${level.themeId} must have 1-3 targets`);
     }
-    if (new Set(level.fruitIds).size < DAILY_LIMITED_MIN_FRUIT_TYPES) {
+    const fruitSet = new Set(level.fruitIds);
+    const playableFruitIds = getDailyLimitedPlayableFruitIds(level);
+    const playableFruitSet = new Set(playableFruitIds);
+    if (playableFruitIds.length > DAILY_LIMITED_MAX_FRUIT_TYPES) {
       throw new Error(
-        `[dailyLimited] ${level.themeId} must have at least ${DAILY_LIMITED_MIN_FRUIT_TYPES} fruit types`,
+        `[dailyLimited] ${level.themeId} must have at most ${DAILY_LIMITED_MAX_FRUIT_TYPES} playable fruit types`,
       );
     }
-    const fruitSet = new Set(level.fruitIds);
     let targetCopiesTotal = 0;
     for (const target of level.targets) {
       if (!fruitSet.has(target.fruitId)) {
         throw new Error(`[dailyLimited] ${level.themeId} missing target fruit in fruitIds: ${target.fruitId}`);
+      }
+      if (!playableFruitSet.has(target.fruitId)) {
+        throw new Error(
+          `[dailyLimited] ${level.themeId} target fruit must be in playable fruit pool: ${target.fruitId}`,
+        );
       }
       if (target.requiredCount < 1) {
         throw new Error(`[dailyLimited] ${level.themeId} target requiredCount must be positive: ${target.fruitId}`);

@@ -3,6 +3,7 @@ import {
   DAILY_LIMITED_LEVELS,
   DAILY_LIMITED_MIN_STACK_CARDS,
   getDailyLimitedLevelForDate,
+  getDailyLimitedPlayableFruitIds,
   getDailyLimitedTargetCount,
   getDailyLimitedTargetFruitIds,
   type DailyThemeLevelDef,
@@ -318,6 +319,10 @@ export class DailyLimitedScene implements Scene {
         this.releaseSceneTextures();
         return;
       }
+      // CoinBar 是通用组件，但每个 Scene 持有自己的实例；每日限定场景实例
+      // 会长期保留，进入时必须重新从 Wallet 读取，否则会显示上次进入时的旧数。
+      this.coinBar.refreshIcon();
+      this.coinBar.refresh();
       this.applyBackground();
       this.renderMainBoardFrame();
       if (!this.roundStarted || this.roundEnded) {
@@ -428,7 +433,7 @@ export class DailyLimitedScene implements Scene {
       this.loadSceneTexture(DAILY_SHARE_BUTTON_TEXTURE_KEY, DAILY_SHARE_BUTTON_PATH),
       TextureCache.load(BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY, BOWL_COMMON_MODAL_PANEL_ASSET),
       TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
-      ...this.level.fruitIds.map((fruitId) => {
+      ...getDailyLimitedPlayableFruitIds(this.level).map((fruitId) => {
         const fruit = FRUIT_MAP[fruitId];
         return this.loadSceneTexture(textureKey(fruitId), fruit.asset);
       }),
@@ -448,7 +453,7 @@ export class DailyLimitedScene implements Scene {
       this.loadSceneTexture(this.dailyBackground.key, this.dailyBackground.path),
       this.loadSceneTexture(this.dailyBoardFrame.key, this.dailyBoardFrame.path),
       this.loadSceneTexture(level.recipeCard.textureKey, level.recipeCard.path),
-      ...level.fruitIds.map((fruitId) => this.loadSceneTexture(textureKey(fruitId), FRUIT_MAP[fruitId].asset)),
+      ...getDailyLimitedPlayableFruitIds(level).map((fruitId) => this.loadSceneTexture(textureKey(fruitId), FRUIT_MAP[fruitId].asset)),
     ]);
   }
 
@@ -700,7 +705,8 @@ export class DailyLimitedScene implements Scene {
 
   private generateCardDeal(): { flat: FruitId[]; stack: FruitId[] } {
     const targetSet = new Set<FruitId>(this.targetFruitIds());
-    const distractors = this.level.fruitIds.filter((fruitId) => !targetSet.has(fruitId));
+    const playableFruitIds = getDailyLimitedPlayableFruitIds(this.level);
+    const distractors = playableFruitIds.filter((fruitId) => !targetSet.has(fruitId));
     const flatPool: FruitId[] = [];
     const stackCards: FruitId[] = [];
 
@@ -714,29 +720,27 @@ export class DailyLimitedScene implements Scene {
       flatPool.push(fruitId, fruitId, fruitId);
     }
 
-    const desiredStackCards = Math.max(
+    const minStackCards = Math.max(
       DAILY_LIMITED_MIN_STACK_CARDS,
       stackCards.length,
       this.level.totalStackCards ?? DAILY_LIMITED_MIN_STACK_CARDS,
     );
+    const targetCardCount = stackCards.length;
+    // 非目标水果必须成 3 的倍数进入牌堆，否则会出现无法三消的落单牌。
+    // 目标水果允许不是 3 的倍数：配置里 requiredCount 之外最多额外 2 张，
+    // 用作目标收集容错，不参与 buffer 三消约束。
+    const desiredDistractorCards = Math.ceil(Math.max(0, minStackCards - targetCardCount) / 3) * 3;
     let distractorIndex = 0;
-    while (stackCards.length + 3 <= desiredStackCards && distractors.length > 0) {
+    while (stackCards.length - targetCardCount < desiredDistractorCards && distractors.length > 0) {
       const fruitId = distractors[distractorIndex % distractors.length]!;
       stackCards.push(fruitId, fruitId, fruitId);
       distractorIndex += 1;
     }
-    while (stackCards.length < desiredStackCards && distractors.length > 0) {
-      stackCards.push(distractors[distractorIndex % distractors.length]!);
-      distractorIndex += 1;
-    }
 
     while (flatPool.length < FLAT_CARD_COUNT && distractors.length > 0) {
-      for (const fruitId of distractors) {
-        if (flatPool.length >= FLAT_CARD_COUNT) {
-          break;
-        }
-        flatPool.push(fruitId);
-      }
+      const fruitId = distractors[distractorIndex % distractors.length]!;
+      flatPool.push(fruitId, fruitId, fruitId);
+      distractorIndex += 1;
     }
 
     return {
