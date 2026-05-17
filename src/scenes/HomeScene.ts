@@ -3,6 +3,7 @@ import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
+import { analytics } from '@/analytics';
 import { getDailyLimitedLevelForDate } from '@/config/dailyLimitedLevels';
 import { getBowlLevelIndex } from '@/game/BowlProgress';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
@@ -859,6 +860,11 @@ export class HomeScene implements Scene {
       loadingOverlay.setProgress(0.46);
       await SceneManager.prepare('fruitSlice');
       loadingOverlay.setProgress(1);
+      analytics.track('gameplay_mode_enter', {
+        mode: 'fruit_slice',
+        source: 'home',
+        best_score: getFruitSliceBestScore(),
+      });
       SceneManager.switchTo('fruitSlice');
     } catch (error) {
       console.error('[HomeScene] enter fruit slice failed', error);
@@ -887,6 +893,13 @@ export class HomeScene implements Scene {
       loadingOverlay.setProgress(0.46);
       await SceneManager.prepare('dailyLimited');
       loadingOverlay.setProgress(1);
+      const dailyLevel = getDailyLimitedLevelForDate();
+      analytics.track('gameplay_mode_enter', {
+        mode: 'daily_limited',
+        source: 'home',
+        level_id: dailyLevel.dayOfMonth,
+        drink_name: dailyLevel.drinkName,
+      });
       SceneManager.switchTo('dailyLimited');
     } catch (error) {
       console.error('[HomeScene] enter daily limited failed', error);

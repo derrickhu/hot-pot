@@ -13,6 +13,7 @@ import { Game } from '@/core/Game';
 import { PersistService } from '@/core/PersistService';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
+import { analytics } from '@/analytics';
 import { addCoins, spendCoins } from '@/game/Wallet';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH, createCoinIcon } from '@/gameobjects/CoinBar';
 import { BOWL_COMMON_MODAL_PANEL_ASSET, BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY } from '@/gameobjects/BowlMechanicIntroOverlay';
@@ -24,6 +25,7 @@ import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
 type DailyToolKind = 'shuffle' | 'undo' | 'lift';
 type CardZone = 'stack' | 'lift';
+type DailyLimitedEndReason = 'complete' | 'buffer_full' | 'back_home' | 'gm_complete';
 
 interface CardState {
   id: string;
@@ -274,6 +276,12 @@ export class DailyLimitedScene implements Scene {
   private toolRewardedAdBusy = false;
   private nextLiftCardId = 1;
   private bufferMatchTimer: ReturnType<typeof window.setTimeout> | null = null;
+  private roundStartTs = 0;
+  private cardClicksThisRound = 0;
+  private targetHitsThisRound = 0;
+  private bufferAddsThisRound = 0;
+  private maxBufferSizeThisRound = 0;
+  private toolUsesThisRound: Record<DailyToolKind, number> = { shuffle: 0, undo: 0, lift: 0 };
   // 目标卡片的 hint glow 集合：让 ticker 只调一次 alpha 流转，不再修改卡片
   // 本身的 scale / y。
   // 历史教训：hint 不能修改 root.y 或 scale —— stack 区是 17px 步进堆叠，
@@ -502,6 +510,9 @@ export class DailyLimitedScene implements Scene {
     this.layoutBackButton();
     this.backButtonSprite.on('pointertap', () => {
       AudioManager.playButtonSound();
+      if (this.roundStarted && !this.roundEnded) {
+        this.trackDailyLimitedEnd(false, 'back_home');
+      }
       SceneManager.switchTo('home');
     });
     this.container.addChild(this.backButtonSprite);
@@ -628,6 +639,12 @@ export class DailyLimitedScene implements Scene {
     this.extraBufferSlotUnlocked = false;
     this.unlockBufferAdBusy = false;
     this.toolRewardedAdBusy = false;
+    this.roundStartTs = Date.now();
+    this.cardClicksThisRound = 0;
+    this.targetHitsThisRound = 0;
+    this.bufferAddsThisRound = 0;
+    this.maxBufferSizeThisRound = 0;
+    this.toolUsesThisRound = { shuffle: 0, undo: 0, lift: 0 };
     this.cards.length = 0;
     this.buffer.length = 0;
     this.history.length = 0;
@@ -671,6 +688,14 @@ export class DailyLimitedScene implements Scene {
     });
 
     this.renderAll();
+    analytics.track('daily_limited_start', {
+      mode: 'daily_limited',
+      level_id: this.level.dayOfMonth,
+      theme_id: this.level.themeId,
+      drink_name: this.level.drinkName,
+      target_count: this.targetCount(),
+      buffer_size: this.activeBufferSize(),
+    });
   }
 
   private generateCardDeal(): { flat: FruitId[]; stack: FruitId[] } {
@@ -1377,6 +1402,7 @@ export class DailyLimitedScene implements Scene {
     }
 
     // 在标记 removed 之前先记录卡片当前位置，作为飞入动画的起点。
+    this.cardClicksThisRound += 1;
     const fromPos = this.cardWorldCenter(card);
     const fruitId = card.fruitId;
 
@@ -1390,6 +1416,7 @@ export class DailyLimitedScene implements Scene {
 
     if (this.isTargetFruit(fruitId)) {
       this.collected += 1;
+      this.targetHitsThisRound += 1;
       this.collectedByFruit[fruitId] = (this.collectedByFruit[fruitId] ?? 0) + 1;
       const collectedForFruit = this.collectedByFruit[fruitId] ?? 1;
       const bowlSlotIndex = this.findBowlSlotIndexForCollected(fruitId, collectedForFruit);
@@ -1432,10 +1459,12 @@ export class DailyLimitedScene implements Scene {
     }
 
     if (this.buffer.length >= this.activeBufferSize()) {
-      this.finishRound(false);
+      this.finishRound(false, 'buffer_full');
       return;
     }
     this.buffer.push(fruitId);
+    this.bufferAddsThisRound += 1;
+    this.maxBufferSizeThisRound = Math.max(this.maxBufferSizeThisRound, this.buffer.length);
     const bufferIndex = this.buffer.length - 1;
     this.bufferIncomingHidden.set(
       bufferIndex,
@@ -1617,7 +1646,7 @@ export class DailyLimitedScene implements Scene {
     this.addTransientTicker(tick);
   }
 
-  private finishRound(success: boolean): void {
+  private finishRound(success: boolean, reason: DailyLimitedEndReason = success ? 'complete' : 'buffer_full'): void {
     this.roundEnded = true;
     this.exitBufferPanic();
     if (success) {
@@ -1635,7 +1664,32 @@ export class DailyLimitedScene implements Scene {
     } else {
       AudioManager.playBufferPanicSound();
     }
+    this.trackDailyLimitedEnd(success, reason);
     this.showResultOverlay(success);
+  }
+
+  private trackDailyLimitedEnd(success: boolean, reason: DailyLimitedEndReason): void {
+    analytics.track('daily_limited_end', {
+      mode: 'daily_limited',
+      level_id: this.level.dayOfMonth,
+      theme_id: this.level.themeId,
+      drink_name: this.level.drinkName,
+      success,
+      end_reason: reason,
+      duration_ms: this.roundStartTs > 0 ? Date.now() - this.roundStartTs : 0,
+      collected_count: this.collected,
+      target_count: this.targetCount(),
+      card_clicks: this.cardClicksThisRound,
+      target_hits: this.targetHitsThisRound,
+      buffer_adds: this.bufferAddsThisRound,
+      max_buffer_size: this.maxBufferSizeThisRound,
+      extra_buffer_unlocked: this.extraBufferSlotUnlocked,
+      shuffle_tool_count: this.toolUsesThisRound.shuffle,
+      undo_tool_count: this.toolUsesThisRound.undo,
+      lift_tool_count: this.toolUsesThisRound.lift,
+      reward_coins: success ? this.lastClearRewardCoins : 0,
+      first_clear_today: success ? this.lastClearRewardWasFirstToday : false,
+    });
   }
 
   private readDailyRewardState(): DailyLimitedRewardState {
@@ -1676,7 +1730,7 @@ export class DailyLimitedScene implements Scene {
       this.collectedByFruit[target.fruitId] = target.requiredCount;
     });
     this.renderAll();
-    this.finishRound(true);
+    this.finishRound(true, 'gm_complete');
   }
 
   private showGmPanel(): void {
@@ -1970,6 +2024,14 @@ export class DailyLimitedScene implements Scene {
       }, DAILY_LIMITED_REWARDED_AD_UNIT_ID);
       if (result === 'completed' || result === 'unavailable') {
         this.extraBufferSlotUnlocked = true;
+        analytics.track('daily_limited_buffer_unlock', {
+          mode: 'daily_limited',
+          level_id: this.level.dayOfMonth,
+          theme_id: this.level.themeId,
+          result,
+          collected_count: this.collected,
+          buffer_size: this.buffer.length,
+        });
         this.toast(result === 'completed' ? '已解锁额外格子' : '广告不可用，已临时解锁');
       } else if (result === 'skipped') {
         this.toast('看完广告才能解锁');
@@ -2018,7 +2080,7 @@ export class DailyLimitedScene implements Scene {
         this.toast(result === 'skipped' ? '看完广告才能使用道具' : '广告加载失败，请稍后再试');
         return;
       }
-      this.executeTool(kind);
+      this.executeTool(kind, 'ad');
     } finally {
       this.toolRewardedAdBusy = false;
     }
@@ -2043,11 +2105,11 @@ export class DailyLimitedScene implements Scene {
     }
     this.coinBar.refresh();
     this.coinBar.bump();
-    this.executeTool(kind);
+    this.executeTool(kind, 'coin');
     return true;
   }
 
-  private executeTool(kind: DailyToolKind): void {
+  private executeTool(kind: DailyToolKind, source: 'coin' | 'ad'): void {
     if (kind === 'shuffle') {
       this.shuffleRemainingCards();
     } else if (kind === 'undo') {
@@ -2055,6 +2117,17 @@ export class DailyLimitedScene implements Scene {
     } else {
       this.liftBufferCards();
     }
+    this.toolUsesThisRound[kind] += 1;
+    analytics.track('daily_limited_tool_use', {
+      mode: 'daily_limited',
+      level_id: this.level.dayOfMonth,
+      theme_id: this.level.themeId,
+      tool_kind: kind,
+      source,
+      remaining_count: this.toolCounts[kind],
+      collected_count: this.collected,
+      buffer_size: this.buffer.length,
+    });
   }
 
   private showToolHelpPanel(kind: DailyToolKind): void {
@@ -2744,6 +2817,13 @@ export class DailyLimitedScene implements Scene {
         title: this.level.recipeCard.shareTitle,
         imageUrl: this.level.recipeCard.path,
         query: `from=share&entry=daily_limited_recipe&theme=${this.level.themeId}`,
+      });
+      analytics.track('daily_limited_recipe_share', {
+        mode: 'daily_limited',
+        level_id: this.level.dayOfMonth,
+        theme_id: this.level.themeId,
+        drink_name: this.level.drinkName,
+        ok,
       });
       if (!ok) {
         this.toast('请在微信小游戏中分享');

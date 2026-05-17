@@ -16,6 +16,7 @@ import { FRUIT_SLICE_COIN_TIERS, fruitSliceCoinsForScore, nextFruitSliceCoinTier
 import { getUnlockedFruitIds } from '@/config/fruitCatalog';
 import { FRUIT_CONFIGS, FRUIT_MAP, type FruitConfig, type FruitId } from '@/config/fruits';
 import { fruitSliceWholeTextureKey, FRUIT_SLICE_IDS, FRUIT_SLICE_WHOLE_PATH } from '@/config/fruitSliceWhole';
+import { analytics } from '@/analytics';
 import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
 import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
@@ -47,7 +48,8 @@ import { sampleEdgeAt, sampleTextureTopEdge, type TextureTopEdge } from '@/utils
 
 type FruitPhysicsState = 'fixed' | 'falling' | 'settled' | 'enteringPipe' | 'pipe';
 type FruitSliceToolKind = 'eliminate' | 'shuffle';
-type FruitSliceStartChoiceSource = 'entry' | 'retry';
+type FruitSliceStartChoiceSource = 'entry' | 'retry' | 'checkpoint';
+type FruitSliceFailReason = 'pipe_overflow' | 'grid_overflow' | 'pipe_capacity' | 'abandon_revive';
 type FruitSliceTutorialStep = 'idle' | 'first' | 'second' | 'waitingMatch' | 'score' | 'done';
 
 type GoalCelebrationJob =
@@ -249,6 +251,12 @@ export class FruitSliceEndlessScene implements Scene {
   private pendingToolKind: FruitSliceToolKind | null = null;
   private toolRewardedAdBusy = false;
   private fruitToolUsesThisRound: Record<FruitSliceToolKind, number> = { eliminate: 0, shuffle: 0 };
+  private roundStartTs = 0;
+  private roundStartSource: FruitSliceStartChoiceSource = 'entry';
+  private roundInitialScore = 0;
+  private maxComboThisRound = 0;
+  private matchCountThisRound = 0;
+  private maxMilestoneThisRound = 0;
   private lastCoinReward: FruitSliceCoinRewardResult | null = null;
   private fruitTopY = 0;
   private fruitBottomY = 0;
@@ -919,7 +927,7 @@ export class FruitSliceEndlessScene implements Scene {
     }
     this.warningLine.alpha = source === 'pipe' ? 1 : 0;
     this.gridWarningLine.alpha = source === 'grid' ? 1 : 0;
-    this.finishRound();
+    this.finishRound(source === 'grid' ? 'grid_overflow' : 'pipe_overflow');
   }
 
   /** 网格行高：与初始 8 行布局保持一致，避免补料后密度突变。 */
@@ -1710,6 +1718,13 @@ export class FruitSliceEndlessScene implements Scene {
       this.shuffleFruits();
     }
     this.fruitToolUsesThisRound[kind] = this.getFruitSliceToolUseCount(kind) + 1;
+    analytics.track('fruit_slice_tool_use', {
+      mode: 'fruit_slice',
+      tool_kind: kind,
+      score: this.score,
+      round_used_count: this.getFruitSliceToolUseCount(kind),
+      pipe_count: this.pipeStack.length,
+    });
   }
 
   private createInfoPill(x: number, y: number, label: string): { root: PIXI.Container; value: PIXI.Text } {
@@ -1760,7 +1775,7 @@ export class FruitSliceEndlessScene implements Scene {
   private showStartChoiceOrStartRound(source: FruitSliceStartChoiceSource): void {
     const checkpoint = this.getBestResumeCheckpoint();
     if (!checkpoint) {
-      this.startRound(0);
+      this.startRound(0, source);
       return;
     }
     this.showFruitSliceStartChoiceOverlay(checkpoint, source);
@@ -1853,7 +1868,7 @@ export class FruitSliceEndlessScene implements Scene {
         return;
       }
       AudioManager.playButtonSound();
-      this.startRound(0);
+      this.startRound(0, source);
     }));
 
     root.addChild(this.createOverlayImageTextButton(W / 2, H / 2 + 126, 318, 58, `从${checkpoint}分开始`, () => {
@@ -1886,7 +1901,13 @@ export class FruitSliceEndlessScene implements Scene {
         extra: { checkpoint, bestScore: best, source },
       }, FRUIT_SLICE_REWARDED_AD_UNIT_ID);
       if (result === 'completed') {
-        this.startRound(checkpoint);
+        analytics.track('fruit_slice_checkpoint_start', {
+          mode: 'fruit_slice',
+          checkpoint,
+          best_score: best,
+          source,
+        });
+        this.startRound(checkpoint, 'checkpoint');
         this.spawnCenterBanner(`已从${checkpoint}分开始`);
         return;
       }
@@ -1923,7 +1944,7 @@ export class FruitSliceEndlessScene implements Scene {
     }
   }
 
-  private startRound(initialScore = 0): void {
+  private startRound(initialScore = 0, source: FruitSliceStartChoiceSource = 'entry'): void {
     const normalizedInitialScore = Number.isFinite(initialScore) ? Math.max(0, Math.floor(initialScore)) : 0;
     this.dismissGoalCelebration(true);
     this.clearRound();
@@ -1945,6 +1966,12 @@ export class FruitSliceEndlessScene implements Scene {
     this.reviveAdBusy = false;
     this.resumeStartAdBusy = false;
     this.fruitToolUsesThisRound = { eliminate: 0, shuffle: 0 };
+    this.roundStartTs = Date.now();
+    this.roundStartSource = source;
+    this.roundInitialScore = normalizedInitialScore;
+    this.maxComboThisRound = 0;
+    this.matchCountThisRound = 0;
+    this.maxMilestoneThisRound = normalizedInitialScore;
     this.pipeBlockRemoved = false;
     this.pipeWoodBlockSprite.visible = true;
     this.pipeWoodBlockSprite2.visible = true;
@@ -1971,6 +1998,12 @@ export class FruitSliceEndlessScene implements Scene {
     if (normalizedInitialScore <= 0) {
       this.startTutorialIfNeeded();
     }
+    analytics.track('fruit_slice_start', {
+      mode: 'fruit_slice',
+      start_source: source,
+      initial_score: normalizedInitialScore,
+      best_score: this.bestScore,
+    });
   }
 
   private resetFruitSpawnBounds(): void {
@@ -2502,7 +2535,7 @@ export class FruitSliceEndlessScene implements Scene {
     this.pipeStack.push({ node, fruitId });
     this.updateHud();
     if (this.pipeStack.length >= FRUIT_SLICE_PHYSICS.pipeCapacity) {
-      this.finishRound();
+      this.finishRound('pipe_capacity');
     } else {
       this.refillIfNeeded();
     }
@@ -2516,6 +2549,8 @@ export class FruitSliceEndlessScene implements Scene {
       this.combo = 1;
     }
     this.lastComboAt = now;
+    this.matchCountThisRound += 1;
+    this.maxComboThisRound = Math.max(this.maxComboThisRound, this.combo);
     const unlocked = getUnlockedFruitIds().has(fruitId);
     const comboBonus = Math.min(
       FRUIT_SLICE_COMBO_BONUS_MAX,
@@ -2560,6 +2595,13 @@ export class FruitSliceEndlessScene implements Scene {
     ) {
       const milestone = FRUIT_SLICE_MILESTONES[this.nextMilestoneIndex]!;
       this.nextMilestoneIndex += 1;
+      this.maxMilestoneThisRound = Math.max(this.maxMilestoneThisRound, milestone);
+      analytics.track('fruit_slice_milestone', {
+        mode: 'fruit_slice',
+        milestone_score: milestone,
+        score: this.score,
+        duration_ms: this.roundStartTs > 0 ? Date.now() - this.roundStartTs : 0,
+      });
       this.enqueueGoalCelebration({ kind: 'milestone', points: milestone });
       AudioManager.playBadgeUnlockSound();
     }
@@ -2660,7 +2702,7 @@ export class FruitSliceEndlessScene implements Scene {
     return base * (FRUIT_SLICE_VISUAL_SCALE[fruitId] ?? 1);
   }
 
-  private finishRound(): void {
+  private finishRound(failReason: FruitSliceFailReason): void {
     if (this.gameOver) {
       return;
     }
@@ -2672,17 +2714,34 @@ export class FruitSliceEndlessScene implements Scene {
       this.showReviveChoiceOverlay();
       return;
     }
-    this.showFinalEndOverlay();
+    this.showFinalEndOverlay(false, failReason);
   }
 
-  private showFinalEndOverlay(markReviveUnavailable = false): void {
+  private showFinalEndOverlay(markReviveUnavailable = false, failReason: FruitSliceFailReason = 'pipe_capacity'): void {
     if (markReviveUnavailable) {
       this.reviveUsed = true;
+      failReason = 'abandon_revive';
     }
     this.lastCoinReward = settleFruitSliceCoinReward(this.score);
     const isNewBest = this.score > 0 ? recordFruitSliceRun(this.score) : false;
     this.bestScore = getFruitSliceBestScore();
     this.updateHud();
+    analytics.track('fruit_slice_end', {
+      mode: 'fruit_slice',
+      score: this.score,
+      duration_ms: this.roundStartTs > 0 ? Date.now() - this.roundStartTs : 0,
+      fail_reason: failReason,
+      start_source: this.roundStartSource,
+      initial_score: this.roundInitialScore,
+      match_count: this.matchCountThisRound,
+      max_combo: this.maxComboThisRound,
+      revive_used: this.reviveUsed,
+      eliminate_tool_count: this.fruitToolUsesThisRound.eliminate,
+      shuffle_tool_count: this.fruitToolUsesThisRound.shuffle,
+      max_milestone_score: this.maxMilestoneThisRound,
+      coin_reward: this.lastCoinReward.totalCoins,
+      is_new_best: isNewBest,
+    });
     // 只有刷新最高分时才上报，避免无意义的 update；后端也会按"非更优记录"二次拦截
     submitFruitBestRankIfNeeded(isNewBest);
     if (this.lastCoinReward.totalCoins > 0) {
@@ -3328,6 +3387,11 @@ export class FruitSliceEndlessScene implements Scene {
         this.spawnCenterBanner(result === 'skipped' ? '看完广告后才能复活' : '广告暂不可用');
         return;
       }
+      analytics.track('fruit_slice_revive', {
+        mode: 'fruit_slice',
+        score: this.score,
+        result,
+      });
       this.reviveUsed = true;
       this.gameOver = false;
       this.warningLine.alpha = 0;
