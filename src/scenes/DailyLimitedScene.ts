@@ -727,7 +727,7 @@ export class DailyLimitedScene implements Scene {
     );
     const targetCardCount = stackCards.length;
     // 非目标水果必须成 3 的倍数进入牌堆，否则会出现无法三消的落单牌。
-    // 目标水果允许不是 3 的倍数：配置里 requiredCount 之外最多额外 2 张，
+    // 目标水果允许不是 3 的倍数：配置里 requiredCount 之外最多额外 3 张，
     // 用作目标收集容错，不参与 buffer 三消约束。
     const desiredDistractorCards = Math.ceil(Math.max(0, minStackCards - targetCardCount) / 3) * 3;
     let distractorIndex = 0;
