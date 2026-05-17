@@ -1171,6 +1171,16 @@ export class DailyLimitedScene implements Scene {
     return idx >= 0 ? idx : 0;
   }
 
+  private findLastBowlSlotIndexForFruit(fruitId: FruitId): number {
+    const bowlSlots = this.getBowlSlots();
+    for (let i = bowlSlots.length - 1; i >= 0; i -= 1) {
+      if (bowlSlots[i]?.fruitId === fruitId) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
   private bowlSlotCenterByIndex(slotIndex: number): { x: number; y: number } {
     const bowlSlots = this.getBowlSlots();
     const bowlW = 118;
@@ -1419,15 +1429,26 @@ export class DailyLimitedScene implements Scene {
     card.removed = true;
 
     if (this.isTargetFruit(fruitId)) {
-      this.collected += 1;
       this.targetHitsThisRound += 1;
-      this.collectedByFruit[fruitId] = (this.collectedByFruit[fruitId] ?? 0) + 1;
-      const collectedForFruit = this.collectedByFruit[fruitId] ?? 1;
-      const bowlSlotIndex = this.findBowlSlotIndexForCollected(fruitId, collectedForFruit);
-      this.bowlIncomingHidden.set(
-        bowlSlotIndex,
-        (this.bowlIncomingHidden.get(bowlSlotIndex) ?? 0) + 1,
-      );
+      const requiredForFruit = this.targetRequiredCount(fruitId);
+      const prevCollectedForFruit = this.collectedByFruit[fruitId] ?? 0;
+      const canCountForGoal = prevCollectedForFruit < requiredForFruit;
+      const collectedForFruit = canCountForGoal
+        ? prevCollectedForFruit + 1
+        : Math.max(1, requiredForFruit);
+      if (canCountForGoal) {
+        this.collected += 1;
+        this.collectedByFruit[fruitId] = collectedForFruit;
+      }
+      const bowlSlotIndex = canCountForGoal
+        ? this.findBowlSlotIndexForCollected(fruitId, collectedForFruit)
+        : this.findLastBowlSlotIndexForFruit(fruitId);
+      if (canCountForGoal) {
+        this.bowlIncomingHidden.set(
+          bowlSlotIndex,
+          (this.bowlIncomingHidden.get(bowlSlotIndex) ?? 0) + 1,
+        );
+      }
       // 命中目标的同步刷新：只更新被点击区域所在的卡片层 + 冰碗占位状态。
       // 缓存的 buffer / 工具栏不会改变，跳过避免无谓的 PIXI Graphics / Sprite
       // 重建（这是点击卡顿的主要来源之一）。
@@ -1440,20 +1461,24 @@ export class DailyLimitedScene implements Scene {
       this.renderIceBowls();
       this.updateToolButtons();
 
-      const reachedGoal = this.collected >= this.targetCount();
+      const reachedGoal = this.hasMetAllTargetCounts();
       this.flyFruitToBowl(fruitId, fromPos, bowlSlotIndex, () => {
-        const cur = this.bowlIncomingHidden.get(bowlSlotIndex) ?? 0;
-        if (cur <= 1) {
-          this.bowlIncomingHidden.delete(bowlSlotIndex);
-        } else {
-          this.bowlIncomingHidden.set(bowlSlotIndex, cur - 1);
+        if (canCountForGoal) {
+          const cur = this.bowlIncomingHidden.get(bowlSlotIndex) ?? 0;
+          if (cur <= 1) {
+            this.bowlIncomingHidden.delete(bowlSlotIndex);
+          } else {
+            this.bowlIncomingHidden.set(bowlSlotIndex, cur - 1);
+          }
         }
         if (this.roundEnded && !reachedGoal) {
           // 场景已结束（其他流程触发），跳过后续状态更新。
           return;
         }
         AudioManager.playScoopSound();
-        this.showTargetCollectEncouragement(fruitId, collectedForFruit);
+        if (canCountForGoal) {
+          this.showTargetCollectEncouragement(fruitId, collectedForFruit);
+        }
         this.renderIceBowls();
         if (reachedGoal && !this.roundEnded) {
           this.finishRound(true);
@@ -2009,6 +2034,16 @@ export class DailyLimitedScene implements Scene {
 
   private targetCount(): number {
     return getDailyLimitedTargetCount(this.level);
+  }
+
+  private targetRequiredCount(fruitId: FruitId): number {
+    return this.level.targets.find((target) => target.fruitId === fruitId)?.requiredCount ?? 0;
+  }
+
+  private hasMetAllTargetCounts(): boolean {
+    return this.level.targets.every((target) => (
+      (this.collectedByFruit[target.fruitId] ?? 0) >= target.requiredCount
+    ));
   }
 
   private activeBufferSize(): number {
@@ -2814,7 +2849,7 @@ export class DailyLimitedScene implements Scene {
     this.overlayLayer.addChild(this.createRecipeFloatingReward(centerX + 118, H * 0.45));
 
     const share = this.createShareRewardButton();
-    share.position.set(centerX, H * 0.71);
+    share.position.set(centerX, H * 0.615);
     share.on('pointertap', () => {
       AudioManager.playButtonSound();
       const ok = shareGame({
@@ -2844,7 +2879,7 @@ export class DailyLimitedScene implements Scene {
     });
     shareTip.anchor.set(0.5);
     shareTip.resolution = 2;
-    shareTip.position.set(centerX, H * 0.77);
+    shareTip.position.set(centerX, H * 0.67);
     this.overlayLayer.addChild(shareTip);
 
     const hint = new PIXI.Text('点击空白处返回首页', {
@@ -3119,15 +3154,18 @@ export class DailyLimitedScene implements Scene {
   }
 
   private boardHeight(): number {
-    return Math.min(620, Game.logicHeight * 0.38);
+    return Math.min(580, Game.logicHeight * 0.34);
   }
 
   private bowlY(): number {
-    return this.flatAreaY() + FLAT_ROWS * (CARD_H + 8) + 82;
+    // 冰碗下方有每个目标水果的关键计数，必须优先保证不被暂存栏遮挡。
+    // 因此碗区以底部暂存栏反推定位，而不是继续跟随上方两个水果区累计
+    // 下推；真机高屏上能稳定留出计数区。
+    return this.bufferY() - 176;
   }
 
   private flatAreaY(): number {
-    return this.boardTop() + this.boardHeight() + 42;
+    return this.boardTop() + this.boardHeight() + 18;
   }
 
   private bufferY(): number {
