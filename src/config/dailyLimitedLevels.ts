@@ -3,6 +3,9 @@ import type { FruitId } from '@/config/fruits';
 export const DAILY_LIMITED_MIN_FRUIT_TYPES = 20;
 export const DAILY_LIMITED_MIN_STACK_CARDS = 210;
 
+/** 每日限定每局每种道具（洗牌 / 撤销 / 抬起）各自可用次数上限 */
+export const DAILY_LIMITED_TOOL_USES_PER_ROUND = 3;
+
 export interface DailyDrinkRecipe {
   readonly title: string;
   readonly intro: string;
@@ -128,9 +131,9 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     bufferSize: 7,
     toolCounts: {
-      shuffle: 2,
-      undo: 2,
-      lift: 2,
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
     },
     layoutSeed: 20260516,
   },
@@ -189,9 +192,9 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     bufferSize: 7,
     toolCounts: {
-      shuffle: 2,
-      undo: 2,
-      lift: 2,
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
     },
     layoutSeed: 20260517,
   },
@@ -217,7 +220,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '多肉桃桃制作方法，清甜多汁果香满满！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260518,
   },
   {
@@ -245,7 +252,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '百香果爆柠檬制作方法，酸甜爽口冰凉一夏！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260519,
   },
   {
@@ -270,7 +281,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '青提茉莉茶制作方法，清甜爽口花香淡雅！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260520,
   },
   {
@@ -295,7 +310,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '西柚茉莉茶制作方法，清新果香颜值满分！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260521,
   },
   {
@@ -320,7 +339,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '草莓乌龙茶制作方法，酸甜少女心爆棚！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260522,
   },
   {
@@ -345,7 +368,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '芒果绿茶制作方法，热带果香清爽不腻！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260523,
   },
   {
@@ -370,7 +397,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '荔枝玫瑰茶制作方法，清甜花香仙气满满！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260524,
   },
   {
@@ -398,7 +429,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '菠萝椰子茶制作方法，清爽解腻一口降温！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260525,
   },
   {
@@ -426,7 +461,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '橙子苹果茶制作方法，橙香苹果清甜暖茶！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260526,
   },
   {
@@ -451,7 +490,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '柠檬蜂蜜红茶制作方法，暖胃经典酸甜舒服！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260527,
   },
   {
@@ -505,7 +548,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '蓝莓桑葚茶制作方法，酸甜浆果一口清爽！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260528,
   },
   {
@@ -533,7 +580,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '西瓜青提冰茶制作方法，清甜多汁夏日冰茶！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260529,
   },
   {
@@ -558,7 +609,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '蓝莓气泡茶制作方法，酸甜浆果气泡冰饮！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260530,
   },
   {
@@ -586,7 +641,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '芒果香蕉冰饮制作方法，热带香甜顺滑冰饮！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260531,
   },
   {
@@ -640,7 +699,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '桃子荔枝青柠茶制作方法，桃香荔枝青柠冰茶！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260601,
   },
   {
@@ -668,7 +731,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '金桔柠檬茶制作方法，酸甜清爽不腻口！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260602,
   },
   {
@@ -693,7 +760,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '苹果生姜茶制作方法，身上暖了不怕凉！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260603,
   },
   {
@@ -721,7 +792,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '雪梨百合茶制作方法，嗓子不干咳嗽少了！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260604,
   },
   {
@@ -749,7 +824,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '橙子薄荷茶制作方法，整个人清爽起来！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260605,
   },
   {
@@ -777,7 +856,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '芭乐牛油果奶昔制作方法，清甜顺滑一杯就满足！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260606,
   },
   {
@@ -805,7 +888,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '黄瓜雪梨汁制作方法，清爽润口很适合夏天！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260607,
   },
   {
@@ -833,7 +920,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '荔枝火龙果饮制作方法，粉粉果香清甜多汁！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260608,
   },
   {
@@ -858,7 +949,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '梅渍小番茄制作方法，酸甜开胃冰爽入味！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260609,
   },
   {
@@ -883,7 +978,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '石榴冰茶制作方法，红宝石果粒酸甜爆汁！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260610,
   },
   {
@@ -911,7 +1010,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '杨梅荔枝饮制作方法，酸甜莓香清爽解暑！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260611,
   },
   {
@@ -942,7 +1045,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '杨梅瑞纳冰制作方法，酸甜冰爽还有杨梅颗粒感！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260612,
   },
   {
@@ -967,7 +1074,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '蜜瓜燕麦拿铁制作方法，清甜顺滑还带咖啡香！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260613,
   },
   {
@@ -995,7 +1106,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '芭乐油柑饮制作方法，清爽回甘越喝越香！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260614,
   },
   {
@@ -1020,7 +1135,11 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
       shareTitle: '木瓜牛奶制作方法，香甜暖润一杯很舒服！',
     },
     bufferSize: 7,
-    toolCounts: { shuffle: 2, undo: 2, lift: 2 },
+    toolCounts: {
+      shuffle: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      undo: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+      lift: DAILY_LIMITED_TOOL_USES_PER_ROUND,
+    },
     layoutSeed: 20260615,
   },
 ];

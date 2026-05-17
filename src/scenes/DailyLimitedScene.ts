@@ -20,6 +20,7 @@ import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
 import { showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { TextureCache } from '@/utils/TextureCache';
 import { shareGame } from '@/utils/wechatShare';
+import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
 type DailyToolKind = 'shuffle' | 'undo' | 'lift';
 type CardZone = 'stack' | 'lift';
@@ -58,6 +59,13 @@ interface DailyBowlSlot {
   fruitId: FruitId;
   start: number;
   capacity: number;
+}
+
+interface IceBowlSlotView {
+  root: PIXI.Container;
+  fruitsLayer: PIXI.Container;
+  countText: PIXI.Text;
+  signature: string;
 }
 
 const CARD_COLS = 9;
@@ -119,7 +127,20 @@ const DAILY_CLEAR_BANNER_PATH = 'subpackages/bowl_game/assets/images/daily_limit
 const DAILY_SHARE_BUTTON_TEXTURE_KEY = 'daily_limited_badge_share_reward_button';
 const DAILY_SHARE_BUTTON_PATH = 'subpackages/bowl_game/assets/images/badge_share_reward_button.png';
 const DAILY_TOOL_KINDS: readonly DailyToolKind[] = ['shuffle', 'undo', 'lift'];
-const DAILY_TARGET_ENCOURAGEMENTS = ['赞', '太棒了', '完美', '果茶制作中', '清爽加一', '继续加油'] as const;
+const DAILY_TARGET_ENCOURAGEMENTS = [
+  '赞',
+  '太棒了',
+  '完美',
+  '果茶制作中',
+  '清爽+1',
+  '健康+1',
+  '凉爽翻倍',
+  '活力+1',
+  '维C+1',
+  '冰凉翻倍',
+  '能量+1',
+  '继续加油',
+] as const;
 
 function seededRandom(seed: number): () => number {
   let value = seed >>> 0;
@@ -186,6 +207,9 @@ export class DailyLimitedScene implements Scene {
   private readonly iceBowlLayer = new PIXI.Container();
   private readonly bufferLayer = new PIXI.Container();
   private readonly toolLayer = new PIXI.Container();
+  // 卡片飞向冰碗 / 暂存栏的飞行层。位于游戏内容之上、模态层之下，保证不被
+  // overlayLayer 的清理动作误销毁；自身只承载短暂存在的 sprite。
+  private readonly flyingLayer = new PIXI.Container();
   private readonly overlayLayer = new PIXI.Container();
   private readonly backButtonSprite = new PIXI.Sprite();
   private readonly coinBar = new CoinBar();
@@ -209,6 +233,31 @@ export class DailyLimitedScene implements Scene {
   private readonly cards: CardState[] = [];
   private readonly buffer: FruitId[] = [];
   private readonly history: ClickHistoryEntry[] = [];
+  // 增量渲染缓存：仅 destroy/重建发生变化的卡片视图，避免每次点击全量重建。
+  private readonly mountedStackCardViews = new Map<string, { view: PIXI.Container; key: string }>();
+  private readonly mountedLiftCardViews = new Map<string, { view: PIXI.Container; key: string }>();
+  // Buffer 静态外框 + 槽位框只画一次，动态内容（水果图标 / 解锁槽）单独管理。
+  private bufferStaticView: PIXI.Container | null = null;
+  private bufferStaticSignature = '';
+  private bufferDynamicLayer: PIXI.Container | null = null;
+  private readonly mountedBufferContents = new Map<number, { view: PIXI.Container; key: string }>();
+  // 冰碗：碗体（精灵 + 计数图标）保持常驻，水果与计数文字按需更新。
+  private readonly iceBowlViews = new Map<number, IceBowlSlotView>();
+  private iceBowlsSignature = '';
+  // O(1) 目标水果判定，避免 isTargetFruit 每次重新分配数组。
+  private targetFruitSet: ReadonlySet<FruitId> = new Set();
+  // 列顶卡片缓存，避免每张卡渲染都扫描整个 cards 数组。
+  private readonly topStackIdByColumn: Array<string | null> = new Array(CARD_COLS).fill(null);
+  // 卡片飞行动画期间，目标位置（暂存槽 / 冰碗）暂时隐藏静态图标，
+  // 等飞入 sprite 落位后再露出。计数允许并行点击叠加。
+  private readonly bufferIncomingHidden = new Map<number, number>();
+  private readonly bowlIncomingHidden = new Map<number, number>();
+  // 暂存栏满时的"红色警报"状态：3 声 stinger + 红色光晕呼吸。
+  private bufferPanicLayer: PIXI.Container | null = null;
+  private bufferPanicTicker: (() => void) | null = null;
+  private bufferPanicElapsedMs = 0;
+  private bufferPanicSfxPlayed = 0;
+  private bufferPanicNextSfxAtMs = 0;
   private toolCounts: Record<DailyToolKind, number> = { shuffle: 0, undo: 0, lift: 0 };
   private loaded = false;
   private loadingPromise: Promise<void> | null = null;
@@ -268,14 +317,19 @@ export class DailyLimitedScene implements Scene {
 
   onExit(): void {
     this.enterToken += 1;
+    this.exitBufferPanic();
     this.stopTransientAnimations();
     destroyContainerChildren(this.cardLayer);
     destroyContainerChildren(this.liftLayer);
     destroyContainerChildren(this.iceBowlLayer);
     destroyContainerChildren(this.bufferLayer);
     destroyContainerChildren(this.toolLayer);
+    destroyContainerChildren(this.flyingLayer);
     destroyContainerChildren(this.overlayLayer);
     this.toolViews.clear();
+    this.bufferIncomingHidden.clear();
+    this.bowlIncomingHidden.clear();
+    this.clearAllRenderCaches();
     this.backButtonSprite.texture = PIXI.Texture.EMPTY;
     this.releaseSceneTextures();
   }
@@ -327,6 +381,8 @@ export class DailyLimitedScene implements Scene {
     this.level = todayLevel;
     this.roundStarted = false;
     this.roundEnded = false;
+    // 跨主题切换时清掉缓存的目标集合，下次 refreshGameStateCaches 会重建。
+    this.targetFruitSet = new Set();
     destroyContainerChildren(this.overlayLayer);
     this.titleText.text = todayLevel.themeName;
     this.hintText.text = todayLevel.positioningText;
@@ -446,13 +502,15 @@ export class DailyLimitedScene implements Scene {
     this.container.addChild(this.coinBar);
     this.coinBar.refresh();
 
-    const gmClear = this.createPillButton('GM测试', 132, 48, 0xff7f50, 0x9d3b20);
-    gmClear.position.set(W - 94, top + 104);
-    gmClear.on('pointertap', () => {
-      AudioManager.playButtonSound();
-      this.showGmPanel();
-    });
-    this.container.addChild(gmClear);
+    if (isWxDevtoolsSimulator()) {
+      const gmClear = this.createPillButton('GM测试', 132, 48, 0xff7f50, 0x9d3b20);
+      gmClear.position.set(W - 94, top + 104);
+      gmClear.on('pointertap', () => {
+        AudioManager.playButtonSound();
+        this.showGmPanel();
+      });
+      this.container.addChild(gmClear);
+    }
 
     this.titleText.text = this.level.themeName;
     this.titleText.anchor.set(0.5);
@@ -476,6 +534,8 @@ export class DailyLimitedScene implements Scene {
     this.container.addChild(this.liftLayer);
     this.container.addChild(this.bufferLayer);
     this.container.addChild(this.toolLayer);
+    this.flyingLayer.eventMode = 'none';
+    this.container.addChild(this.flyingLayer);
     this.container.addChild(this.overlayLayer);
 
     this.mountToolButtons();
@@ -565,6 +625,16 @@ export class DailyLimitedScene implements Scene {
     this.history.length = 0;
     this.roundDealSeed = hashString(`${this.level.themeId}|${Date.now()}|${Math.random()}`);
     destroyContainerChildren(this.overlayLayer);
+    // 一局开始时彻底清掉旧视图，确保增量渲染缓存与场景层一致。
+    this.exitBufferPanic();
+    destroyContainerChildren(this.cardLayer);
+    destroyContainerChildren(this.liftLayer);
+    destroyContainerChildren(this.bufferLayer);
+    destroyContainerChildren(this.iceBowlLayer);
+    destroyContainerChildren(this.flyingLayer);
+    this.bufferIncomingHidden.clear();
+    this.bowlIncomingHidden.clear();
+    this.clearAllRenderCaches();
     this.toolCounts = {
       shuffle: this.level.toolCounts.shuffle,
       undo: this.level.toolCounts.undo,
@@ -643,6 +713,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private renderAll(): void {
+    this.refreshGameStateCaches();
     this.renderCards();
     this.renderLiftCards();
     this.renderIceBowls();
@@ -650,57 +721,88 @@ export class DailyLimitedScene implements Scene {
     this.updateToolButtons();
   }
 
-  private renderCards(): void {
-    destroyContainerChildren(this.cardLayer);
-    const boardTop = this.boardTop();
-    const startX = Math.round((Game.logicWidth - (CARD_COLS * CARD_W + (CARD_COLS - 1) * CARD_GAP)) / 2);
+  private refreshGameStateCaches(): void {
+    // 目标水果集合在一局内固定，仅当 level 变化时需要重建。
+    if (this.targetFruitSet.size !== this.level.targets.length) {
+      this.targetFruitSet = new Set(this.level.targets.map((target) => target.fruitId));
+    }
+
+    // 重新扫描各列顶部卡片：一局内只在卡片移动 / 移除时需要更新。
+    if (this.topStackIdByColumn.length !== CARD_COLS) {
+      this.topStackIdByColumn.length = CARD_COLS;
+    }
     for (let col = 0; col < CARD_COLS; col += 1) {
-      const topCard = this.topStackCard(col);
-      const cards = this.cards
-        .filter((card) => card.zone === 'stack' && card.columnIndex === col && !card.removed)
-        .sort((a, b) => a.depthIndex - b.depthIndex);
-      for (const card of cards) {
-        const x = startX + col * (CARD_W + CARD_GAP);
-        const y = boardTop + 42 + card.depthIndex * STACK_STEP_Y;
-        const view = this.createCardView(card, topCard?.id === card.id);
-        view.position.set(x, y);
-        this.cardLayer.addChild(view);
+      this.topStackIdByColumn[col] = null;
+    }
+    const topDepth: number[] = new Array(CARD_COLS).fill(-1);
+    for (const card of this.cards) {
+      if (card.zone !== 'stack' || card.removed) {
+        continue;
+      }
+      const col = card.columnIndex;
+      if (col < 0 || col >= CARD_COLS) {
+        continue;
+      }
+      if (card.depthIndex > topDepth[col]!) {
+        topDepth[col] = card.depthIndex;
+        this.topStackIdByColumn[col] = card.id;
       }
     }
   }
 
-  private renderLiftCards(): void {
-    destroyContainerChildren(this.liftLayer);
-    const lifted = this.cards
-      .filter((card) => card.zone === 'lift' && !card.removed)
-      .sort((a, b) => (a.depthIndex - b.depthIndex) || (a.columnIndex - b.columnIndex));
-
-    const y = this.flatAreaY();
-    const panelW = FLAT_COLS * CARD_W + (FLAT_COLS - 1) * CARD_GAP + 30;
-    const panelH = FLAT_ROWS * CARD_H + (FLAT_ROWS - 1) * 8 + 30;
-    const panel = new PIXI.Graphics();
-    const panelX = (Game.logicWidth - panelW) / 2;
-    const panelY = y - 15;
-    panel.beginFill(0xfffdf3, 0.58);
-    panel.lineStyle(2, 0x9ec872, 0.85);
-    panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
-    panel.endFill();
-    this.liftLayer.addChild(panel);
-
-    const totalW = FLAT_COLS * CARD_W + (FLAT_COLS - 1) * CARD_GAP;
-    const startX = Math.round((Game.logicWidth - totalW) / 2);
-    lifted.forEach((card) => {
-      const view = this.createCardView(card, true);
-      view.position.set(
-        startX + card.columnIndex * (CARD_W + CARD_GAP),
-        y + card.depthIndex * (CARD_H + 8),
-      );
-      this.liftLayer.addChild(view);
-    });
+  private clearStackRenderCache(): void {
+    this.mountedStackCardViews.clear();
   }
 
-  private renderBuffer(): void {
-    destroyContainerChildren(this.bufferLayer);
+  private clearLiftRenderCache(): void {
+    this.mountedLiftCardViews.clear();
+  }
+
+  private clearBufferRenderCache(): void {
+    this.bufferStaticView = null;
+    this.bufferStaticSignature = '';
+    this.bufferDynamicLayer = null;
+    this.mountedBufferContents.clear();
+  }
+
+  private clearIceBowlRenderCache(): void {
+    this.iceBowlViews.clear();
+    this.iceBowlsSignature = '';
+  }
+
+  private clearAllRenderCaches(): void {
+    this.clearStackRenderCache();
+    this.clearLiftRenderCache();
+    this.clearBufferRenderCache();
+    this.clearIceBowlRenderCache();
+  }
+
+  private evaluateBufferPanic(): void {
+    if (this.roundEnded) {
+      this.exitBufferPanic();
+      return;
+    }
+    const isFull = this.buffer.length > 0 && this.buffer.length >= this.activeBufferSize();
+    if (isFull && !this.bufferPanicLayer) {
+      this.enterBufferPanic();
+    } else if (!isFull && this.bufferPanicLayer) {
+      this.exitBufferPanic();
+    }
+  }
+
+  private enterBufferPanic(): void {
+    if (this.bufferPanicLayer) {
+      return;
+    }
+    const layer = new PIXI.Container();
+    layer.eventMode = 'none';
+    this.bufferPanicLayer = layer;
+    this.bufferPanicElapsedMs = 0;
+    this.bufferPanicSfxPlayed = 0;
+    this.bufferPanicNextSfxAtMs = 0;
+
+    // 简化版预警：只把已占用的暂存槽底色染成静态红色，
+    // 外框不闪、内部也不呼吸；提示责任完全交给那 3 声警报音。
     const W = Game.logicWidth;
     const slotSize = 76;
     const gap = 8;
@@ -709,34 +811,254 @@ export class DailyLimitedScene implements Scene {
     const startX = Math.round((W - totalW) / 2);
     const y = this.bufferY();
 
-    const strip = new PIXI.Graphics();
-    strip.beginFill(0x7a4e42, 0.95);
-    strip.drawRoundedRect(startX - 18, y - 18, totalW + 36, slotSize + 36, 28);
-    strip.endFill();
-    this.bufferLayer.addChild(strip);
+    const activeSize = this.activeBufferSize();
+    for (let i = 0; i < Math.min(activeSize, this.buffer.length); i += 1) {
+      const x = startX + i * (slotSize + gap);
+      const g = new PIXI.Graphics();
+      // 半透明红色填充：盖在水果图标下方做底色，不遮挡水果可见性。
+      g.beginFill(0xff3a3a, 0.42);
+      g.drawRoundedRect(x, y, slotSize, slotSize, 12);
+      g.endFill();
+      layer.addChild(g);
+    }
 
+    this.bufferLayer.addChild(layer);
+
+    // ticker 只用来播 3 次警报音 + 兜底退出，UI 不再做任何脉动。
+    const tick = () => {
+      if (!this.bufferPanicLayer || layer.destroyed || !this.container.parent) {
+        this.removeTransientTicker(tick);
+        return;
+      }
+      this.bufferPanicElapsedMs += PIXI.Ticker.shared.deltaMS;
+      if (this.bufferPanicSfxPlayed < 3 && this.bufferPanicElapsedMs >= this.bufferPanicNextSfxAtMs) {
+        AudioManager.playBufferPanicSound();
+        this.bufferPanicSfxPlayed += 1;
+        this.bufferPanicNextSfxAtMs = this.bufferPanicElapsedMs + 720;
+      }
+      // 警报放完后 ticker 自然退出，但红色底色保留直到 evaluateBufferPanic 显式 exit。
+      if (this.bufferPanicSfxPlayed >= 3) {
+        this.removeTransientTicker(tick);
+        this.bufferPanicTicker = null;
+      }
+    };
+    this.bufferPanicTicker = tick;
+    this.addTransientTicker(tick);
+  }
+
+  private exitBufferPanic(): void {
+    if (this.bufferPanicTicker) {
+      this.removeTransientTicker(this.bufferPanicTicker);
+      this.bufferPanicTicker = null;
+    }
+    if (this.bufferPanicLayer) {
+      if (!this.bufferPanicLayer.destroyed) {
+        if (this.bufferPanicLayer.parent) {
+          this.bufferPanicLayer.parent.removeChild(this.bufferPanicLayer);
+        }
+        this.bufferPanicLayer.destroy({ children: true });
+      }
+      this.bufferPanicLayer = null;
+    }
+    this.bufferPanicElapsedMs = 0;
+    this.bufferPanicSfxPlayed = 0;
+    this.bufferPanicNextSfxAtMs = 0;
+  }
+
+  private renderCards(): void {
+    const boardTop = this.boardTop();
+    const startX = Math.round((Game.logicWidth - (CARD_COLS * CARD_W + (CARD_COLS - 1) * CARD_GAP)) / 2);
+    const visibleIds = new Set<string>();
+
+    for (let col = 0; col < CARD_COLS; col += 1) {
+      const topCardId = this.topStackIdByColumn[col] ?? null;
+      const x = startX + col * (CARD_W + CARD_GAP);
+      for (const card of this.cards) {
+        if (card.zone !== 'stack' || card.removed || card.columnIndex !== col) {
+          continue;
+        }
+        const y = boardTop + 42 + card.depthIndex * STACK_STEP_Y;
+        const clickable = topCardId === card.id;
+        const shouldHint = clickable && this.isTargetFruit(card.fruitId);
+        // key 包含外观相关的所有维度：只要这些不变，就可以保留旧视图。
+        const key = `${card.fruitId}|${clickable ? 1 : 0}|${shouldHint ? 1 : 0}`;
+        visibleIds.add(card.id);
+        const existing = this.mountedStackCardViews.get(card.id);
+        if (existing && existing.key === key && !existing.view.destroyed) {
+          existing.view.position.set(x, y);
+          continue;
+        }
+        if (existing) {
+          existing.view.destroy({ children: true });
+        }
+        const view = this.createCardView(card, clickable);
+        view.position.set(x, y);
+        this.cardLayer.addChild(view);
+        this.mountedStackCardViews.set(card.id, { view, key });
+      }
+    }
+
+    // 清理已不再可见的卡片视图（比如刚被点掉的那一张）。
+    for (const [cardId, entry] of this.mountedStackCardViews) {
+      if (visibleIds.has(cardId)) {
+        continue;
+      }
+      if (!entry.view.destroyed) {
+        entry.view.destroy({ children: true });
+      }
+      this.mountedStackCardViews.delete(cardId);
+    }
+  }
+
+  private renderLiftCards(): void {
+    const y = this.flatAreaY();
+    const panelW = FLAT_COLS * CARD_W + (FLAT_COLS - 1) * CARD_GAP + 30;
+    const panelH = FLAT_ROWS * CARD_H + (FLAT_ROWS - 1) * 8 + 30;
+    const panelX = (Game.logicWidth - panelW) / 2;
+    const panelY = y - 15;
+    const totalW = FLAT_COLS * CARD_W + (FLAT_COLS - 1) * CARD_GAP;
+    const startX = Math.round((Game.logicWidth - totalW) / 2);
+
+    // 静态面板只画一次：除非被 onExit / 重置缓存清掉，否则不再重建。
+    if (this.liftLayer.children.length === 0) {
+      const panel = new PIXI.Graphics();
+      panel.beginFill(0xfffdf3, 0.58);
+      panel.lineStyle(2, 0x9ec872, 0.85);
+      panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
+      panel.endFill();
+      this.liftLayer.addChild(panel);
+    }
+
+    const visibleIds = new Set<string>();
+    for (const card of this.cards) {
+      if (card.zone !== 'lift' || card.removed) {
+        continue;
+      }
+      const x = startX + card.columnIndex * (CARD_W + CARD_GAP);
+      const yPos = y + card.depthIndex * (CARD_H + 8);
+      const shouldHint = this.isTargetFruit(card.fruitId);
+      const key = `${card.fruitId}|1|${shouldHint ? 1 : 0}`;
+      visibleIds.add(card.id);
+      const existing = this.mountedLiftCardViews.get(card.id);
+      if (existing && existing.key === key && !existing.view.destroyed) {
+        existing.view.position.set(x, yPos);
+        continue;
+      }
+      if (existing) {
+        existing.view.destroy({ children: true });
+      }
+      const view = this.createCardView(card, true);
+      view.position.set(x, yPos);
+      this.liftLayer.addChild(view);
+      this.mountedLiftCardViews.set(card.id, { view, key });
+    }
+
+    for (const [cardId, entry] of this.mountedLiftCardViews) {
+      if (visibleIds.has(cardId)) {
+        continue;
+      }
+      if (!entry.view.destroyed) {
+        entry.view.destroy({ children: true });
+      }
+      this.mountedLiftCardViews.delete(cardId);
+    }
+  }
+
+  private renderBuffer(): void {
+    const W = Game.logicWidth;
+    const slotSize = 76;
+    const gap = 8;
+    const totalSlots = this.level.bufferSize + 1;
+    const totalW = totalSlots * slotSize + (totalSlots - 1) * gap;
+    const startX = Math.round((W - totalW) / 2);
+    const y = this.bufferY();
+    const activeSize = this.activeBufferSize();
+
+    // 外框 + 槽位框：只与 totalSlots/activeSize 有关，发生变化时才重画。
+    const staticSig = `${totalSlots}|${activeSize}`;
+    if (this.bufferStaticSignature !== staticSig || !this.bufferStaticView) {
+      if (this.bufferStaticView) {
+        this.bufferStaticView.destroy({ children: true });
+        this.bufferStaticView = null;
+      }
+      const staticRoot = new PIXI.Container();
+      const strip = new PIXI.Graphics();
+      strip.beginFill(0x7a4e42, 0.95);
+      strip.drawRoundedRect(startX - 18, y - 18, totalW + 36, slotSize + 36, 28);
+      strip.endFill();
+      staticRoot.addChild(strip);
+      for (let i = 0; i < totalSlots; i += 1) {
+        const x = startX + i * (slotSize + gap);
+        const locked = i >= activeSize;
+        const slot = new PIXI.Graphics();
+        slot.beginFill(locked ? 0xd8c4b0 : 0xf6dfc6, locked ? 0.82 : 0.96);
+        slot.lineStyle(3, 0xfaf0df, locked ? 0.55 : 0.82);
+        slot.drawRoundedRect(x, y, slotSize, slotSize, 12);
+        slot.endFill();
+        staticRoot.addChild(slot);
+      }
+      this.bufferLayer.addChildAt(staticRoot, 0);
+      this.bufferStaticView = staticRoot;
+      this.bufferStaticSignature = staticSig;
+    }
+
+    if (!this.bufferDynamicLayer || this.bufferDynamicLayer.destroyed) {
+      const dyn = new PIXI.Container();
+      this.bufferLayer.addChild(dyn);
+      this.bufferDynamicLayer = dyn;
+      this.mountedBufferContents.clear();
+    } else {
+      // 保证动态层位于静态层之上。
+      this.bufferLayer.setChildIndex(this.bufferDynamicLayer, this.bufferLayer.children.length - 1);
+    }
+
+    const dynamic = this.bufferDynamicLayer;
+    const validSlotIndexes = new Set<number>();
     for (let i = 0; i < totalSlots; i += 1) {
       const x = startX + i * (slotSize + gap);
-      const locked = i >= this.activeBufferSize();
-      const slot = new PIXI.Graphics();
-      slot.beginFill(locked ? 0xd8c4b0 : 0xf6dfc6, locked ? 0.82 : 0.96);
-      slot.lineStyle(3, 0xfaf0df, locked ? 0.55 : 0.82);
-      slot.drawRoundedRect(x, y, slotSize, slotSize, 12);
-      slot.endFill();
-      this.bufferLayer.addChild(slot);
-
+      const locked = i >= activeSize;
       const fruitId = this.buffer[i];
       const isMatching = this.animatingBufferMatchIndexes.includes(i);
-      if (fruitId && !isMatching) {
-        const icon = this.createFruitIcon(fruitId, 56);
-        icon.position.set(x + slotSize / 2, y + slotSize / 2);
-        this.bufferLayer.addChild(icon);
-      }
-
+      const isIncoming = (this.bufferIncomingHidden.get(i) ?? 0) > 0;
+      const showFruit = !!fruitId && !isMatching && !isIncoming;
+      // key 标识当前槽要显示的内容；变化时才重建。
+      let key: string;
       if (locked) {
-        const lock = this.createLockedBufferSlot(x, y, slotSize);
-        this.bufferLayer.addChild(lock);
+        key = `lock|${this.unlockBufferAdBusy ? 1 : 0}`;
+      } else if (showFruit) {
+        key = `fruit|${fruitId}`;
+      } else {
+        key = 'empty';
       }
+      validSlotIndexes.add(i);
+      const existing = this.mountedBufferContents.get(i);
+      if (existing && existing.key === key && !existing.view.destroyed) {
+        continue;
+      }
+      if (existing) {
+        existing.view.destroy({ children: true });
+      }
+      let view: PIXI.Container;
+      if (locked) {
+        view = this.createLockedBufferSlot(x, y, slotSize);
+      } else if (showFruit && fruitId) {
+        view = this.createFruitIcon(fruitId, 56);
+        view.position.set(x + slotSize / 2, y + slotSize / 2);
+      } else {
+        view = new PIXI.Container();
+      }
+      dynamic.addChild(view);
+      this.mountedBufferContents.set(i, { view, key });
+    }
+
+    for (const [slotIndex, entry] of this.mountedBufferContents) {
+      if (validSlotIndexes.has(slotIndex)) {
+        continue;
+      }
+      if (!entry.view.destroyed) {
+        entry.view.destroy({ children: true });
+      }
+      this.mountedBufferContents.delete(slotIndex);
     }
   }
 
@@ -781,6 +1103,116 @@ export class DailyLimitedScene implements Scene {
     video.position.set(x + size / 2, y + size / 2 + 18);
     root.addChild(video);
     return root;
+  }
+
+  private cardWorldCenter(card: CardState): { x: number; y: number } {
+    if (card.zone === 'stack') {
+      const startX = Math.round(
+        (Game.logicWidth - (CARD_COLS * CARD_W + (CARD_COLS - 1) * CARD_GAP)) / 2,
+      );
+      return {
+        x: startX + card.columnIndex * (CARD_W + CARD_GAP) + CARD_W / 2,
+        y: this.boardTop() + 42 + card.depthIndex * STACK_STEP_Y + CARD_H / 2,
+      };
+    }
+    const totalW = FLAT_COLS * CARD_W + (FLAT_COLS - 1) * CARD_GAP;
+    const startX = Math.round((Game.logicWidth - totalW) / 2);
+    return {
+      x: startX + card.columnIndex * (CARD_W + CARD_GAP) + CARD_W / 2,
+      y: this.flatAreaY() + card.depthIndex * (CARD_H + 8) + CARD_H / 2,
+    };
+  }
+
+  private findBowlSlotIndexForCollected(fruitId: FruitId, collectedForFruit: number): number {
+    const bowlSlots = this.getBowlSlots();
+    const collectedIndex = Math.max(0, collectedForFruit - 1);
+    const idx = bowlSlots.findIndex(
+      (slot) => slot.fruitId === fruitId
+        && collectedIndex >= slot.start
+        && collectedIndex < slot.start + slot.capacity,
+    );
+    return idx >= 0 ? idx : 0;
+  }
+
+  private bowlSlotCenterByIndex(slotIndex: number): { x: number; y: number } {
+    const bowlSlots = this.getBowlSlots();
+    const bowlW = 118;
+    const gap = 12;
+    const totalW = bowlSlots.length * bowlW + (bowlSlots.length - 1) * gap;
+    const startX = Math.round((Game.logicWidth - totalW) / 2);
+    return {
+      x: startX + slotIndex * (bowlW + gap) + bowlW / 2,
+      y: this.bowlY() + 14,
+    };
+  }
+
+  private flyFruitTo(
+    fruitId: FruitId,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    onLand: () => void,
+  ): void {
+    if (!this.container.parent) {
+      onLand();
+      return;
+    }
+    const sprite = this.createFruitIcon(fruitId, 56);
+    sprite.position.set(from.x, from.y);
+    this.flyingLayer.addChild(sprite);
+
+    const start = performance.now();
+    // 加速：原 280ms 抛物线 + 弹跳缩放看起来偏慢，
+    // 改成 170ms 直线（带轻微抛物线提示运动方向），点击节奏跟得上。
+    const duration = 170;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    // 轻微抛物线提示运动方向，幅度比原来小一半左右，避免视觉拖沓。
+    const arcHeight = Math.min(56, Math.max(18, Math.sqrt(dx * dx + dy * dy) * 0.08));
+
+    let landed = false;
+    const tick = () => {
+      if (sprite.destroyed || !this.container.parent) {
+        this.removeTransientTicker(tick);
+        if (!sprite.destroyed && sprite.parent) {
+          sprite.parent.removeChild(sprite);
+          sprite.destroy({ children: true });
+        }
+        if (!landed) {
+          landed = true;
+          onLand();
+        }
+        return;
+      }
+      const elapsed = performance.now() - start;
+      const t = Math.min(1, elapsed / duration);
+      // easeOutCubic：起步快、后段顺滑落入目标。
+      const ease = 1 - (1 - t) * (1 - t) * (1 - t);
+      sprite.position.x = from.x + dx * ease;
+      sprite.position.y = from.y + dy * ease - Math.sin(t * Math.PI) * arcHeight;
+      // 不再做缩放弹跳，避免视觉上"吸进去"再"弹出来"的拉扯感。
+      if (t >= 1) {
+        this.removeTransientTicker(tick);
+        if (sprite.parent) {
+          sprite.parent.removeChild(sprite);
+        }
+        sprite.destroy({ children: true });
+        if (!landed) {
+          landed = true;
+          onLand();
+        }
+      }
+    };
+    this.addTransientTicker(tick);
+  }
+
+  private flyFruitToBuffer(fruitId: FruitId, from: { x: number; y: number }, slotIndex: number, onLand: () => void): void {
+    const target = this.bufferSlotCenter(slotIndex);
+    this.flyFruitTo(fruitId, from, target, onLand);
+  }
+
+  private flyFruitToBowl(fruitId: FruitId, from: { x: number; y: number }, bowlSlotIndex: number, onLand: () => void): void {
+    const target = this.bowlSlotCenterByIndex(bowlSlotIndex);
+    this.flyFruitTo(fruitId, from, target, onLand);
   }
 
   private bufferSlotCenter(index: number): { x: number; y: number } {
@@ -907,6 +1339,10 @@ export class DailyLimitedScene implements Scene {
       return;
     }
 
+    // 在标记 removed 之前先记录卡片当前位置，作为飞入动画的起点。
+    const fromPos = this.cardWorldCenter(card);
+    const fruitId = card.fruitId;
+
     this.history.push({
       cardId,
       prevCollected: this.collected,
@@ -915,31 +1351,69 @@ export class DailyLimitedScene implements Scene {
     });
     card.removed = true;
 
-    if (this.isTargetFruit(card.fruitId)) {
+    if (this.isTargetFruit(fruitId)) {
       this.collected += 1;
-      this.collectedByFruit[card.fruitId] = (this.collectedByFruit[card.fruitId] ?? 0) + 1;
-      AudioManager.playScoopSound();
-      this.showTargetCollectEncouragement(card.fruitId, this.collectedByFruit[card.fruitId] ?? 1);
-      if (this.collected >= this.targetCount()) {
-        this.renderAll();
-        this.finishRound(true);
-        return;
-      }
-    } else {
-      if (this.buffer.length >= this.activeBufferSize()) {
-        this.finishRound(false);
-        return;
-      }
-      this.buffer.push(card.fruitId);
-      const matchIndexes = this.findBufferMatchIndexes();
+      this.collectedByFruit[fruitId] = (this.collectedByFruit[fruitId] ?? 0) + 1;
+      const collectedForFruit = this.collectedByFruit[fruitId] ?? 1;
+      const bowlSlotIndex = this.findBowlSlotIndexForCollected(fruitId, collectedForFruit);
+      this.bowlIncomingHidden.set(
+        bowlSlotIndex,
+        (this.bowlIncomingHidden.get(bowlSlotIndex) ?? 0) + 1,
+      );
       this.renderAll();
-      if (matchIndexes) {
-        this.scheduleBufferMatchResolve(matchIndexes);
-      }
+
+      const reachedGoal = this.collected >= this.targetCount();
+      this.flyFruitToBowl(fruitId, fromPos, bowlSlotIndex, () => {
+        const cur = this.bowlIncomingHidden.get(bowlSlotIndex) ?? 0;
+        if (cur <= 1) {
+          this.bowlIncomingHidden.delete(bowlSlotIndex);
+        } else {
+          this.bowlIncomingHidden.set(bowlSlotIndex, cur - 1);
+        }
+        if (this.roundEnded && !reachedGoal) {
+          // 场景已结束（其他流程触发），跳过后续状态更新。
+          return;
+        }
+        AudioManager.playScoopSound();
+        this.showTargetCollectEncouragement(fruitId, collectedForFruit);
+        this.renderIceBowls();
+        if (reachedGoal && !this.roundEnded) {
+          this.finishRound(true);
+        }
+      });
       return;
     }
 
+    if (this.buffer.length >= this.activeBufferSize()) {
+      this.finishRound(false);
+      return;
+    }
+    this.buffer.push(fruitId);
+    const bufferIndex = this.buffer.length - 1;
+    this.bufferIncomingHidden.set(
+      bufferIndex,
+      (this.bufferIncomingHidden.get(bufferIndex) ?? 0) + 1,
+    );
+    const matchIndexes = this.findBufferMatchIndexes();
     this.renderAll();
+
+    this.flyFruitToBuffer(fruitId, fromPos, bufferIndex, () => {
+      const cur = this.bufferIncomingHidden.get(bufferIndex) ?? 0;
+      if (cur <= 1) {
+        this.bufferIncomingHidden.delete(bufferIndex);
+      } else {
+        this.bufferIncomingHidden.set(bufferIndex, cur - 1);
+      }
+      if (this.roundEnded) {
+        return;
+      }
+      this.renderBuffer();
+      if (matchIndexes) {
+        this.scheduleBufferMatchResolve(matchIndexes);
+      } else {
+        this.evaluateBufferPanic();
+      }
+    });
   }
 
   private findBufferMatchIndexes(): number[] | null {
@@ -1076,6 +1550,7 @@ export class DailyLimitedScene implements Scene {
         this.animatingBufferMatchIndexes = [];
         this.bufferMatchResolving = false;
         this.renderAll();
+        this.evaluateBufferPanic();
       }
     };
 
@@ -1084,6 +1559,7 @@ export class DailyLimitedScene implements Scene {
 
   private finishRound(success: boolean): void {
     this.roundEnded = true;
+    this.exitBufferPanic();
     if (success) {
       if (!this.clearRewardGranted) {
         this.clearRewardGranted = true;
@@ -1403,7 +1879,10 @@ export class DailyLimitedScene implements Scene {
   }
 
   private isTargetFruit(fruitId: FruitId): boolean {
-    return this.targetFruitIds().includes(fruitId);
+    if (this.targetFruitSet.size === 0) {
+      this.refreshGameStateCaches();
+    }
+    return this.targetFruitSet.has(fruitId);
   }
 
   private targetFruitIds(): readonly FruitId[] {
@@ -1440,6 +1919,8 @@ export class DailyLimitedScene implements Scene {
     } finally {
       this.unlockBufferAdBusy = false;
       this.renderBuffer();
+      // 解锁额外格子后空间从 7 满变成 7/8，需要立刻退出红色预警。
+      this.evaluateBufferPanic();
     }
   }
 
@@ -1615,6 +2096,7 @@ export class DailyLimitedScene implements Scene {
     this.roundEnded = false;
     AudioManager.playOrderCompleteSound();
     this.renderAll();
+    this.evaluateBufferPanic();
   }
 
   private liftBufferCards(): void {
@@ -1642,6 +2124,7 @@ export class DailyLimitedScene implements Scene {
     this.toolCounts.lift -= 1;
     AudioManager.playOrderCompleteSound();
     this.renderAll();
+    this.evaluateBufferPanic();
   }
 
   private getToolUnavailableReason(kind: DailyToolKind): string | null {
@@ -1760,7 +2243,6 @@ export class DailyLimitedScene implements Scene {
   }
 
   private renderIceBowls(): void {
-    destroyContainerChildren(this.iceBowlLayer);
     const W = Game.logicWidth;
     const y = this.bowlY();
     const bowlW = 118;
@@ -1769,36 +2251,38 @@ export class DailyLimitedScene implements Scene {
     const totalW = bowlSlots.length * bowlW + (bowlSlots.length - 1) * gap;
     const startX = Math.round((W - totalW) / 2);
 
+    // 碗体布局只与 slot 数量 / 槽水果有关，结构变化时才整体重建。
+    const layoutSig = bowlSlots.map((s) => `${s.fruitId}|${s.start}|${s.capacity}`).join(',');
+    if (this.iceBowlsSignature !== layoutSig) {
+      destroyContainerChildren(this.iceBowlLayer);
+      this.iceBowlViews.clear();
+      this.iceBowlsSignature = layoutSig;
+    }
+
     for (let i = 0; i < bowlSlots.length; i += 1) {
       const slot = bowlSlots[i]!;
       const x = startX + i * (bowlW + gap) + bowlW / 2;
       const targetCollected = this.collectedByFruit[slot.fruitId] ?? 0;
       const filled = Math.max(0, Math.min(slot.capacity, targetCollected - slot.start));
-      this.iceBowlLayer.addChild(this.createIceBowlView(x, y, bowlW, filled, slot));
-    }
-  }
-
-  private getBowlSlots(): DailyBowlSlot[] {
-    const slots: DailyBowlSlot[] = [];
-    for (const target of this.level.targets) {
-      for (let start = 0; start < target.requiredCount; start += ICE_BOWL_CAPACITY) {
-        slots.push({
-          fruitId: target.fruitId,
-          start,
-          capacity: ICE_BOWL_CAPACITY,
-        });
+      // 飞行动画期间，先暂时按"飞入数量"扣减显示数，等 sprite 落位后再补上。
+      const hiding = this.bowlIncomingHidden.get(i) ?? 0;
+      const visibleFilled = Math.max(0, filled - hiding);
+      const fillSig = `${visibleFilled}/${slot.capacity}`;
+      let view = this.iceBowlViews.get(i);
+      if (!view) {
+        view = this.buildIceBowlSlotView(x, y, bowlW, slot);
+        this.iceBowlLayer.addChild(view.root);
+        this.iceBowlViews.set(i, view);
+      }
+      if (view.signature !== fillSig) {
+        this.updateIceBowlFruits(view, slot, visibleFilled, x, y);
+        view.countText.text = `${visibleFilled}/${ICE_BOWL_CAPACITY}`;
+        view.signature = fillSig;
       }
     }
-    return slots;
   }
 
-  private createIceBowlView(
-    x: number,
-    y: number,
-    width: number,
-    filledCount: number,
-    slot: DailyBowlSlot,
-  ): PIXI.Container {
+  private buildIceBowlSlotView(x: number, y: number, width: number, slot: DailyBowlSlot): IceBowlSlotView {
     const root = new PIXI.Container();
     const tex = TextureCache.get(DAILY_ICE_BOWL_TEXTURE_KEY);
     if (tex) {
@@ -1829,35 +2313,63 @@ export class DailyLimitedScene implements Scene {
       root.addChild(g);
     }
 
-    const fruitPositions = [
-      { x: x - 22, y: y - 2 },
-      { x, y: y - 10 },
-      { x: x + 22, y: y - 1 },
-    ];
-    for (let i = 0; i < Math.min(filledCount, fruitPositions.length); i += 1) {
-      const pos = fruitPositions[i];
-      const icon = this.createFruitIcon(slot.fruitId, 42);
-      icon.position.set(pos.x, pos.y);
-      icon.alpha = 0.92;
-      root.addChild(icon);
-    }
+    const fruitsLayer = new PIXI.Container();
+    root.addChild(fruitsLayer);
 
     const countIcon = this.createFruitIcon(slot.fruitId, 30);
     countIcon.position.set(x - 26, y + 88);
     root.addChild(countIcon);
 
-    const count = new PIXI.Text(`${filledCount}/${ICE_BOWL_CAPACITY}`, {
+    const countText = new PIXI.Text(`0/${ICE_BOWL_CAPACITY}`, {
       fontSize: 24,
       fill: 0x20718a,
       fontWeight: '900',
       stroke: 0xffffff,
       strokeThickness: 4,
     });
-    count.anchor.set(0.5);
-    count.resolution = 2;
-    count.position.set(x + 17, y + 88);
-    root.addChild(count);
-    return root;
+    countText.anchor.set(0.5);
+    countText.resolution = 2;
+    countText.position.set(x + 17, y + 88);
+    root.addChild(countText);
+
+    return { root, fruitsLayer, countText, signature: '' };
+  }
+
+  private updateIceBowlFruits(
+    view: IceBowlSlotView,
+    slot: DailyBowlSlot,
+    filled: number,
+    x: number,
+    y: number,
+  ): void {
+    destroyContainerChildren(view.fruitsLayer);
+    const positions = [
+      { x: x - 22, y: y - 2 },
+      { x, y: y - 10 },
+      { x: x + 22, y: y - 1 },
+    ];
+    const count = Math.min(filled, positions.length);
+    for (let i = 0; i < count; i += 1) {
+      const pos = positions[i]!;
+      const icon = this.createFruitIcon(slot.fruitId, 42);
+      icon.position.set(pos.x, pos.y);
+      icon.alpha = 0.92;
+      view.fruitsLayer.addChild(icon);
+    }
+  }
+
+  private getBowlSlots(): DailyBowlSlot[] {
+    const slots: DailyBowlSlot[] = [];
+    for (const target of this.level.targets) {
+      for (let start = 0; start < target.requiredCount; start += ICE_BOWL_CAPACITY) {
+        slots.push({
+          fruitId: target.fruitId,
+          start,
+          capacity: ICE_BOWL_CAPACITY,
+        });
+      }
+    }
+    return slots;
   }
 
   private showTargetCollectEncouragement(fruitId: FruitId, collectedForFruit: number): void {

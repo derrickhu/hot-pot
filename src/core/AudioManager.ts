@@ -37,6 +37,12 @@ type WxInnerAudioContext = {
   onEnded?: (handler: () => void) => void;
 };
 
+interface PooledSfx {
+  ctx: WxInnerAudioContext;
+  busy: boolean;
+  stopTimer: ReturnType<typeof setTimeout> | null;
+}
+
 class AudioManagerClass {
   private wxBgm: WxInnerAudioContext | null = null;
   private webBgm: HTMLAudioElement | null = null;
@@ -45,6 +51,11 @@ class AudioManagerClass {
   private musicEnabled = this.readSettings().musicEnabled;
   private soundEnabled = this.readSettings().soundEnabled;
   private bgmSrc = DEFAULT_BGM_SRC;
+  // 真机上 wx.createInnerAudioContext 单次开销很大（>20ms），
+  // 多次点击连续创建会让卡片 tap 出现明显卡顿。这里按 src 池化，
+  // 每个音效仅保留 1 个常驻上下文，重置 currentTime 后复播。
+  private readonly sfxPool = new Map<string, PooledSfx>();
+  private readonly webSfxPool = new Map<string, HTMLAudioElement>();
 
   constructor() {
     PersistService.subscribeCloudImport(() => {
@@ -182,58 +193,99 @@ class AudioManagerClass {
     }
 
     const api = typeof wx !== 'undefined' ? wx : null;
-    if (api?.createInnerAudioContext) {
-      const sfx = api.createInnerAudioContext();
-      sfx.src = src;
-      sfx.loop = false;
-      sfx.volume = 0.86;
-      sfx.obeyMuteSwitch = false;
-      sfx.onEnded?.(() => {
-        sfx.destroy?.();
-      });
-      sfx.onError?.((error) => {
-        console.warn('[AudioManager] SFX failed', error);
-        sfx.destroy?.();
-      });
-      try {
-        sfx.seek?.(0);
-        sfx.play();
-      } catch {
-        sfx.destroy?.();
-        return;
-      }
-      if (maxDurationSec !== undefined) {
-        setTimeout(() => {
-          try {
-            sfx.stop?.();
-          } finally {
-            sfx.destroy?.();
-          }
-        }, Math.max(0, maxDurationSec) * 1000);
-      }
+    const create = api?.createInnerAudioContext;
+    if (create) {
+      this.playWxSfx(create.bind(api), src, maxDurationSec);
       return;
     }
 
     if (typeof Audio === 'undefined') {
       return;
     }
-    const sfx = new Audio(src);
-    sfx.volume = 0.86;
-    sfx.preload = 'auto';
-    sfx.currentTime = 0;
-    sfx.addEventListener('ended', () => {
-      sfx.remove();
-    }, { once: true });
+    this.playWebSfx(src, maxDurationSec);
+  }
+
+  private playWxSfx(
+    create: () => WxInnerAudioContext,
+    src: string,
+    maxDurationSec?: number,
+  ): void {
+    let entry = this.sfxPool.get(src);
+    if (!entry) {
+      const ctx = create();
+      ctx.src = src;
+      ctx.loop = false;
+      ctx.volume = 0.86;
+      ctx.obeyMuteSwitch = false;
+      const created: PooledSfx = { ctx, busy: false, stopTimer: null };
+      ctx.onEnded?.(() => {
+        if (created.stopTimer !== null) {
+          clearTimeout(created.stopTimer);
+          created.stopTimer = null;
+        }
+        created.busy = false;
+      });
+      ctx.onError?.((error) => {
+        console.warn('[AudioManager] SFX failed', error);
+        if (created.stopTimer !== null) {
+          clearTimeout(created.stopTimer);
+          created.stopTimer = null;
+        }
+        created.busy = false;
+      });
+      this.sfxPool.set(src, created);
+      entry = created;
+    }
+    if (entry.stopTimer !== null) {
+      clearTimeout(entry.stopTimer);
+      entry.stopTimer = null;
+    }
     try {
+      // 重置到起点再 play() 即可复播；比 destroy/重建快几十倍。
+      entry.ctx.seek?.(0);
+      entry.ctx.play();
+      entry.busy = true;
+    } catch {
+      entry.busy = false;
+      return;
+    }
+    if (maxDurationSec !== undefined) {
+      const sfxEntry = entry;
+      sfxEntry.stopTimer = setTimeout(() => {
+        sfxEntry.stopTimer = null;
+        try {
+          sfxEntry.ctx.stop?.();
+        } catch {
+          // ignore
+        }
+        sfxEntry.busy = false;
+      }, Math.max(0, maxDurationSec) * 1000);
+    }
+  }
+
+  private playWebSfx(src: string, maxDurationSec?: number): void {
+    let sfx = this.webSfxPool.get(src);
+    if (!sfx) {
+      sfx = new Audio(src);
+      sfx.volume = 0.86;
+      sfx.preload = 'auto';
+      this.webSfxPool.set(src, sfx);
+    }
+    try {
+      sfx.currentTime = 0;
       void sfx.play();
     } catch {
       return;
     }
     if (maxDurationSec !== undefined) {
+      const node = sfx;
       setTimeout(() => {
-        sfx.pause();
-        sfx.currentTime = 0;
-        sfx.remove();
+        try {
+          node.pause();
+          node.currentTime = 0;
+        } catch {
+          // ignore
+        }
       }, Math.max(0, maxDurationSec) * 1000);
     }
   }

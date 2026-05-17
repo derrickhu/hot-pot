@@ -275,6 +275,15 @@ export class FruitSliceEndlessScene implements Scene {
   private tutorialTargets: FruitSliceNode[] = [];
   private tutorialTarget: FruitSliceNode | null = null;
   private readonly tutorialTimers: ReturnType<typeof setTimeout>[] = [];
+  // 飞行 / 特效 / 计分等所有挂在 Game.ticker 上的短时回调统一登记，
+  // 便于 onExit / clearRound 一次摘除，避免离场后回调还在改已销毁节点。
+  private readonly transientTickers = new Set<(delta: number) => void>();
+  // 短时延迟（金币结算等 setTimeout）也集中追踪，避免切场景后还在调用旧场景方法。
+  private readonly transientTimers = new Set<ReturnType<typeof setTimeout>>();
+  // 复用同一个分数脉冲 ticker，避免连消时 N 个 ticker 同时改 lbl.scale。
+  private scorePulseTicker: ((delta: number) => void) | null = null;
+  // 复用 update / collision 用的临时数组，避免每帧 allocate FruitSliceNode[]。
+  private readonly updateScratch: FruitSliceNode[] = [];
 
   constructor() {
     this.build();
@@ -303,6 +312,44 @@ export class FruitSliceEndlessScene implements Scene {
     this.hideToolHelpPanel();
     this.dismissGoalCelebration(true);
     this.hideTutorialOverlay();
+    // 退出时统一摘除所有飞行/特效 ticker、停掉延迟回调，
+    // 防止 280ms 金币结算 / 切片爆炸 / pulse 等在新场景里继续乱改 UI。
+    this.stopAllTransientTickers();
+    this.clearAllTransientTimers();
+  }
+
+  private addTransientTicker(tick: (delta: number) => void): void {
+    this.transientTickers.add(tick);
+    Game.ticker.add(tick);
+  }
+
+  private removeTransientTicker(tick: (delta: number) => void): void {
+    Game.ticker.remove(tick);
+    this.transientTickers.delete(tick);
+  }
+
+  private stopAllTransientTickers(): void {
+    for (const tick of this.transientTickers) {
+      Game.ticker.remove(tick);
+    }
+    this.transientTickers.clear();
+    this.scorePulseTicker = null;
+  }
+
+  private trackTimer(timer: ReturnType<typeof setTimeout>): ReturnType<typeof setTimeout> {
+    this.transientTimers.add(timer);
+    return timer;
+  }
+
+  private finishTimer(timer: ReturnType<typeof setTimeout>): void {
+    this.transientTimers.delete(timer);
+  }
+
+  private clearAllTransientTimers(): void {
+    for (const timer of this.transientTimers) {
+      clearTimeout(timer);
+    }
+    this.transientTimers.clear();
   }
 
   update(dt: number): void {
@@ -312,7 +359,14 @@ export class FruitSliceEndlessScene implements Scene {
     this.tutorialGuideOverlay.update(dt);
     const clampedDt = Math.min(dt, 1 / 30);
     let changed = false;
-    for (const node of [...this.fruits]) {
+    // 复用 scratch 数组装当前帧快照，避免每帧 spread 出新数组（连续 60fps 下显著降低 GC）。
+    const snapshot = this.updateScratch;
+    snapshot.length = 0;
+    for (let i = 0; i < this.fruits.length; i += 1) {
+      snapshot.push(this.fruits[i]!);
+    }
+    for (let i = 0; i < snapshot.length; i += 1) {
+      const node = snapshot[i]!;
       if (node.state === 'falling') {
         this.updateFallingFruit(node, clampedDt);
         changed = true;
@@ -321,6 +375,7 @@ export class FruitSliceEndlessScene implements Scene {
         changed = true;
       }
     }
+    snapshot.length = 0;
     if (changed) {
       this.refreshFruitDepth();
     }
@@ -2321,9 +2376,11 @@ export class FruitSliceEndlessScene implements Scene {
 
   private resolveFruitCollisions(node: FruitSliceNode): boolean {
     let supported = false;
-    const blockers = this.fruits.filter((other) =>
-      other !== node && (other.state === 'fixed' || other.state === 'settled'));
-    for (const other of blockers) {
+    // 直接 for 遍历 + 过滤，避免每帧每颗 falling 水果分配一份 blockers 数组。
+    for (let i = 0; i < this.fruits.length; i += 1) {
+      const other = this.fruits[i]!;
+      if (other === node) continue;
+      if (other.state !== 'fixed' && other.state !== 'settled') continue;
       const dx = node.x - other.x;
       const dy = node.y - other.y;
       const minDist = node.radius + other.radius - 4;
@@ -2410,12 +2467,12 @@ export class FruitSliceEndlessScene implements Scene {
       node.y = startY + (targetY - startY) * e + Math.sin(p * Math.PI) * 18;
       node.rotation = startRot + (slot.rotation - startRot) * e + Math.sin(p * Math.PI) * 0.32;
       if (p >= 1) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         this.pendingPipeSlots = Math.max(0, this.pendingPipeSlots - 1);
         done();
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private onFruitLandedInPipe(node: FruitSliceNode, fruitId: FruitId): void {
@@ -2925,7 +2982,7 @@ export class FruitSliceEndlessScene implements Scene {
     title.y -= 16;
     const tick = (delta: number): void => {
       if (closing || root.destroyed) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         return;
       }
       elapsed += delta / 60;
@@ -2949,7 +3006,7 @@ export class FruitSliceEndlessScene implements Scene {
         sp.node.rotation += delta * 0.018;
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
 
     root.on('pointertap', () => {
       if (closing) {
@@ -3063,7 +3120,7 @@ export class FruitSliceEndlessScene implements Scene {
     const duration = 0.72;
     const tick = (): void => {
       if (coin.destroyed) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         return;
       }
       elapsed += Game.ticker.deltaMS / 1000;
@@ -3074,16 +3131,19 @@ export class FruitSliceEndlessScene implements Scene {
       coin.scale.set(1.45 - 0.75 * p);
       coin.rotation += 0.18;
       if (p >= 1) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         coin.parent?.removeChild(coin);
         coin.destroy({ children: true });
         this.coinBar.refresh();
         this.coinBar.bump();
         this.spawnCenterBanner('金币已入账');
-        setTimeout(done, 280);
+        const t = this.trackTimer(setTimeout(() => {
+          this.finishTimer(t);
+          done();
+        }, 280));
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private createOverlayHitButton(
@@ -3387,12 +3447,12 @@ export class FruitSliceEndlessScene implements Scene {
       ring.scale.set(r / Math.max(1, startRadius));
       ring.alpha = 1 - p;
       if (p >= 1) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         ring.parent?.removeChild(ring);
         ring.destroy();
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
   }
 
   /** 闪光圆盘：撞击瞬间一抹高亮。 */
@@ -3411,12 +3471,12 @@ export class FruitSliceEndlessScene implements Scene {
       flash.scale.set(1 + p * 0.7);
       flash.alpha = 1 - p;
       if (p >= 1) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         flash.parent?.removeChild(flash);
         flash.destroy();
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
   }
 
   /** 大号 +XX 偏侧弹出，副标变小；停留后飞向计分板，落点触发计分。 */
@@ -3487,7 +3547,7 @@ export class FruitSliceEndlessScene implements Scene {
     let scored = false;
     const tick = (): void => {
       if (root.destroyed) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         if (!scored) {
           this.applyDisplayedScoreGain(gain);
         }
@@ -3521,7 +3581,7 @@ export class FruitSliceEndlessScene implements Scene {
         }
       }
       if (elapsed >= total) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         root.parent?.removeChild(root);
         root.destroy({ children: true });
         if (!scored) {
@@ -3529,7 +3589,7 @@ export class FruitSliceEndlessScene implements Scene {
         }
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private applyDisplayedScoreGain(gain: number): void {
@@ -3540,9 +3600,14 @@ export class FruitSliceEndlessScene implements Scene {
 
   /** 计分板放大→回弹脉冲。 */
   private pulseScoreLabel(): void {
+    // 连消时帧内多次触发：每次只重置进度，复用同一个 ticker，
+    // 避免 N 个 ticker 互相覆盖 lbl.scale 出现"打架"。
     this.scoreLabelPulseT = 0;
     this.scoreLabelPulseDur = 0.55;
     const lbl = this.scoreLabel;
+    if (this.scorePulseTicker) {
+      return;
+    }
     const tick = (): void => {
       this.scoreLabelPulseT += Game.ticker.deltaMS / 1000;
       const p = Math.min(1, this.scoreLabelPulseT / this.scoreLabelPulseDur);
@@ -3552,10 +3617,12 @@ export class FruitSliceEndlessScene implements Scene {
       lbl.scale.set(s);
       if (p >= 1) {
         lbl.scale.set(1);
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
+        this.scorePulseTicker = null;
       }
     };
-    Game.ticker.add(tick);
+    this.scorePulseTicker = tick;
+    this.addTransientTicker(tick);
   }
 
   /** 连击横幅：x2 / x3... 带颜色升级、弹跳与抖动。 */
@@ -3588,7 +3655,7 @@ export class FruitSliceEndlessScene implements Scene {
     let elapsed = 0;
     const tick = (): void => {
       if (label.destroyed) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         return;
       }
       elapsed += Game.ticker.deltaMS / 1000;
@@ -3610,12 +3677,12 @@ export class FruitSliceEndlessScene implements Scene {
         label.alpha = 1 - p;
       }
       if (elapsed >= total) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         label.parent?.removeChild(label);
         label.destroy();
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private spawnCenterBanner(text: string): void {
@@ -3645,7 +3712,7 @@ export class FruitSliceEndlessScene implements Scene {
     const duration = 1.8;
     const tick = (): void => {
       if (root.destroyed) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         return;
       }
       elapsed += Game.ticker.deltaMS / 1000;
@@ -3654,12 +3721,12 @@ export class FruitSliceEndlessScene implements Scene {
       const s = 0.72 + Math.sin(Math.min(1, p * 3) * Math.PI * 0.5) * 0.28;
       root.scale.set(s);
       if (p >= 1) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         root.parent?.removeChild(root);
         root.destroy({ children: true });
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private animateEffect(
@@ -3682,12 +3749,12 @@ export class FruitSliceEndlessScene implements Scene {
         node.rotation += spinSpeed;
       }
       if (p >= 1) {
-        Game.ticker.remove(tick);
+        this.removeTransientTicker(tick);
         node.parent?.removeChild(node);
         node.destroy();
       }
     };
-    Game.ticker.add(tick);
+    this.addTransientTicker(tick);
   }
 
   private updateHud(): void {

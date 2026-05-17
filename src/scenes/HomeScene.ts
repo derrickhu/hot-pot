@@ -56,12 +56,28 @@ const HOME_FOOTER_BAR_H = 150;
 const HOME_FOOTER_NAV_CELL_W = 150;
 const HOME_FOOTER_NAV_CELL_H = 136;
 
+/**
+ * 把 container 的所有子节点 detach 并 destroy，避免热路径反复 removeChildren
+ * 留下游离的 PIXI.Text / Sprite 占内存（mode entry tag / footer nav 等高频重画位）。
+ */
+function destroyContainerChildren(container: PIXI.Container): void {
+  const children = container.removeChildren();
+  for (const child of children) {
+    if (!child.destroyed) {
+      child.destroy({ children: true });
+    }
+  }
+}
+
 /** 主页：夏日底图 + 进入关卡 */
 export class HomeScene implements Scene {
   readonly name = 'home';
   readonly container = new PIXI.Container();
 
   private readonly settingsOverlay: SettingsPauseOverlay;
+  // onEnter 里串好的 syncGameClubNativeButton setTimeout 需在 onExit 取消，
+  // 否则离开主页后 wx 原生按钮还会被异步同步一次，盖到下个场景画布上。
+  private readonly pendingHomeTimers = new Set<ReturnType<typeof setTimeout>>();
   private readonly homeFooterSlots: PIXI.Container[] = [];
   private readonly leaderboardEntryRoot = new PIXI.Container();
   private readonly gachaEntryRoot = new PIXI.Container();
@@ -121,11 +137,26 @@ export class HomeScene implements Scene {
     this.layoutHomeMainColumn();
     this.bringGameClubAboveHomeUi();
     this.syncGameClubNativeButton();
-    setTimeout(() => this.syncGameClubNativeButton(), 0);
-    setTimeout(() => this.syncGameClubNativeButton(), 160);
+    this.scheduleHomeTimer(() => this.syncGameClubNativeButton(), 0);
+    this.scheduleHomeTimer(() => this.syncGameClubNativeButton(), 160);
     // 主页空闲时预热好友榜子域沙箱，把 ~100-500ms 的冷启动藏在 home 阶段，
     // 等玩家点开排行榜并切到好友榜 tab 时少等一截。失败完全静默。
     warmupFriendRankContext();
+  }
+
+  private scheduleHomeTimer(fn: () => void, delay: number): void {
+    const id = setTimeout(() => {
+      this.pendingHomeTimers.delete(id);
+      fn();
+    }, delay);
+    this.pendingHomeTimers.add(id);
+  }
+
+  private clearAllHomeTimers(): void {
+    for (const id of this.pendingHomeTimers) {
+      clearTimeout(id);
+    }
+    this.pendingHomeTimers.clear();
   }
 
   /** 保证在底图之上、且盖住同屏其它控件（仍低于设置全屏层） */
@@ -141,6 +172,7 @@ export class HomeScene implements Scene {
 
   onExit(): void {
     this.hideGameClubNativeButton();
+    this.clearAllHomeTimers();
   }
 
   private refreshPlayEntryTitle(): void {
@@ -234,7 +266,7 @@ export class HomeScene implements Scene {
     fill: number,
     stroke: number,
   ): void {
-    tag.removeChildren();
+    destroyContainerChildren(tag);
 
     const labelRoot = new PIXI.Container();
     const labelTexts = parts.map((part) => {
@@ -1085,7 +1117,7 @@ export class HomeScene implements Scene {
     fallbackLabel: string,
     fallbackColor: number,
   ): void {
-    root.removeChildren();
+    destroyContainerChildren(root);
     root.addChild(this.createFooterCardBackdrop());
 
     const textureButton = this.createFooterCardTextureIcon(textureKey);

@@ -31,9 +31,12 @@ type BoardTab = 'world' | 'friend';
 
 let nextInitialBoard: RankBoard = RANK_BOARD_BOWL;
 
+// 这里直接用 RankBoard 字面量做 key，让 TS 能确认 Record 全集已覆盖；
+// 用 RANK_BOARD_BOWL/FRUIT 这种 const 变量做 key 时，TS 会把它们看成
+// 整个 RankBoard 联合类型而无法证明 key 不重复，导致 Record 检查失败。
 const BOARD_TAB_META: Record<RankBoard, { label: string; shortLabel: string }> = {
-  [RANK_BOARD_BOWL]: { label: '捞水果', shortLabel: '捞水果' },
-  [RANK_BOARD_FRUIT]: { label: '果切挑战', shortLabel: '果切' },
+  bowl_progress: { label: '捞水果', shortLabel: '捞水果' },
+  fruit_best: { label: '果切挑战', shortLabel: '果切' },
 };
 
 const LEADERBOARD_MEDAL_ASSETS: Record<number, string> = {
@@ -164,6 +167,19 @@ interface RankRowView extends PIXI.Container {
   __lastValue?: string;
   __lastNameFontSize?: number;
   __lastNameStrokeThickness?: number;
+}
+
+/**
+ * 把 container 的所有子节点 detach + destroy，避免只 detach 不销毁导致的 PIXI 对象堆积。
+ * 用于 trophyDeco / cardChrome / mineLayer / badgeSlot / avatarSlot 等"一次性重画"的容器。
+ */
+function destroyContainerChildren(container: PIXI.Container): void {
+  const children = container.removeChildren();
+  for (const child of children) {
+    if (!child.destroyed) {
+      child.destroy({ children: true });
+    }
+  }
 }
 
 export class LeaderboardScene implements Scene {
@@ -360,7 +376,7 @@ export class LeaderboardScene implements Scene {
 
   /** 顶部奖杯 + 月桂叶矢量装饰；卡片在它的下面 */
   private drawTrophyDeco(): void {
-    this.trophyDeco.removeChildren();
+    destroyContainerChildren(this.trophyDeco);
     const W = Game.logicWidth;
     const cy = this.cardY - 38;
     const cx = W / 2;
@@ -461,7 +477,7 @@ export class LeaderboardScene implements Scene {
 
   /** 弹窗外壳：白色卡片 + 紫色标题横幅 + 关闭按钮 */
   private buildChrome(): void {
-    this.cardChrome.removeChildren();
+    destroyContainerChildren(this.cardChrome);
     const W = Game.logicWidth;
 
     // 卡片阴影
@@ -648,7 +664,7 @@ export class LeaderboardScene implements Scene {
 
   private redraw(): void {
     this.cardContent.removeChildren();
-    this.mineLayer.removeChildren();
+    destroyContainerChildren(this.mineLayer);
     this.worldListContent = null;
     this.worldListRecords = [];
     this.worldVisibleStart = -1;
@@ -1056,12 +1072,12 @@ export class LeaderboardScene implements Scene {
       bg.lineTo(w / 2 - 18, h / 2);
     }
 
-    row.__badgeSlot.removeChildren();
+    destroyContainerChildren(row.__badgeSlot);
     const badge = this.createRankBadge(rank, record.isMe);
     badge.position.set(0, topStyle ? -2 : 0);
     row.__badgeSlot.addChild(badge);
 
-    row.__avatarSlot.removeChildren();
+    destroyContainerChildren(row.__avatarSlot);
     const avatar = this.createAvatar(record, rank);
     row.__avatarSlot.addChild(avatar);
 
@@ -1386,7 +1402,8 @@ export class LeaderboardScene implements Scene {
     }
     const generation = ++this.avatarLoadGeneration;
     void TextureCache.load(key, url).then((tex) => {
-      if (tex && generation <= this.avatarLoadGeneration) {
+      // sceneActive 守卫：如果用户已经离开榜单页，避免对已销毁的列表节点 redraw。
+      if (tex && this.sceneActive && generation <= this.avatarLoadGeneration) {
         // 头像就绪后局部刷新榜单：调用 redraw 会重画 mineLayer 与 cardContent
         this.redraw();
       }
