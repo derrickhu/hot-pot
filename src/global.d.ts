@@ -54,6 +54,7 @@ declare const wx: {
     destroy: () => void;
   };
   showToast?: (options: { title: string; icon?: string; duration?: number; mask?: boolean }) => void;
+  vibrateShort?: (options?: { type?: 'light' | 'medium' | 'heavy'; success?: () => void; fail?: (err: unknown) => void; complete?: () => void }) => void;
   createRewardedVideoAd?: (options: { adUnitId: string }) => {
     load: () => Promise<void>;
     show: () => Promise<void>;

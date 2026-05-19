@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { AudioManager } from '@/core/AudioManager';
+import { Haptics } from '@/core/Haptics';
 
 export interface SettingsPauseCallbacks {
   onReplay: () => void;
@@ -15,7 +16,7 @@ export interface SettingsPauseOptions {
 export class SettingsPauseOverlay extends PIXI.Container {
   private readonly musicOn = { value: AudioManager.isMusicEnabled() };
   private readonly soundOn = { value: AudioManager.isSoundEnabled() };
-  private readonly vibrateOn = { value: true };
+  private readonly vibrateOn = { value: Haptics.isEnabled() };
 
   constructor(
     width: number,
@@ -112,7 +113,12 @@ export class SettingsPauseOverlay extends PIXI.Container {
       return;
     }
     ty += 52;
-    this.addToggleRow(width / 2, ty, '震动', this.vibrateOn);
+    this.addToggleRow(width / 2, ty, '震动', this.vibrateOn, (enabled) => {
+      Haptics.setEnabled(enabled);
+      if (enabled) {
+        Haptics.light();
+      }
+    });
 
     const btnW = panelW - 72;
     const btnH = 56;

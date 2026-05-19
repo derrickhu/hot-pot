@@ -40,7 +40,7 @@ const allTools = { allowAddDish: true, allowRemove: true, allowShuffle: true } a
 
 /**
  * 每关新解锁的食材（累积式：本关订单池 = 前 N 组并集）。
- * 节奏：L1=4、L2+4、L3+4 → L3 一开就 12 种；
+ * 节奏：L1=4、L2 解锁 4 但订单池压到 7、L3 解锁 4 但订单池压到 11；
  *      L4-15 保持原解锁节奏不动，L16-30 补齐全部小料/滋补/甜品食材。
  * 关卡通关弹窗的「下一关解锁」会显示对应组中的新水果。
  */
@@ -134,6 +134,20 @@ function post15TargetFoodCount(levelNumber: number): number {
   return Math.ceil((orderCount * 3) / POST_15_COPIES_PER_FRUIT);
 }
 
+function removeOneOldFruitForEarlyLevel(levelIndex: number, fruits: FruitId[]): FruitId[] {
+  if (levelIndex <= 0 || fruits.length <= 1) {
+    return fruits;
+  }
+  /**
+   * 每关降 1 种水果时，优先从更早的旧池删，保护本关与上一关新解锁的食材。
+   * L2 没有“更早旧池”，只能从 L1 基础水果里删 1 个。
+   */
+  const removableGroupsEnd = Math.max(1, levelIndex - 1);
+  const removable = uniqueFruitIds(UNLOCK_GROUPS.slice(0, removableGroupsEnd).flat());
+  const removed = removable[removable.length - 1];
+  return removed ? fruits.filter((id) => id !== removed) : fruits.slice(0, -1);
+}
+
 /**
  * 累积式：第 N 关订单池 = UNLOCK_GROUPS[0..N-1] 全部并集（去重）。
  * L16 起改为「后期基础池 + 最近新解锁食材」，避免早期食材过度重复。
@@ -141,10 +155,13 @@ function post15TargetFoodCount(levelNumber: number): number {
 function levelFruits(levelNumber: number): FruitId[] {
   const idx = Math.max(0, Math.min(levelNumber - 1, UNLOCK_GROUPS.length - 1));
   if (idx < 15) {
-    return uniqueFruitIds(UNLOCK_GROUPS.slice(0, idx + 1).flat());
+    return removeOneOldFruitForEarlyLevel(
+      idx,
+      uniqueFruitIds(UNLOCK_GROUPS.slice(0, idx + 1).flat()),
+    );
   }
   const recentStart = Math.max(15, idx - POST_15_RECENT_GROUP_WINDOW + 1);
-  const targetFoodCount = post15TargetFoodCount(levelNumber);
+  const targetFoodCount = Math.max(1, post15TargetFoodCount(levelNumber) - 1);
   return uniqueFruitIds([
     ...UNLOCK_GROUPS.slice(recentStart, idx + 1).flat(),
     ...POST_15_BASE_POOL,

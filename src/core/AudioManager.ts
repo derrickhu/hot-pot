@@ -20,6 +20,7 @@ const BUFFER_PANIC_SFX_SRC = 'assets/audio/buffer_panic.mp3';
 interface UserAudioSettings {
   musicEnabled: boolean;
   soundEnabled: boolean;
+  vibrateEnabled?: boolean;
 }
 
 type WxInnerAudioContext = {
@@ -365,7 +366,9 @@ class AudioManagerClass {
   }
 
   private writeSettings(): void {
+    const prev = PersistService.readJSON<Partial<UserAudioSettings>>(USER_SETTINGS_KEY) ?? {};
     PersistService.writeJSON(USER_SETTINGS_KEY, {
+      ...prev,
       musicEnabled: this.musicEnabled,
       soundEnabled: this.soundEnabled,
     });

@@ -1,11 +1,14 @@
 import * as PIXI from 'pixi.js';
 import type { FruitConfig, FruitId } from '@/config/fruits';
+import { Game } from '@/core/Game';
 
 export type FruitPhase = 'bowl' | 'buffer' | 'flying';
 
 export class FruitItem extends PIXI.Container {
   readonly fruitId: FruitId;
   readonly display: PIXI.DisplayObject;
+  private readonly contactShadow: PIXI.Graphics;
+  private readonly highlightRing: PIXI.Graphics;
   /** 冻果冰块覆盖层：仅在 frozen=true 时可见；与 display 同生同灭 */
   readonly frostOverlay: PIXI.Container;
   private readonly frostIceSprite: PIXI.Sprite;
@@ -32,6 +35,7 @@ export class FruitItem extends PIXI.Container {
   baseY = 0;
   /** 叠放用，与 y 解耦的小偏置，避免同 y 时 z 序抖动 */
   depthJitter = Math.random() * 0.001;
+  private readonly activeTickers = new Set<() => void>();
 
   constructor(config: FruitConfig, texture?: PIXI.Texture | null) {
     super();
@@ -69,7 +73,19 @@ export class FruitItem extends PIXI.Container {
       this.display = graphic;
     }
 
+    this.contactShadow = new PIXI.Graphics();
+    this.contactShadow.beginFill(0x3d2616, 0.22);
+    this.contactShadow.drawEllipse(0, 18, 30, 10);
+    this.contactShadow.endFill();
+    this.contactShadow.eventMode = 'none';
+    this.addChild(this.contactShadow);
+
     this.addChild(this.display);
+
+    this.highlightRing = new PIXI.Graphics();
+    this.highlightRing.eventMode = 'none';
+    this.highlightRing.visible = false;
+    this.addChild(this.highlightRing);
 
     /** 冻果表现为冰块资源包住水果，默认隐藏，由 BowlScene 在标记冻果时显示。 */
     this.frostOverlay = new PIXI.Container();
@@ -97,6 +113,14 @@ export class FruitItem extends PIXI.Container {
 
     this.eventMode = 'static';
     this.cursor = 'pointer';
+  }
+
+  destroy(options?: Parameters<PIXI.Container['destroy']>[0]): void {
+    for (const ticker of this.activeTickers) {
+      Game.ticker.remove(ticker);
+    }
+    this.activeTickers.clear();
+    super.destroy(options);
   }
 
   /** 设置冻果覆盖用的冰块贴图；冰块尺寸大于水果，避免水果露在冰块外。 */
@@ -138,5 +162,88 @@ export class FruitItem extends PIXI.Container {
     const sec = Math.max(1, Math.ceil(this.frostRemainingMs / 1000));
     this.frostTimerText.text = String(sec);
     this.frostTimerText.visible = true;
+  }
+
+  setSoupDepthVisual(mode: 'surface' | 'submerged' | 'hidden' | 'standalone'): void {
+    if (mode === 'hidden') {
+      this.contactShadow.alpha = 0;
+      return;
+    }
+    if (mode === 'submerged') {
+      this.contactShadow.alpha = 0.08;
+      this.contactShadow.scale.set(0.82, 0.72);
+      return;
+    }
+    if (mode === 'standalone') {
+      this.contactShadow.alpha = 0.16;
+      this.contactShadow.scale.set(0.9, 0.76);
+      return;
+    }
+    this.contactShadow.alpha = 0.26;
+    this.contactShadow.scale.set(1, 0.88);
+  }
+
+  playTapPop(kind: 'order' | 'buffer' | 'frozen' = 'order'): void {
+    const display = this.display;
+    const frost = this.frostOverlay;
+    const baseDisplayScaleX = display.scale.x;
+    const baseDisplayScaleY = display.scale.y;
+    const baseFrostScaleX = frost.scale.x;
+    const baseFrostScaleY = frost.scale.y;
+    const color = kind === 'order' ? 0xffe07a : kind === 'frozen' ? 0xbde9ff : 0xdff8ff;
+    this.highlightRing.visible = true;
+    this.animate(0.18, (t) => {
+      const pop = t < 0.42 ? 1 - 0.1 * (t / 0.42) : 0.9 + Math.sin(((t - 0.42) / 0.58) * Math.PI) * 0.18;
+      display.scale.set(baseDisplayScaleX * pop, baseDisplayScaleY * pop);
+      frost.scale.set(baseFrostScaleX * pop, baseFrostScaleY * pop);
+      const fade = 1 - t;
+      this.highlightRing.clear();
+      this.highlightRing.lineStyle(5 * fade, color, 0.82 * fade);
+      this.highlightRing.drawEllipse(0, 3, 38 + t * 16, 28 + t * 10);
+    }, () => {
+      display.scale.set(baseDisplayScaleX, baseDisplayScaleY);
+      frost.scale.set(baseFrostScaleX, baseFrostScaleY);
+      this.highlightRing.clear();
+      this.highlightRing.visible = false;
+    });
+  }
+
+  playInvalidShake(): void {
+    const baseDisplayX = this.display.x;
+    const baseFrostX = this.frostOverlay.x;
+    const baseTimerX = this.frostTimerText.x;
+    this.highlightRing.visible = true;
+    this.animate(0.24, (t) => {
+      const fade = 1 - t;
+      const offset = Math.sin(t * Math.PI * 6) * 7 * fade;
+      this.display.x = baseDisplayX + offset;
+      this.frostOverlay.x = baseFrostX + offset;
+      this.frostTimerText.x = baseTimerX + offset;
+      this.highlightRing.clear();
+      this.highlightRing.lineStyle(4 * fade, 0xff7f6e, 0.76 * fade);
+      this.highlightRing.drawEllipse(0, 3, 40 + t * 8, 30 + t * 6);
+    }, () => {
+      this.display.x = baseDisplayX;
+      this.frostOverlay.x = baseFrostX;
+      this.frostTimerText.x = baseTimerX;
+      this.highlightRing.clear();
+      this.highlightRing.visible = false;
+    });
+  }
+
+  private animate(durationSec: number, onFrame: (t: number) => void, onDone: () => void): void {
+    let elapsed = 0;
+    const ticker = () => {
+      elapsed += Game.ticker.deltaMS / 1000;
+      const t = Math.min(1, elapsed / durationSec);
+      onFrame(t);
+      if (t >= 1) {
+        Game.ticker.remove(ticker);
+        this.activeTickers.delete(ticker);
+        onDone();
+      }
+    };
+    this.activeTickers.add(ticker);
+    Game.ticker.add(ticker);
   }
 }
