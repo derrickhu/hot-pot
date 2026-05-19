@@ -1,6 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { AudioManager } from '@/core/AudioManager';
 import { Haptics } from '@/core/Haptics';
+import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
+
+export const BOWL_PAUSE_PANEL_TEXTURE_KEY = 'bowl_pause_panel_three_buttons';
+export const BOWL_PAUSE_PANEL_ASSET = `${BOWL_IMAGES_ROOT}/bowl_pause_panel_three_buttons.png`;
 
 export interface SettingsPauseCallbacks {
   onReplay: () => void;
@@ -17,6 +21,7 @@ export class SettingsPauseOverlay extends PIXI.Container {
   private readonly musicOn = { value: AudioManager.isMusicEnabled() };
   private readonly soundOn = { value: AudioManager.isSoundEnabled() };
   private readonly vibrateOn = { value: Haptics.isEnabled() };
+  private readonly pausePanelSprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
 
   constructor(
     width: number,
@@ -28,6 +33,7 @@ export class SettingsPauseOverlay extends PIXI.Container {
     this.visible = false;
     this.eventMode = 'static';
     const isHomeMode = options.mode === 'home';
+    const showToggles = isHomeMode;
 
     const dim = new PIXI.Graphics();
     dim.beginFill(0x2a2118, 0.52);
@@ -37,8 +43,13 @@ export class SettingsPauseOverlay extends PIXI.Container {
     dim.on('pointertap', (e) => e.stopPropagation());
     this.addChild(dim);
 
+    if (!showToggles) {
+      this.addArtworkPausePanel(width, height, callbacks);
+      return;
+    }
+
     const panelW = 420;
-    const panelH = isHomeMode ? 300 : 520;
+    const panelH = isHomeMode ? 300 : 360;
     const px = (width - panelW) / 2;
     const py = (height - panelH) / 2 - 20;
 
@@ -96,34 +107,27 @@ export class SettingsPauseOverlay extends PIXI.Container {
     this.addChild(title);
 
     const inner = new PIXI.Graphics();
-    inner.beginFill(0xfff3d6);
-    inner.drawRoundedRect(px + 28, py + 112, panelW - 56, isHomeMode ? 116 : 168, 16);
-    inner.endFill();
-    this.addChild(inner);
+    if (showToggles) {
+      inner.beginFill(0xfff3d6);
+      inner.drawRoundedRect(px + 28, py + 112, panelW - 56, 116, 16);
+      inner.endFill();
+      this.addChild(inner);
 
-    let ty = py + 132;
-    this.addToggleRow(width / 2, ty, '音乐', this.musicOn, (enabled) => {
-      AudioManager.setMusicEnabled(enabled);
-    });
-    ty += 52;
-    this.addToggleRow(width / 2, ty, '音效', this.soundOn, (enabled) => {
-      AudioManager.setSoundEnabled(enabled);
-    });
-    if (isHomeMode) {
+      let ty = py + 132;
+      this.addToggleRow(width / 2, ty, '音乐', this.musicOn, (enabled) => {
+        AudioManager.setMusicEnabled(enabled);
+      });
+      ty += 52;
+      this.addToggleRow(width / 2, ty, '音效', this.soundOn, (enabled) => {
+        AudioManager.setSoundEnabled(enabled);
+      });
       return;
     }
-    ty += 52;
-    this.addToggleRow(width / 2, ty, '震动', this.vibrateOn, (enabled) => {
-      Haptics.setEnabled(enabled);
-      if (enabled) {
-        Haptics.light();
-      }
-    });
 
     const btnW = panelW - 72;
     const btnH = 56;
     const bx = px + 36;
-    let by = py + 300;
+    let by = py + 128;
 
     this.addBigButton(bx, by, btnW, btnH, 0xc67d3a, '重玩本关', 0xffffff, () => {
       this.visible = false;
@@ -225,5 +229,49 @@ export class SettingsPauseOverlay extends PIXI.Container {
     t.eventMode = 'none';
     root.addChild(t);
     this.addChild(root);
+  }
+
+  setPanelTexture(texture?: PIXI.Texture | null): void {
+    if (!texture) {
+      return;
+    }
+    this.pausePanelSprite.texture = texture;
+    this.pausePanelSprite.visible = true;
+  }
+
+  private addArtworkPausePanel(width: number, height: number, callbacks: SettingsPauseCallbacks): void {
+    const sourceW = 902;
+    const sourceH = 854;
+    const panelW = Math.min(430, Math.floor(width * 0.84));
+    const panelH = Math.round(panelW * (sourceH / sourceW));
+    const panelX = Math.round((width - panelW) / 2);
+    const panelY = Math.round((height - panelH) / 2 - 14);
+    const scaleX = panelW / sourceW;
+    const scaleY = panelH / sourceH;
+
+    this.pausePanelSprite.anchor.set(0);
+    this.pausePanelSprite.position.set(panelX, panelY);
+    this.pausePanelSprite.width = panelW;
+    this.pausePanelSprite.height = panelH;
+    this.pausePanelSprite.visible = false;
+    this.addChild(this.pausePanelSprite);
+
+    const addHotspot = (x: number, y: number, w: number, h: number, onTap: () => void): void => {
+      const root = new PIXI.Container();
+      root.position.set(panelX + x * scaleX, panelY + y * scaleY);
+      root.eventMode = 'static';
+      root.cursor = 'pointer';
+      root.hitArea = new PIXI.Rectangle(0, 0, w * scaleX, h * scaleY);
+      root.on('pointertap', () => {
+        AudioManager.playButtonSound();
+        this.visible = false;
+        onTap();
+      });
+      this.addChild(root);
+    };
+
+    addHotspot(180, 140, 560, 165, callbacks.onReplay);
+    addHotspot(180, 355, 560, 165, callbacks.onHome);
+    addHotspot(180, 570, 560, 165, callbacks.onContinue);
   }
 }

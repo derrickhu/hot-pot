@@ -35,6 +35,8 @@ export const BOWL_UNLOCK_PANEL_TEXTURE_KEY = 'bowl_unlock_panel';
 export const BOWL_UNLOCK_PANEL_ASSET = `${BOWL_IMAGES_ROOT}/bowl_unlock_panel.png`;
 export const BOWL_NEXT_LEVEL_BUTTON_TEXTURE_KEY = 'bowl_next_level_button';
 export const BOWL_NEXT_LEVEL_BUTTON_ASSET = `${BOWL_IMAGES_ROOT}/bowl_next_level_button.png`;
+export const BOWL_LEVEL_CLEAR_HOME_BUTTON_TEXTURE_KEY = 'bowl_level_clear_home_button';
+export const BOWL_LEVEL_CLEAR_HOME_BUTTON_ASSET = `${BOWL_IMAGES_ROOT}/bowl_level_clear_home_button.png`;
 export const BOWL_LEVEL_CLEAR_SIDE_ACTION_BUTTON_TEXTURE_KEY = 'bowl_level_clear_side_action_button';
 export const BOWL_LEVEL_CLEAR_SIDE_ACTION_BUTTON_ASSET = `${BOWL_IMAGES_ROOT}/bowl_level_clear_side_action_button.png`;
 
@@ -87,6 +89,9 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   private readonly homeBtn: PIXI.Container;
   private readonly homeActionBg = new PIXI.Sprite(PIXI.Texture.EMPTY);
   private readonly homeIconHost = new PIXI.Container();
+  private readonly homeWideSprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
+  private readonly homeWideBg = new PIXI.Graphics();
+  private readonly homeWideLabel: PIXI.Text;
   private readonly nextBtn: PIXI.Container;
   private readonly nextSprite: PIXI.Sprite;
   private readonly nextLabel: PIXI.Text;
@@ -236,6 +241,22 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.homeBtn.addChild(this.homeActionBg);
     this.homeBtn.addChild(this.homeIconHost);
     BowlLevelClearOverlay.drawHouseIcon(this.homeIconHost.addChild(new PIXI.Graphics()));
+    this.homeWideSprite.anchor.set(0.5);
+    this.homeWideSprite.visible = false;
+    this.homeBtn.addChild(this.homeWideSprite);
+    this.homeBtn.addChild(this.homeWideBg);
+    this.homeWideLabel = new PIXI.Text('回到首页', {
+      fontSize: 26,
+      fill: 0xffffff,
+      fontWeight: '900',
+      dropShadow: true,
+      dropShadowBlur: 2,
+      dropShadowDistance: 1,
+      dropShadowColor: 0x7d4312,
+      lineJoin: 'round',
+    });
+    this.homeWideLabel.anchor.set(0.5);
+    this.homeBtn.addChild(this.homeWideLabel);
     this.homeBtn.on('pointertap', () => {
       AudioManager.playButtonSound();
       this.onHome();
@@ -314,6 +335,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     panelTexture?: PIXI.Texture | null,
     nextButtonTexture?: PIXI.Texture | null,
     sideActionButtonTexture?: PIXI.Texture | null,
+    homeButtonTexture?: PIXI.Texture | null,
   ): void {
     if (panelTexture) {
       this.panelSprite.texture = panelTexture;
@@ -328,6 +350,10 @@ export class BowlLevelClearOverlay extends PIXI.Container {
         sprite.texture = sideActionButtonTexture;
         sprite.visible = true;
       }
+    }
+    if (homeButtonTexture) {
+      this.homeWideSprite.texture = homeButtonTexture;
+      this.homeWideSprite.visible = true;
     }
   }
 
@@ -349,6 +375,38 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   private mountActionIconSprites(): void {
     mountLevelClearActionIconSprite(this.homeIconHost, 0, 66);
     mountLevelClearActionIconSprite(this.shareIconHost, 1, 66);
+  }
+
+  private redrawHomeWideButton(): void {
+    this.homeWideBg.clear();
+    if (this.homeWideSprite.visible && this.homeWideSprite.texture.width > 0 && this.homeWideSprite.texture.height > 0) {
+      this.homeWideSprite.width = 212;
+      this.homeWideSprite.height = 72;
+      this.homeWideBg.visible = false;
+      this.homeWideLabel.visible = false;
+      this.homeBtn.hitArea = new PIXI.Rectangle(-106, -36, 212, 72);
+      return;
+    }
+
+    this.homeWideBg.visible = true;
+    this.homeWideLabel.visible = true;
+    this.homeWideBg.beginFill(0x9b5b18, 0.32);
+    this.homeWideBg.drawRoundedRect(-106, -30, 212, 70, 35);
+    this.homeWideBg.endFill();
+    this.homeWideBg.beginFill(0xb96522);
+    this.homeWideBg.drawRoundedRect(-106, -36, 212, 72, 36);
+    this.homeWideBg.endFill();
+    this.homeWideBg.lineStyle(4, 0xffffff, 0.35);
+    this.homeWideBg.drawRoundedRect(-102, -32, 204, 64, 32);
+    this.homeWideBg.lineStyle(0);
+    this.homeWideBg.beginFill(0xe79835);
+    this.homeWideBg.drawRoundedRect(-98, -28, 196, 56, 28);
+    this.homeWideBg.endFill();
+    this.homeWideBg.beginFill(0xffc45d, 0.42);
+    this.homeWideBg.drawRoundedRect(-86, -24, 172, 18, 9);
+    this.homeWideBg.endFill();
+    this.homeWideLabel.position.set(0, 0);
+    this.homeBtn.hitArea = new PIXI.Rectangle(-106, -36, 212, 72);
   }
 
   private static drawYellowTile(g: PIXI.Graphics): void {
@@ -494,7 +552,11 @@ export class BowlLevelClearOverlay extends PIXI.Container {
       btn.getChildAt(1).visible = false;
       btn.hitArea = new PIXI.Rectangle(-38, -38, 76, 76);
     };
-    applySideSkin(this.homeBtn, this.homeActionBg);
+    this.homeActionBg.visible = false;
+    this.homeIconHost.visible = false;
+    this.homeBtn.getChildAt(0).visible = false;
+    this.homeBtn.getChildAt(1).visible = false;
+    this.redrawHomeWideButton();
     applySideSkin(this.shareBtn, this.shareActionBg);
   }
 
@@ -582,10 +644,13 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.renderPassRate(options.passRate ?? null);
 
     const footY = this.panelY + ph - (hasPanelSkin ? 78 : bottomPad + 40);
-    this.homeBtn.position.set(this.panelX + 82, footY);
-    this.nextBtn.position.set(w / 2, footY);
-    this.shareBtn.position.set(this.panelX + pw - 82, footY);
+    this.homeBtn.position.set(w / 2 - 112, footY);
+    this.nextBtn.position.set(w / 2 + 112, footY);
+    this.shareBtn.visible = false;
+    this.shareBtn.eventMode = 'none';
+    this.shareHint.visible = false;
 
+    this.homeHint.visible = false;
     this.homeHint.position.set(this.homeBtn.x, this.homeBtn.y + 21);
     this.shareHint.position.set(this.shareBtn.x, this.shareBtn.y + 21);
     const gridBottomY = this.gridRoot.y + (unlockCount === 0 ? 48 : gridH);

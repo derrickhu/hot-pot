@@ -44,8 +44,8 @@ import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 import { createBadgeShareCard } from '@/utils/badgeShareCard';
 import {
   loadSettingsButtonTexture,
-  mountSettingsButtonSprite,
-  SETTINGS_BTN_TEXTURE_KEY,
+  mountPauseEntryButtonSprite,
+  PAUSE_ENTRY_BTN_TEXTURE_KEY,
 } from '@/utils/settingsButtonSprite';
 import { shareGame, shareGameForReward } from '@/utils/wechatShare';
 import { showGameplayRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
@@ -62,6 +62,8 @@ import {
 import {
   BOWL_LEVEL_CLEAR_SIDE_ACTION_BUTTON_ASSET,
   BOWL_LEVEL_CLEAR_SIDE_ACTION_BUTTON_TEXTURE_KEY,
+  BOWL_LEVEL_CLEAR_HOME_BUTTON_ASSET,
+  BOWL_LEVEL_CLEAR_HOME_BUTTON_TEXTURE_KEY,
   BOWL_NEXT_LEVEL_BUTTON_ASSET,
   BOWL_NEXT_LEVEL_BUTTON_TEXTURE_KEY,
   BOWL_UNLOCK_PANEL_ASSET,
@@ -70,7 +72,11 @@ import {
   LEVEL_CLEAR_ACTION_ICONS_ASSET,
   LEVEL_CLEAR_ACTION_ICONS_TEXTURE_KEY,
 } from '@/gameobjects/BowlLevelClearOverlay';
-import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
+import {
+  BOWL_PAUSE_PANEL_ASSET,
+  BOWL_PAUSE_PANEL_TEXTURE_KEY,
+  SettingsPauseOverlay,
+} from '@/gameobjects/SettingsPauseOverlay';
 import {
   BOWL_TUTORIAL_HAND_ASSET,
   BOWL_TUTORIAL_HAND_TEXTURE_KEY,
@@ -1259,7 +1265,9 @@ export class BowlScene implements Scene {
     jobs.push(TextureCache.load(LEVEL_CLEAR_ACTION_ICONS_TEXTURE_KEY, LEVEL_CLEAR_ACTION_ICONS_ASSET));
     jobs.push(TextureCache.load(BOWL_UNLOCK_PANEL_TEXTURE_KEY, BOWL_UNLOCK_PANEL_ASSET));
     jobs.push(TextureCache.load(BOWL_NEXT_LEVEL_BUTTON_TEXTURE_KEY, BOWL_NEXT_LEVEL_BUTTON_ASSET));
+    jobs.push(TextureCache.load(BOWL_LEVEL_CLEAR_HOME_BUTTON_TEXTURE_KEY, BOWL_LEVEL_CLEAR_HOME_BUTTON_ASSET));
     jobs.push(TextureCache.load(BOWL_LEVEL_CLEAR_SIDE_ACTION_BUTTON_TEXTURE_KEY, BOWL_LEVEL_CLEAR_SIDE_ACTION_BUTTON_ASSET));
+    jobs.push(TextureCache.load(BOWL_PAUSE_PANEL_TEXTURE_KEY, BOWL_PAUSE_PANEL_ASSET));
     jobs.push(TextureCache.load(BOWL_TUTORIAL_HAND_TEXTURE_KEY, BOWL_TUTORIAL_HAND_ASSET));
     jobs.push(TextureCache.load(BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY, BOWL_COMMON_MODAL_PANEL_ASSET));
     jobs.push(TextureCache.load(BOWL_COMMON_MODAL_BUTTON_TEXTURE_KEY, BOWL_COMMON_MODAL_BUTTON_ASSET));
@@ -1277,7 +1285,9 @@ export class BowlScene implements Scene {
       TextureCache.get(BOWL_UNLOCK_PANEL_TEXTURE_KEY),
       TextureCache.get(BOWL_NEXT_LEVEL_BUTTON_TEXTURE_KEY),
       TextureCache.get(BOWL_LEVEL_CLEAR_SIDE_ACTION_BUTTON_TEXTURE_KEY),
+      TextureCache.get(BOWL_LEVEL_CLEAR_HOME_BUTTON_TEXTURE_KEY),
     );
+    this.settingsOverlay.setPanelTexture(TextureCache.get(BOWL_PAUSE_PANEL_TEXTURE_KEY));
     this.reviveOverlay.setPanelTexture(TextureCache.get(BOWL_FAIL_REVIVE_PANEL_TEXTURE_KEY));
     this.mechanicIntroOverlay.setSkinTextures(
       TextureCache.get(BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY),
@@ -1333,7 +1343,7 @@ export class BowlScene implements Scene {
   }
 
   private mountGameplaySettingsButton(): void {
-    mountSettingsButtonSprite(this.settingsBtnRoot, TextureCache.get(SETTINGS_BTN_TEXTURE_KEY), 66);
+    mountPauseEntryButtonSprite(this.settingsBtnRoot, TextureCache.get(PAUSE_ENTRY_BTN_TEXTURE_KEY), 82);
   }
 
   private applyBowlArtTextures(): void {

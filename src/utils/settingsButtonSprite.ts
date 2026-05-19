@@ -3,9 +3,14 @@ import { TextureCache } from '@/utils/TextureCache';
 
 export const SETTINGS_BTN_TEXTURE_KEY = 'ui_settings_btn';
 export const SETTINGS_BTN_PATH = 'assets/images/settings_btn.png';
+export const PAUSE_ENTRY_BTN_TEXTURE_KEY = 'bowl_pause_entry_back_btn';
+export const PAUSE_ENTRY_BTN_PATH = 'subpackages/bowl_game/assets/images/fruit_slice/back_button.png';
 
 export function loadSettingsButtonTexture(): Promise<PIXI.Texture | null> {
-  return TextureCache.load(SETTINGS_BTN_TEXTURE_KEY, SETTINGS_BTN_PATH);
+  return Promise.all([
+    TextureCache.load(SETTINGS_BTN_TEXTURE_KEY, SETTINGS_BTN_PATH),
+    TextureCache.load(PAUSE_ENTRY_BTN_TEXTURE_KEY, PAUSE_ENTRY_BTN_PATH),
+  ]).then(([settingsTex]) => settingsTex);
 }
 
 /**
@@ -37,4 +42,27 @@ export function mountSettingsButtonSprite(
   sp.scale.set(s);
   root.addChild(sp);
   root.hitArea = new PIXI.Circle(0, 0, half + 2);
+}
+
+export function mountPauseEntryButtonSprite(
+  root: PIXI.Container,
+  tex: PIXI.Texture | null,
+  targetWidth: number,
+): void {
+  root.removeChildren();
+  if (!tex) {
+    mountSettingsButtonSprite(root, null, Math.round(targetWidth * 0.72));
+    return;
+  }
+  const sp = new PIXI.Sprite(tex);
+  sp.anchor.set(0.5);
+  const scale = targetWidth / Math.max(tex.width, 1);
+  sp.scale.set(scale);
+  root.addChild(sp);
+  root.hitArea = new PIXI.Rectangle(
+    -targetWidth * 0.56,
+    -targetWidth * 0.34,
+    targetWidth * 1.12,
+    targetWidth * 0.68,
+  );
 }
