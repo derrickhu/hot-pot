@@ -6,6 +6,7 @@ const DEFAULT_RANK_LIST_MAX_LIMIT = 100;
 const DEFAULT_RANK_MINE_SCAN_LIMIT = 1000;
 const DEFAULT_RANK_BOWL_MAX_LEVEL = 30;
 const DEFAULT_RANK_FRUIT_MAX_SCORE = 9999999;
+const DEFAULT_LEVEL_PASS_RATE_COLLECTION = 'hotpot_public_level_pass_rates';
 
 function getGameKey() {
   const v = String(process.env.GAME_KEY || '').trim().toLowerCase();
@@ -86,6 +87,10 @@ function getRankFruitMaxScore() {
   return readPositiveIntEnv('RANK_FRUIT_MAX_SCORE', DEFAULT_RANK_FRUIT_MAX_SCORE);
 }
 
+function getLevelPassRateCollectionName() {
+  return readEnvPrefer(`${gameKeyUpper()}_LEVEL_PASS_RATE_COLLECTION`) || DEFAULT_LEVEL_PASS_RATE_COLLECTION;
+}
+
 module.exports = {
   getGameKey,
   gameKeyUpper,
@@ -99,4 +104,5 @@ module.exports = {
   getRankMineScanLimit,
   getRankBowlMaxLevel,
   getRankFruitMaxScore,
+  getLevelPassRateCollectionName,
 };

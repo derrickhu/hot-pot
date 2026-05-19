@@ -3,6 +3,7 @@ export const GAME_KEY = 'hotpot';
 
 export const BACKEND_BASE_URL = 'https://rosa-env-d7grf78r5dbd37323.service.tcloudbase.com';
 export const BACKEND_PATH_PREFIX = `/${GAME_KEY}-api`;
+export const CLOUD_ENV_ID = 'rosa-env-d7grf78r5dbd37323';
 
 export const BACKEND_LOGIN_PATH = `${BACKEND_PATH_PREFIX}/login/`;
 export const BACKEND_PULL_PATH = `${BACKEND_PATH_PREFIX}/save/pull`;
@@ -11,6 +12,9 @@ export const BACKEND_HEALTH_PATH = `${BACKEND_PATH_PREFIX}/health`;
 export const BACKEND_RANK_SUBMIT_PATH = `${BACKEND_PATH_PREFIX}/rank/submit`;
 export const BACKEND_RANK_LIST_PATH = `${BACKEND_PATH_PREFIX}/rank/list`;
 export const BACKEND_RANK_MINE_PATH = `${BACKEND_PATH_PREFIX}/rank/mine`;
+export const BACKEND_LEVEL_PASS_RATES_PATH = `${BACKEND_PATH_PREFIX}/level/pass-rates`;
+export const LEVEL_PASS_RATE_COLLECTION = 'hotpot_public_level_pass_rates';
+export const LEVEL_PASS_RATE_DOC_ID = 'bowl_30d_latest';
 
 export const BACKEND_REQUEST_TIMEOUT_MS = 10000;
 
@@ -25,6 +29,7 @@ export const GACHA_STATE_KEY = `${GAME_KEY}_gacha_state_v1`;
 export const TOOL_INVENTORY_KEY = `${GAME_KEY}_tool_inventory_v1`;
 export const FRUIT_SLICE_REWARD_KEY = `${GAME_KEY}_fruit_slice_reward_v1`;
 export const FRUIT_SLICE_TOOL_INVENTORY_KEY = `${GAME_KEY}_fruit_slice_tool_inventory_v1`;
+export const LEVEL_PASS_RATE_CACHE_KEY = `${GAME_KEY}_level_pass_rates_v1`;
 /**
  * 玩家自己授权拿到的微信昵称 + 头像 URL；仅用于排行榜显示。
  * 不进入 CLOUD_SYNC_ALLOWLIST：用户资料本机敏感，不参与跨设备云端同步，

@@ -29,6 +29,7 @@ import { submitCurrentBowlProgressRank } from '@/game/RankUpload';
 import { openLeaderboard } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_BOWL } from '@/services/RankService';
 import { analytics, EVENT_NAMES } from '@/analytics';
+import { LevelPassRateService } from '@/core/LevelPassRateService';
 import {
   canClaimDailyShareToolReward,
   claimDailyShareCleanupReward,
@@ -116,6 +117,7 @@ const FROZEN_FRUIT_THAW_MS = 30000;
 const SHUFFLE_DEPTH_SWAP_SEC = 1.15;
 const SHUFFLE_ICE_RESURFACE_SEC = 22;
 const SHUFFLE_ICE_HOLD_SUBMERGED_RATIO = 0.9;
+const LEVEL_PASS_RATE_HINT_MS = 2800;
 
 /** 菜碟暂存槽：开局数量与上限（加菜碟工具每次 +1，至多多 2 格） */
 const BUFFER_SLOTS_MAX = 7;
@@ -435,6 +437,8 @@ export class BowlScene implements Scene {
   /** 餐盖图标，与参考图一致放在关卡与剩余订单数之间 */
   private hudCloche = new PIXI.Container();
   private hudRemainderText!: PIXI.Text;
+  private readonly levelPassRateHintRoot = new PIXI.Container();
+  private levelPassRateHintTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** 底部三工具槽（预加载后可能换为雪碧条贴图） */
   private readonly toolSlots: PIXI.Container[] = [];
@@ -725,6 +729,12 @@ export class BowlScene implements Scene {
   private buildScene(): void {
     const headerHeight = Game.safeTop + 78;
     const panelTop = headerHeight;
+
+    this.container.eventMode = 'static';
+    this.container.hitArea = new PIXI.Rectangle(0, 0, Game.logicWidth, Game.logicHeight);
+    this.container.on('pointerdown', () => {
+      this.hideLevelPassRateHint();
+    });
 
     this.themeBackdropSprite.visible = false;
     this.container.addChild(this.themeBg, this.themeBackdropSprite, this.themeHeaderDecor);
@@ -1017,6 +1027,9 @@ export class BowlScene implements Scene {
     this.container.addChild(this.reviveOverlay);
     this.container.addChild(this.levelClearOverlay);
     this.buildToolHelpOverlay();
+    this.levelPassRateHintRoot.visible = false;
+    this.levelPassRateHintRoot.eventMode = 'none';
+    this.container.addChild(this.levelPassRateHintRoot);
     this.container.addChild(this.settingsOverlay);
     /** 机制说明面板需要盖住所有玩法层，但低于 settings 暂停面板（暂停优先级最高） */
     this.container.addChild(this.mechanicIntroOverlay);
@@ -1870,6 +1883,136 @@ export class BowlScene implements Scene {
     api?.showToast?.({ title, icon: 'none' });
   }
 
+  private showLevelPassRateHint(levelId: number): void {
+    const cached = LevelPassRateService.getLevel(levelId);
+    if (cached) {
+      this.renderLevelPassRateHint(cached);
+    }
+    void LevelPassRateService.refreshIfNeeded().then(() => {
+      if (cached) {
+        return;
+      }
+      const latest = LevelPassRateService.getLevel(levelId);
+      if (latest) {
+        this.renderLevelPassRateHint(latest);
+      }
+    });
+  }
+
+  private hideLevelPassRateHint(): void {
+    if (this.levelPassRateHintTimer) {
+      clearTimeout(this.levelPassRateHintTimer);
+      this.levelPassRateHintTimer = null;
+    }
+    this.levelPassRateHintRoot.visible = false;
+    this.levelPassRateHintRoot.removeChildren();
+  }
+
+  private renderLevelPassRateHint(rate: {
+    pass_rate: number;
+    start_users: number;
+    clear_users: number;
+  }): void {
+    if (this.levelPassRateHintTimer) {
+      clearTimeout(this.levelPassRateHintTimer);
+      this.levelPassRateHintTimer = null;
+    }
+    this.levelPassRateHintRoot.removeChildren();
+
+    const root = this.levelPassRateHintRoot;
+    root.visible = true;
+    root.alpha = 1;
+    root.position.set(190, Game.logicHeight * 0.41);
+
+    const cardW = 250;
+    const cardH = 96;
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0x4d2b18, 0.92);
+    bg.lineStyle(4, 0xf3d38a, 0.95);
+    bg.drawRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 18);
+    bg.endFill();
+    bg.beginFill(0x2d170d, 0.22);
+    bg.drawRoundedRect(-cardW / 2 + 8, -cardH / 2 + 8, cardW - 16, cardH - 16, 14);
+    bg.endFill();
+    root.addChild(bg);
+
+    const title = new PIXI.Text('全国通关数据', {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 18,
+      fill: 0xfff0b8,
+      fontWeight: '900',
+      stroke: 0x2b1b12,
+      strokeThickness: 3,
+      lineJoin: 'round',
+    });
+    title.anchor.set(0, 0.5);
+    title.position.set(-cardW / 2 + 54, -26);
+    root.addChild(title);
+
+    const isRareClear = rate.clear_users < 10;
+    const percent = Math.max(0, Math.min(100, Math.round(rate.pass_rate * 100)));
+    const mainText = isRareClear ? '通关少于10人' : `通关率 ${percent}%`;
+    const detailText = isRareClear ? '过去30天' : `${rate.clear_users.toLocaleString()}人通关`;
+    const sourceText = '过去30天计算 · 每日更新';
+
+    const icon = new PIXI.Text('🏆', {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 28,
+      fill: 0xffd66b,
+      stroke: 0x2b1b12,
+      strokeThickness: 3,
+    });
+    icon.anchor.set(0.5);
+    icon.position.set(-cardW / 2 + 30, -2);
+    root.addChild(icon);
+
+    const main = new PIXI.Text(mainText, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 24,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x2b1b12,
+      strokeThickness: 5,
+      lineJoin: 'round',
+    });
+    main.anchor.set(0, 0.5);
+    main.position.set(-cardW / 2 + 54, 2);
+    root.addChild(main);
+
+    const detail = new PIXI.Text(detailText, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 17,
+      fill: 0xfff2c8,
+      fontWeight: '800',
+      stroke: 0x2b1b12,
+      strokeThickness: 3,
+      lineJoin: 'round',
+    });
+    detail.anchor.set(0, 0.5);
+    detail.position.set(-cardW / 2 + 54, 28);
+    root.addChild(detail);
+
+    const source = new PIXI.Text(sourceText, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 13,
+      fill: 0xe9cfa0,
+      fontWeight: '700',
+      stroke: 0x2b1b12,
+      strokeThickness: 2,
+      lineJoin: 'round',
+    });
+    source.anchor.set(0, 0.5);
+    source.alpha = 0.86;
+    source.position.set(-cardW / 2 + 12, 44);
+    root.addChild(source);
+
+    this.levelPassRateHintTimer = setTimeout(() => {
+      root.visible = false;
+      root.removeChildren();
+      this.levelPassRateHintTimer = null;
+    }, LEVEL_PASS_RATE_HINT_MS);
+  }
+
   private async runRewardedGameplayAction(scene: string, action: () => void): Promise<void> {
     if (this.rewardedAdBusy) {
       this.toast('广告加载中');
@@ -2111,6 +2254,7 @@ export class BowlScene implements Scene {
 
   private startRound(): void {
     this.hideToolHelpPanel();
+    this.hideLevelPassRateHint();
     this.failSettlementOverlay.hide();
     this.badgeUnlockOverlay.hide();
     this.reviveOverlay.hide();
@@ -2143,6 +2287,7 @@ export class BowlScene implements Scene {
       level_id: getBowlLevelIndex() + 1,
       level_name: this.levelDef.displayName,
     });
+    this.showLevelPassRateHint(getBowlLevelIndex() + 1);
     this.levelFruitIds = this.levelDef.fruitIds.slice();
     this.orderFruitIds = this.levelFruitIds.filter((id) => !NON_ORDER_FRUIT_IDS.has(id));
     this.orderSize = this.levelDef.orderTarget;

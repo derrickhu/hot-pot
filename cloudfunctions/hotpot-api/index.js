@@ -1,6 +1,7 @@
 const { handleLogin } = require('./lib/auth');
 const { handlePull, handlePush } = require('./lib/save');
 const { handleSubmit: handleRankSubmit, handleList: handleRankList, handleMine: handleRankMine } = require('./lib/rank');
+const { handleList: handleLevelPassRates } = require('./lib/level-pass-rates');
 const { respond, parseEvent, preflight } = require('./lib/http');
 
 const ROUTES = {
@@ -11,6 +12,7 @@ const ROUTES = {
   'POST /rank/submit': handleRankSubmit,
   'POST /rank/list': handleRankList,
   'POST /rank/mine': handleRankMine,
+  'POST /level/pass-rates': handleLevelPassRates,
 };
 
 exports.main = async (event, context) => {

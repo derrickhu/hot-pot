@@ -1,5 +1,5 @@
 const tcb = require('@cloudbase/node-sdk');
-const { getCollectionName } = require('./config');
+const { getCollectionName, getLevelPassRateCollectionName } = require('./config');
 
 let app = null;
 
@@ -23,9 +23,14 @@ function getRankingCollection() {
   return getDb().collection(getCollectionName('rankings'));
 }
 
+function getLevelPassRateCollection() {
+  return getDb().collection(getLevelPassRateCollectionName());
+}
+
 module.exports = {
   getApp,
   getDb,
   getCollection,
   getRankingCollection,
+  getLevelPassRateCollection,
 };

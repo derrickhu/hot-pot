@@ -2,6 +2,7 @@ import {
   BACKEND_ANON_ID_KEY,
   BACKEND_BASE_URL,
   BACKEND_LOGIN_PATH,
+  BACKEND_LEVEL_PASS_RATES_PATH,
   BACKEND_PULL_PATH,
   BACKEND_PUSH_PATH,
   BACKEND_RANK_LIST_PATH,
@@ -91,6 +92,25 @@ export interface BackendRankMineResult {
   mine: BackendRankRecord | null;
 }
 
+export interface LevelPassRateItem {
+  level_id: number;
+  pass_rate: number;
+  start_users: number;
+  clear_users: number;
+  started_and_cleared_users: number;
+  is_sample_low: boolean;
+}
+
+export interface BackendLevelPassRatesResult {
+  game_key: string;
+  mode_key: 'bowl';
+  window_days: number;
+  window_start_date: string;
+  window_end_date: string;
+  computed_at: number;
+  levels: LevelPassRateItem[];
+}
+
 interface StoredToken {
   token: string;
   userId: string;
@@ -161,6 +181,13 @@ class BackendServiceClass {
 
   mineRank(board: RankBoard): Promise<BackendRankMineResult> {
     return this.callWithAuth<BackendRankMineResult>(BACKEND_RANK_MINE_PATH, { board });
+  }
+
+  listLevelPassRates(): Promise<BackendLevelPassRatesResult> {
+    return this.callWithAuth<BackendLevelPassRatesResult>(BACKEND_LEVEL_PASS_RATES_PATH, {
+      mode_key: 'bowl',
+      window_days: 30,
+    });
   }
 
   clearToken(): void {
