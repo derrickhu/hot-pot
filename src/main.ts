@@ -42,6 +42,7 @@ async function main(): Promise<void> {
     loadingOverlay.setProgress(0.48);
     const startupSync = await CloudSyncManager.awaitAuthoritativeStartup();
     console.log(`[CloudSync] startup gate result status=${startupSync.status}, reason=${startupSync.reason}`);
+    console.log(`[User] user_id=${CloudSyncManager.userId || 'empty'}`);
     if (CloudSyncManager.userId) {
       // 默认会自动 track 一次 LOGIN 事件并立即 flush，不再等 15s batch
       setAnalyticsUserId(CloudSyncManager.userId);

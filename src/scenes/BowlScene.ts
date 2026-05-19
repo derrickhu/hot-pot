@@ -26,8 +26,6 @@ import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
 import { FRUIT_MAP, type FruitId } from '@/config/fruits';
 import { getBowlLevelIndex, recordBowlBadgeUnlocked, setBowlLevelIndex } from '@/game/BowlProgress';
 import { submitCurrentBowlProgressRank } from '@/game/RankUpload';
-import { openLeaderboard } from '@/scenes/LeaderboardScene';
-import { RANK_BOARD_BOWL } from '@/services/RankService';
 import { analytics, EVENT_NAMES } from '@/analytics';
 import { LevelPassRateService } from '@/core/LevelPassRateService';
 import {
@@ -3211,10 +3209,12 @@ export class BowlScene implements Scene {
     const isLast = idx >= BOWL_LEVEL_COUNT - 1;
     const introduced = isLast ? [] : getNewFruitsIntroducedInLevel(idx + 1);
     const skinUnlocks = isLast ? [] : getBowlSkinUnlocksInLevel(idx + 2);
+    const passRate = LevelPassRateService.getLevel(idx + 1);
     const showLevelClear = (): void => {
       this.levelClearOverlay.show({
         newFruitIds: introduced,
         newSkinUnlocks: skinUnlocks,
+        passRate,
         isLastLevel: isLast,
         onHome: () => {
           this.levelClearOverlay.hide();
@@ -3241,10 +3241,6 @@ export class BowlScene implements Scene {
           } else {
             this.toast('转发请在微信小游戏中使用');
           }
-        },
-        onRank: () => {
-          this.levelClearOverlay.hide();
-          openLeaderboard(RANK_BOARD_BOWL);
         },
       });
     };

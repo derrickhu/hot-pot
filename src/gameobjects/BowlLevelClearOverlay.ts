@@ -8,12 +8,18 @@ import { TextureCache } from '@/utils/TextureCache';
 export interface BowlLevelClearOverlayOptions {
   newFruitIds: FruitId[];
   newSkinUnlocks?: BowlSkinUnlock[];
+  passRate?: BowlLevelClearPassRate | null;
   /** 是否已是最后一关（文案区分「下一关」） */
   isLastLevel: boolean;
   onHome: () => void;
   onNextLevel: () => void;
   onShare: () => void;
-  onRank?: () => void;
+}
+
+export interface BowlLevelClearPassRate {
+  pass_rate: number;
+  start_users: number;
+  clear_users: number;
 }
 
 const COLS = 3;
@@ -73,6 +79,11 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   private readonly rewardParchment: PIXI.Graphics;
   private readonly rewardTitle: PIXI.Text;
   private readonly rewardMain: PIXI.Text;
+  private readonly passRateRoot: PIXI.Container;
+  private readonly passRateBg: PIXI.Graphics;
+  private readonly passRateTitle: PIXI.Text;
+  private readonly passRateMain: PIXI.Text;
+  private readonly passRateDetail: PIXI.Text;
   private readonly homeBtn: PIXI.Container;
   private readonly homeActionBg = new PIXI.Sprite(PIXI.Texture.EMPTY);
   private readonly homeIconHost = new PIXI.Container();
@@ -83,7 +94,6 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   private readonly shareBtn: PIXI.Container;
   private readonly shareActionBg = new PIXI.Sprite(PIXI.Texture.EMPTY);
   private readonly shareIconHost = new PIXI.Container();
-  private readonly rankBtn: PIXI.Container;
   private readonly homeHint: PIXI.Text;
   private readonly shareHint: PIXI.Text;
 
@@ -98,7 +108,6 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   private onHome: () => void = () => {};
   private onNextLevel: () => void = () => {};
   private onShare: () => void = () => {};
-  private onRank: () => void = () => {};
 
   constructor(w: number, h: number) {
     super();
@@ -179,6 +188,48 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.rewardMain.anchor.set(0.5, 0);
     this.rewardRoot.addChild(this.rewardMain);
 
+    this.passRateRoot = new PIXI.Container();
+    this.addChild(this.passRateRoot);
+
+    this.passRateBg = new PIXI.Graphics();
+    this.passRateRoot.addChild(this.passRateBg);
+
+    this.passRateTitle = new PIXI.Text('近30天通关数据', {
+      fontSize: 15,
+      fill: 0x9b6a35,
+      fontWeight: '800',
+      stroke: 0xffffff,
+      strokeThickness: 2,
+      lineJoin: 'round',
+    });
+    this.passRateTitle.anchor.set(0.5, 0);
+    this.passRateTitle.position.set(0, 9);
+    this.passRateRoot.addChild(this.passRateTitle);
+
+    this.passRateMain = new PIXI.Text('', {
+      fontSize: 29,
+      fill: 0xc45c14,
+      fontWeight: '900',
+      stroke: 0xfff5de,
+      strokeThickness: 3,
+      lineJoin: 'round',
+    });
+    this.passRateMain.anchor.set(0.5, 0);
+    this.passRateMain.position.set(0, 27);
+    this.passRateRoot.addChild(this.passRateMain);
+
+    this.passRateDetail = new PIXI.Text('', {
+      fontSize: 15,
+      fill: 0x7a5c4e,
+      fontWeight: '700',
+      stroke: 0xffffff,
+      strokeThickness: 2,
+      lineJoin: 'round',
+    });
+    this.passRateDetail.anchor.set(0.5, 0);
+    this.passRateDetail.position.set(0, 60);
+    this.passRateRoot.addChild(this.passRateDetail);
+
     this.homeBtn = BowlLevelClearOverlay.makeSquareActionBtn();
     this.homeActionBg.anchor.set(0.5);
     this.homeActionBg.visible = false;
@@ -256,13 +307,6 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.shareHint.anchor.set(0.5, 0);
     this.addChild(this.shareHint);
 
-    this.rankBtn = this.createRankButton();
-    this.rankBtn.on('pointertap', () => {
-      AudioManager.playButtonSound();
-      this.onRank();
-    });
-    this.addChild(this.rankBtn);
-
     this.redrawSparkles();
   }
 
@@ -285,29 +329,6 @@ export class BowlLevelClearOverlay extends PIXI.Container {
         sprite.visible = true;
       }
     }
-  }
-
-  private createRankButton(): PIXI.Container {
-    const c = new PIXI.Container();
-    c.eventMode = 'static';
-    c.cursor = 'pointer';
-    c.hitArea = new PIXI.Rectangle(-72, -24, 144, 48);
-    const bg = new PIXI.Graphics();
-    bg.beginFill(0xff8a3d, 0.98);
-    bg.lineStyle(3, 0xffffff, 0.7);
-    bg.drawRoundedRect(-72, -24, 144, 48, 24);
-    bg.endFill();
-    c.addChild(bg);
-    const text = new PIXI.Text('排行榜', {
-      fontSize: 22,
-      fill: 0xffffff,
-      fontWeight: '900',
-      stroke: 0x8b3a12,
-      strokeThickness: 3,
-    });
-    text.anchor.set(0.5);
-    c.addChild(text);
-    return c;
   }
 
   private static makeSquareActionBtn(): PIXI.Container {
@@ -496,8 +517,6 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.onHome = options.onHome;
     this.onNextLevel = options.onNextLevel;
     this.onShare = options.onShare;
-    this.onRank = options.onRank ?? (() => {});
-    this.rankBtn.visible = !!options.onRank;
 
     const w = this.screenW;
     const h = this.screenH;
@@ -526,8 +545,9 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     const headerH = hasPanelSkin ? 0 : 52;
     const topPad = hasPanelSkin ? 148 : 56;
     const gridTopGap = hasPanelSkin ? 8 : 12;
+    const hasPassRate = !!options.passRate;
     /** 面板内：解锁网格底边距「下一关」按钮可视顶部的留白（≥100）—— ph 中与 footY 推导一致时为 footerH - 下一关半高≈76 */
-    const footerH = 176;
+    const footerH = 176 + (hasPassRate ? 104 : 0);
     const bottomPad = 28;
 
     const contentDrivenH =
@@ -559,6 +579,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.mountActionIconSprites();
 
     this.rewardRoot.visible = false;
+    this.renderPassRate(options.passRate ?? null);
 
     const footY = this.panelY + ph - (hasPanelSkin ? 78 : bottomPad + 40);
     this.homeBtn.position.set(this.panelX + 82, footY);
@@ -567,7 +588,11 @@ export class BowlLevelClearOverlay extends PIXI.Container {
 
     this.homeHint.position.set(this.homeBtn.x, this.homeBtn.y + 21);
     this.shareHint.position.set(this.shareBtn.x, this.shareBtn.y + 21);
-    this.rankBtn.position.set(w / 2, footY - 74);
+    const gridBottomY = this.gridRoot.y + (unlockCount === 0 ? 48 : gridH);
+    const nextButtonTopY = footY - 38;
+    const passRateCardH = 92;
+    const passRateGapY = Math.max(16, Math.round((nextButtonTopY - gridBottomY - passRateCardH) / 2));
+    this.passRateRoot.position.set(w / 2, gridBottomY + passRateGapY);
 
     this.nextLabel.position.set(0, -18);
     this.nextSub.position.set(0, 10);
@@ -667,6 +692,40 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     }
 
     this.visible = true;
+  }
+
+  private renderPassRate(passRate: BowlLevelClearPassRate | null): void {
+    if (!passRate) {
+      this.passRateRoot.visible = false;
+      return;
+    }
+
+    this.passRateRoot.visible = true;
+    this.passRateBg.clear();
+    this.passRateBg.beginFill(0x7b4a2a, 0.16);
+    this.passRateBg.drawRoundedRect(-196, 5, 392, 88, 20);
+    this.passRateBg.endFill();
+    this.passRateBg.lineStyle(3, 0xe5b86c, 0.9);
+    this.passRateBg.beginFill(0xfff1d5, 0.96);
+    this.passRateBg.drawRoundedRect(-198, 0, 396, 86, 20);
+    this.passRateBg.endFill();
+    this.passRateBg.lineStyle(2, 0xffffff, 0.82);
+    this.passRateBg.drawRoundedRect(-188, 8, 376, 70, 14);
+    this.passRateBg.lineStyle(0);
+    this.passRateBg.beginFill(0xf7d89a, 0.35);
+    this.passRateBg.drawRoundedRect(-122, 7, 244, 23, 12);
+    this.passRateBg.endFill();
+
+    const isRareClear = passRate.clear_users < 10;
+    if (isRareClear) {
+      this.passRateMain.text = '稀有通关达成';
+      this.passRateDetail.text = '近30天通关玩家少于10位';
+      return;
+    }
+
+    const percent = Math.max(0, Math.min(100, Math.round(passRate.pass_rate * 100)));
+    this.passRateMain.text = `通关率 ${percent}%`;
+    this.passRateDetail.text = `${passRate.clear_users.toLocaleString()}位玩家通关，你也是其中一位`;
   }
 
   hide(): void {
