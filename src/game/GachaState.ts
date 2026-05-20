@@ -1,8 +1,8 @@
 import { GACHA_PULL_COST, GACHA_REWARD_POOL, type GachaReward } from '@/config/economy';
 import { GACHA_STATE_KEY } from '@/config/CloudConfig';
 import { PersistService } from '@/core/PersistService';
-import { addFruitSliceTool } from '@/game/FruitSliceToolInventory';
-import { addTool } from '@/game/ToolInventory';
+import { addFruitSliceTools, type FruitSliceInventoryToolKind } from '@/game/FruitSliceToolInventory';
+import { addTools, type ToolKind } from '@/game/ToolInventory';
 import { spendCoins } from '@/game/Wallet';
 
 export interface GachaState {
@@ -73,21 +73,37 @@ function rollGachaReward(): GachaReward {
 }
 
 function grantGachaReward(reward: GachaReward): void {
+  const bowlToolCounts: Partial<Record<ToolKind, number>> = {};
+  const fruitSliceToolCounts: Partial<Record<FruitSliceInventoryToolKind, number>> = {};
+  const addBowlToolReward = (tool: ToolKind, count: number): void => {
+    bowlToolCounts[tool] = (bowlToolCounts[tool] ?? 0) + count;
+  };
+  const addFruitSliceToolReward = (tool: FruitSliceInventoryToolKind, count: number): void => {
+    fruitSliceToolCounts[tool] = (fruitSliceToolCounts[tool] ?? 0) + count;
+  };
+
   if (reward.kind === 'bowlTool') {
-    addTool(reward.tool, reward.count);
+    addBowlToolReward(reward.tool, reward.count);
+    addTools(bowlToolCounts);
     return;
   }
   if (reward.kind === 'fruitSliceTool') {
-    addFruitSliceTool(reward.tool, reward.count);
+    addFruitSliceToolReward(reward.tool, reward.count);
+    addFruitSliceTools(fruitSliceToolCounts);
     return;
   }
   for (const item of reward.rewards) {
     if (item.kind === 'bowlTool') {
-      addTool(item.tool, item.count);
+      addBowlToolReward(item.tool, item.count);
+    } else if (item.kind === 'fruitSliceTool') {
+      addFruitSliceToolReward(item.tool, item.count);
     } else {
-      addFruitSliceTool(item.tool, item.count);
+      const unexpected: never = item;
+      console.warn('[GachaState] unknown bundle reward item', unexpected);
     }
   }
+  addTools(bowlToolCounts);
+  addFruitSliceTools(fruitSliceToolCounts);
 }
 
 function normalizeState(input: Partial<GachaState>): GachaState {

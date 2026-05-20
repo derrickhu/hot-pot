@@ -18,6 +18,7 @@ const DEFAULT_TOOL_INVENTORY: ToolInventoryState = {
   shuffle: 0,
   lastShareRewardDate: '',
 };
+const TOOL_KINDS: ToolKind[] = ['addDish', 'remove', 'shuffle'];
 
 export function readToolInventory(): ToolInventoryState {
   return normalizeToolInventory(PersistService.readJSON<Partial<ToolInventoryState>>(TOOL_INVENTORY_KEY) || {});
@@ -57,14 +58,26 @@ export function consumeTool(kind: ToolKind): { consumed: boolean; count: number 
 }
 
 export function addTool(kind: ToolKind, count: number): ToolInventoryState {
+  return addTools({ [kind]: count });
+}
+
+export function addTools(counts: Partial<Record<ToolKind, number>>): ToolInventoryState {
   const state = readToolInventory();
-  const amount = normalizeCount(count);
-  if (amount <= 0) {
+  const next = { ...state };
+  let changed = false;
+  for (const kind of TOOL_KINDS) {
+    const amount = normalizeCount(counts[kind]);
+    if (amount <= 0) {
+      continue;
+    }
+    next[kind] += amount;
+    changed = true;
+  }
+  if (!changed) {
     return state;
   }
-  state[kind] += amount;
-  writeToolInventory(state);
-  return state;
+  writeToolInventory(next);
+  return next;
 }
 
 export function toolKindForIndex(index: number): ToolKind {

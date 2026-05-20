@@ -12,6 +12,7 @@ const DEFAULT_STATE: FruitSliceToolInventoryState = {
   eliminate: 0,
   shuffle: 0,
 };
+const FRUIT_SLICE_TOOL_KINDS: FruitSliceInventoryToolKind[] = ['eliminate', 'shuffle'];
 
 export function readFruitSliceToolInventory(): FruitSliceToolInventoryState {
   return normalizeState(PersistService.readJSON<Partial<FruitSliceToolInventoryState>>(FRUIT_SLICE_TOOL_INVENTORY_KEY) || {});
@@ -22,12 +23,26 @@ export function getFruitSliceToolCount(kind: FruitSliceInventoryToolKind): numbe
 }
 
 export function addFruitSliceTool(kind: FruitSliceInventoryToolKind, count: number): FruitSliceToolInventoryState {
-  const amount = normalizeCount(count);
+  return addFruitSliceTools({ [kind]: count });
+}
+
+export function addFruitSliceTools(
+  counts: Partial<Record<FruitSliceInventoryToolKind, number>>,
+): FruitSliceToolInventoryState {
   const state = readFruitSliceToolInventory();
-  if (amount <= 0) {
+  const next = { ...state };
+  let changed = false;
+  for (const kind of FRUIT_SLICE_TOOL_KINDS) {
+    const amount = normalizeCount(counts[kind]);
+    if (amount <= 0) {
+      continue;
+    }
+    next[kind] += amount;
+    changed = true;
+  }
+  if (!changed) {
     return state;
   }
-  const next = { ...state, [kind]: state[kind] + amount };
   writeFruitSliceToolInventory(next);
   return next;
 }
