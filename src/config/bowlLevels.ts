@@ -120,8 +120,8 @@ const POST_15_BASE_POOL = [
 
 const POST_15_RECENT_GROUP_WINDOW = 8;
 const POST_15_FIRST_LEVEL = 16;
-const POST_15_START_ORDER_COUNT = 80;
-const POST_15_ORDER_INCREMENT = 2;
+const POST_15_START_ORDER_COUNT = 54;
+const POST_15_ORDER_INCREMENT = 1;
 const POST_15_COPIES_PER_FRUIT = 6;
 
 function uniqueFruitIds(ids: readonly FruitId[]): FruitId[] {
@@ -134,18 +134,30 @@ function post15TargetFoodCount(levelNumber: number): number {
   return Math.ceil((orderCount * 3) / POST_15_COPIES_PER_FRUIT);
 }
 
-function removeOneOldFruitForEarlyLevel(levelIndex: number, fruits: FruitId[]): FruitId[] {
-  if (levelIndex <= 0 || fruits.length <= 1) {
+function targetFruitCountForEarlyLevel(levelNumber: number): number {
+  const targets = [4, 7, 10, 12, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
+  return targets[Math.max(0, Math.min(levelNumber - 1, targets.length - 1))]!;
+}
+
+function trimOldFruitsForEarlyLevel(levelIndex: number, fruits: FruitId[]): FruitId[] {
+  const target = targetFruitCountForEarlyLevel(levelIndex + 1);
+  if (fruits.length <= target) {
     return fruits;
   }
   /**
-   * 每关降 1 种水果时，优先从更早的旧池删，保护本关与上一关新解锁的食材。
-   * L2 没有“更早旧池”，只能从 L1 基础水果里删 1 个。
+   * 降低每关水果种类时，保护本关新解锁食材；L3 起额外保护上一关食材。
+   * 其余名额从较新的旧食材往回补，优先剔除更早的旧水果。
    */
-  const removableGroupsEnd = Math.max(1, levelIndex - 1);
-  const removable = uniqueFruitIds(UNLOCK_GROUPS.slice(0, removableGroupsEnd).flat());
-  const removed = removable[removable.length - 1];
-  return removed ? fruits.filter((id) => id !== removed) : fruits.slice(0, -1);
+  const protectedStart = levelIndex <= 1 ? levelIndex : levelIndex - 1;
+  const protectedIds = new Set<FruitId>(uniqueFruitIds(UNLOCK_GROUPS.slice(protectedStart, levelIndex + 1).flat()));
+  const keep = new Set<FruitId>(protectedIds);
+  for (const id of fruits.filter((fruitId) => !protectedIds.has(fruitId)).reverse()) {
+    if (keep.size >= target) {
+      break;
+    }
+    keep.add(id);
+  }
+  return fruits.filter((id) => keep.has(id));
 }
 
 /**
@@ -155,7 +167,7 @@ function removeOneOldFruitForEarlyLevel(levelIndex: number, fruits: FruitId[]): 
 function levelFruits(levelNumber: number): FruitId[] {
   const idx = Math.max(0, Math.min(levelNumber - 1, UNLOCK_GROUPS.length - 1));
   if (idx < 15) {
-    return removeOneOldFruitForEarlyLevel(
+    return trimOldFruitsForEarlyLevel(
       idx,
       uniqueFruitIds(UNLOCK_GROUPS.slice(0, idx + 1).flat()),
     );
@@ -170,7 +182,7 @@ function levelFruits(levelNumber: number): FruitId[] {
 }
 
 /**
- * 30 关数值（v6，碗内"满当当"画面 + L3 起强压力）：
+ * 30 关数值（v7，平缓学习曲线 + 碗内"满当当"视觉）：
  *   `orderTarget` 全程 = 3（三消核心玩法不动）；
  *   `copiesPerFruit` 必须全程为 3 的倍数，避免生成无法凑满 x3 的尾数水果。
    *   `plateLanesInitial` 默认 = 2 —— 第 3/4 路订单盘上的「解锁」按钮点了才看广告解锁
@@ -180,16 +192,15 @@ function levelFruits(levelNumber: number): FruitId[] {
  *     缓解 buffer 满压力但不解锁订单路。
  *   难度递增完全靠：水果种类 ↑、copiesPerFruit、冰 / 冻果 ↑、bufferSize ↓、初始可见 ↑。
  *
- *   A 段 教学（L1-2）           — 零障碍上手；L2 起 8 种水果让选择压力出现
- *   B 段 习惯养成（L3-7）       — L3 一上来 12 种 + 48 单位 + 4 颗冰 + 72 颗满碗；必用 1 道具/关
- *   C 段 中阶（L8-13）          — 25-35 种水果，冰 8→11、冻果 3→5，碗内 110-125 颗高密度
- *   D 段 高阶（L14-30）         — buffer 收紧 4 格 + 冰冻果增压；L16+ 每关约 +2 单
+ *   A 段 教学（L1-2）           — 零障碍上手；L2 起 7 种水果让选择压力出现
+ *   B 段 习惯养成（L3-7）       — L3 起只增加水果种类与少量冰块，不再把订单量翻倍
+ *   C 段 中阶（L8-15）          — 逐步加入冻果，障碍缓慢爬升，始终保留 5 个暂存盘
+ *   D 段 长线（L16-30）         — 订单量小幅增长，靠新食材与背景变化提供新鲜感
  *
- * 总订单单位 (`ordersRemaining`)：L1=4 → L3=48 → L10=87 → L15=78 → L16=80 → L30=108
- * `bufferSize`：L1-L10 全 5 格保新手手感；L11+ 起收紧为 4 格，与水果种类峰值同步加压。
- * `initialVisibleCount`：L1=14、L2=32、L3=72，从 L3 起碗内堆出明显视觉压力；
- *   `revealPerOrderComplete` 与 `parallelPlateCount × orderTarget`（=6/盘）持平，
- *   保证完成订单后及时补充，碗内密度全程贴近"满"。
+ * 总订单单位 (`ordersRemaining`)：L1=4 → L3≈20 → L10≈40 → L15≈50 → L16≈54 → L30≈68
+ * `bufferSize`：全程 5 格保留安全感；加菜碟工具仍可扩到 7 格。
+ * `initialVisibleCount`：跟随订单量慢慢提升；通过水果放大和更多上层水果来保持画面丰富，
+ *   不再用过量可点击水果制造早期压迫感。
  * `allTools` 全程开。
  */
 export const BOWL_LEVELS: BowlLevelDef[] = [
@@ -221,12 +232,12 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 3,
     displayName: '第3关 热带开席',
     fruitIds: levelFruits(3),
-    copiesPerFruit: 12,
+    copiesPerFruit: 6,
     orderTarget: 3,
     bufferSize: 5,
-    iceCount: 4,
-    initialVisibleCount: 72,
-    revealPerOrderComplete: 6,
+    iceCount: 2,
+    initialVisibleCount: 54,
+    revealPerOrderComplete: 5,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -234,12 +245,12 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 4,
     displayName: '第4关 星果长廊',
     fruitIds: levelFruits(4),
-    copiesPerFruit: 9,
+    copiesPerFruit: 6,
     orderTarget: 3,
     bufferSize: 5,
-    iceCount: 5,
-    initialVisibleCount: 80,
-    revealPerOrderComplete: 6,
+    iceCount: 3,
+    initialVisibleCount: 60,
+    revealPerOrderComplete: 5,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -247,13 +258,13 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 5,
     displayName: '第5关 薄冰试饮',
     fruitIds: levelFruits(5),
-    copiesPerFruit: 9,
+    copiesPerFruit: 6,
     orderTarget: 3,
     bufferSize: 5,
-    iceCount: 6,
+    iceCount: 4,
     frozenCount: 1,
-    initialVisibleCount: 90,
-    revealPerOrderComplete: 6,
+    initialVisibleCount: 66,
+    revealPerOrderComplete: 5,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -261,7 +272,77 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     levelNumber: 6,
     displayName: '第6关 坚果蜜语',
     fruitIds: levelFruits(6),
-    copiesPerFruit: 9,
+    copiesPerFruit: 6,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 4,
+    frozenCount: 1,
+    initialVisibleCount: 72,
+    revealPerOrderComplete: 5,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 7,
+    displayName: '第7关 暖盅小宴',
+    fruitIds: levelFruits(7),
+    copiesPerFruit: 6,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 5,
+    frozenCount: 1,
+    initialVisibleCount: 78,
+    revealPerOrderComplete: 6,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 8,
+    displayName: '第8关 满席小酌',
+    fruitIds: levelFruits(8),
+    copiesPerFruit: 6,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 5,
+    frozenCount: 2,
+    initialVisibleCount: 84,
+    revealPerOrderComplete: 6,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 9,
+    displayName: '第9关 甜脆交锋',
+    fruitIds: levelFruits(9),
+    copiesPerFruit: 6,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 6,
+    frozenCount: 2,
+    initialVisibleCount: 90,
+    revealPerOrderComplete: 6,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 10,
+    displayName: '第10关 深汤追单',
+    fruitIds: levelFruits(10),
+    copiesPerFruit: 6,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 6,
+    frozenCount: 2,
+    initialVisibleCount: 96,
+    revealPerOrderComplete: 6,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 11,
+    displayName: '第11关 鲜果巡礼',
+    fruitIds: levelFruits(11),
+    copiesPerFruit: 6,
     orderTarget: 3,
     bufferSize: 5,
     iceCount: 7,
@@ -272,86 +353,16 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     ...allTools,
   },
   {
-    levelNumber: 7,
-    displayName: '第7关 暖盅小宴',
-    fruitIds: levelFruits(7),
-    copiesPerFruit: 9,
-    orderTarget: 3,
-    bufferSize: 5,
-    iceCount: 8,
-    frozenCount: 2,
-    initialVisibleCount: 105,
-    revealPerOrderComplete: 6,
-    plateLanesInitial: 2,
-    ...allTools,
-  },
-  {
-    levelNumber: 8,
-    displayName: '第8关 满席小酌',
-    fruitIds: levelFruits(8),
-    copiesPerFruit: 9,
-    orderTarget: 3,
-    bufferSize: 5,
-    iceCount: 8,
-    frozenCount: 3,
-    initialVisibleCount: 110,
-    revealPerOrderComplete: 7,
-    plateLanesInitial: 2,
-    ...allTools,
-  },
-  {
-    levelNumber: 9,
-    displayName: '第9关 甜脆交锋',
-    fruitIds: levelFruits(9),
-    copiesPerFruit: 9,
-    orderTarget: 3,
-    bufferSize: 5,
-    iceCount: 9,
-    frozenCount: 3,
-    initialVisibleCount: 115,
-    revealPerOrderComplete: 7,
-    plateLanesInitial: 2,
-    ...allTools,
-  },
-  {
-    levelNumber: 10,
-    displayName: '第10关 深汤追单',
-    fruitIds: levelFruits(10),
-    copiesPerFruit: 9,
-    orderTarget: 3,
-    bufferSize: 5,
-    iceCount: 9,
-    frozenCount: 4,
-    initialVisibleCount: 115,
-    revealPerOrderComplete: 7,
-    plateLanesInitial: 2,
-    ...allTools,
-  },
-  {
-    levelNumber: 11,
-    displayName: '第11关 鲜果巡礼',
-    fruitIds: levelFruits(11),
-    copiesPerFruit: 6,
-    orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 10,
-    frozenCount: 4,
-    initialVisibleCount: 115,
-    revealPerOrderComplete: 7,
-    plateLanesInitial: 2,
-    ...allTools,
-  },
-  {
     levelNumber: 12,
     displayName: '第12关 果香续宴',
     fruitIds: levelFruits(12),
     copiesPerFruit: 6,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 11,
-    frozenCount: 5,
-    initialVisibleCount: 120,
-    revealPerOrderComplete: 7,
+    bufferSize: 5,
+    iceCount: 7,
+    frozenCount: 3,
+    initialVisibleCount: 104,
+    revealPerOrderComplete: 6,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -361,11 +372,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(13),
     copiesPerFruit: 6,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 11,
-    frozenCount: 5,
-    initialVisibleCount: 125,
-    revealPerOrderComplete: 8,
+    bufferSize: 5,
+    iceCount: 8,
+    frozenCount: 3,
+    initialVisibleCount: 108,
+    revealPerOrderComplete: 7,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -375,11 +386,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(14),
     copiesPerFruit: 6,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 12,
-    frozenCount: 6,
-    initialVisibleCount: 125,
-    revealPerOrderComplete: 8,
+    bufferSize: 5,
+    iceCount: 8,
+    frozenCount: 4,
+    initialVisibleCount: 112,
+    revealPerOrderComplete: 7,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -389,11 +400,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(15),
     copiesPerFruit: 6,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 12,
-    frozenCount: 6,
-    initialVisibleCount: 130,
-    revealPerOrderComplete: 8,
+    bufferSize: 5,
+    iceCount: 9,
+    frozenCount: 4,
+    initialVisibleCount: 116,
+    revealPerOrderComplete: 7,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -403,11 +414,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(16),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 13,
-    frozenCount: 7,
-    initialVisibleCount: 130,
-    revealPerOrderComplete: 8,
+    bufferSize: 5,
+    iceCount: 9,
+    frozenCount: 4,
+    initialVisibleCount: 118,
+    revealPerOrderComplete: 7,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -417,11 +428,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(17),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 13,
-    frozenCount: 7,
-    initialVisibleCount: 135,
-    revealPerOrderComplete: 8,
+    bufferSize: 5,
+    iceCount: 9,
+    frozenCount: 5,
+    initialVisibleCount: 120,
+    revealPerOrderComplete: 7,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -431,11 +442,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(18),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 14,
-    frozenCount: 8,
-    initialVisibleCount: 140,
-    revealPerOrderComplete: 9,
+    bufferSize: 5,
+    iceCount: 10,
+    frozenCount: 5,
+    initialVisibleCount: 122,
+    revealPerOrderComplete: 7,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -445,11 +456,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(19),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 14,
-    frozenCount: 8,
-    initialVisibleCount: 140,
-    revealPerOrderComplete: 9,
+    bufferSize: 5,
+    iceCount: 10,
+    frozenCount: 5,
+    initialVisibleCount: 124,
+    revealPerOrderComplete: 8,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -459,11 +470,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(20),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 15,
-    frozenCount: 9,
-    initialVisibleCount: 145,
-    revealPerOrderComplete: 9,
+    bufferSize: 5,
+    iceCount: 11,
+    frozenCount: 6,
+    initialVisibleCount: 126,
+    revealPerOrderComplete: 8,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -473,11 +484,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(21),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 15,
-    frozenCount: 9,
-    initialVisibleCount: 145,
-    revealPerOrderComplete: 9,
+    bufferSize: 5,
+    iceCount: 11,
+    frozenCount: 6,
+    initialVisibleCount: 128,
+    revealPerOrderComplete: 8,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -487,11 +498,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(22),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 16,
-    frozenCount: 10,
-    initialVisibleCount: 150,
-    revealPerOrderComplete: 9,
+    bufferSize: 5,
+    iceCount: 12,
+    frozenCount: 6,
+    initialVisibleCount: 130,
+    revealPerOrderComplete: 8,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -501,11 +512,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(23),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 16,
-    frozenCount: 10,
-    initialVisibleCount: 150,
-    revealPerOrderComplete: 10,
+    bufferSize: 5,
+    iceCount: 12,
+    frozenCount: 7,
+    initialVisibleCount: 132,
+    revealPerOrderComplete: 8,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -515,11 +526,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(24),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 17,
-    frozenCount: 11,
-    initialVisibleCount: 155,
-    revealPerOrderComplete: 10,
+    bufferSize: 5,
+    iceCount: 13,
+    frozenCount: 7,
+    initialVisibleCount: 134,
+    revealPerOrderComplete: 8,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -529,11 +540,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(25),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 17,
-    frozenCount: 11,
-    initialVisibleCount: 155,
-    revealPerOrderComplete: 10,
+    bufferSize: 5,
+    iceCount: 13,
+    frozenCount: 7,
+    initialVisibleCount: 136,
+    revealPerOrderComplete: 9,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -543,11 +554,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(26),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 18,
-    frozenCount: 12,
-    initialVisibleCount: 160,
-    revealPerOrderComplete: 10,
+    bufferSize: 5,
+    iceCount: 14,
+    frozenCount: 8,
+    initialVisibleCount: 138,
+    revealPerOrderComplete: 9,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -557,11 +568,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(27),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 18,
-    frozenCount: 12,
-    initialVisibleCount: 160,
-    revealPerOrderComplete: 10,
+    bufferSize: 5,
+    iceCount: 14,
+    frozenCount: 8,
+    initialVisibleCount: 140,
+    revealPerOrderComplete: 9,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -571,11 +582,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(28),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 19,
-    frozenCount: 13,
-    initialVisibleCount: 165,
-    revealPerOrderComplete: 10,
+    bufferSize: 5,
+    iceCount: 15,
+    frozenCount: 8,
+    initialVisibleCount: 142,
+    revealPerOrderComplete: 9,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -585,11 +596,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(29),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 19,
-    frozenCount: 13,
-    initialVisibleCount: 170,
-    revealPerOrderComplete: 11,
+    bufferSize: 5,
+    iceCount: 15,
+    frozenCount: 9,
+    initialVisibleCount: 144,
+    revealPerOrderComplete: 9,
     plateLanesInitial: 2,
     ...allTools,
   },
@@ -599,11 +610,11 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     fruitIds: levelFruits(30),
     copiesPerFruit: POST_15_COPIES_PER_FRUIT,
     orderTarget: 3,
-    bufferSize: 4,
-    iceCount: 20,
-    frozenCount: 14,
-    initialVisibleCount: 175,
-    revealPerOrderComplete: 11,
+    bufferSize: 5,
+    iceCount: 16,
+    frozenCount: 9,
+    initialVisibleCount: 146,
+    revealPerOrderComplete: 9,
     plateLanesInitial: 2,
     ...allTools,
   },

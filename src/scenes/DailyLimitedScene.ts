@@ -11,6 +11,7 @@ import {
 import { FRUIT_MAP, type FruitId } from '@/config/fruits';
 import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
+import { Haptics } from '@/core/Haptics';
 import { PersistService } from '@/core/PersistService';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
@@ -1415,6 +1416,7 @@ export class DailyLimitedScene implements Scene {
       return;
     }
 
+    Haptics.light();
     // 在标记 removed 之前先记录卡片当前位置，作为飞入动画的起点。
     this.cardClicksThisRound += 1;
     const fromPos = this.cardWorldCenter(card);

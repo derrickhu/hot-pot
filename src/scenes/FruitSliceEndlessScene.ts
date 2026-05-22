@@ -20,6 +20,7 @@ import { analytics } from '@/analytics';
 import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
 import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
+import { Haptics } from '@/core/Haptics';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { BowlTutorialOverlay } from '@/gameobjects/BowlTutorialOverlay';
@@ -2105,6 +2106,7 @@ export class FruitSliceEndlessScene implements Scene {
       this.handleTutorialFruitTap(node);
       return;
     }
+    Haptics.light();
     AudioManager.playScoopSound();
     node.releaseX = node.x;
     node.releaseY = node.y;
@@ -2120,6 +2122,7 @@ export class FruitSliceEndlessScene implements Scene {
       this.pulseTutorialTarget();
       return;
     }
+    Haptics.light();
     AudioManager.playScoopSound();
     node.releaseX = node.x;
     node.releaseY = node.y;

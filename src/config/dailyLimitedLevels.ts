@@ -1,6 +1,6 @@
 import type { FruitId } from '@/config/fruits';
 
-export const DAILY_LIMITED_MAX_FRUIT_TYPES = 20;
+export const DAILY_LIMITED_MAX_FRUIT_TYPES = 19;
 export const DAILY_LIMITED_MIN_STACK_CARDS = 210;
 
 /** 每日限定每局每种道具（洗牌 / 撤销 / 抬起）各自可用次数上限 */
@@ -57,7 +57,7 @@ export function getDailyLimitedPlayableFruitIds(level: DailyThemeLevelDef): read
     seen.add(fruitId);
     result.push(fruitId);
   };
-  // 目标水果必须优先保留；剩余名额再补干扰水果，保证实际发牌种类不超过 20。
+  // 目标水果必须优先保留；剩余名额再补干扰水果，保证实际发牌种类不超过 19。
   for (const target of level.targets) {
     push(target.fruitId);
   }

@@ -30,7 +30,7 @@
    - 每个目标必须满足：`requiredCount <= cardCopies <= requiredCount + 2`。
    - 示例：目标 6 个葡萄，则葡萄卡片总数只能是 6-8。
 4. 配置卡牌规模：
-   - `fruitIds` 至少 20 种水果/配料，保证局内变化足够。
+   - `fruitIds` 可配置较多种类；局内实际发牌由 `getDailyLimitedPlayableFruitIds` 截断为最多 19 种（目标水果必含）。
    - `totalStackCards` 是堆叠区总卡数，不是目标卡数；必须大于等于 210，保持满屏堆叠难度。
    - 后续主题只能在 210 基础上增加，不能减少。
    - 目标卡优先进入堆叠区。
@@ -109,7 +109,7 @@ recipeCard: {
 - 目标水果数量必须是 1-3。
 - 每个目标水果必须存在于 `fruitIds`。
 - 每个目标 `cardCopies` 必须在 `requiredCount` 到 `requiredCount + 2` 之间。
-- `fruitIds` 至少 20 种。
+- `fruitIds` 建议覆盖足够干扰池； playable 上限 19 种，目标水果必须在其中。
 - `totalStackCards` 如果配置，必须大于等于 210，且不能小于目标卡总数。
 - `recipeCard.textureKey` 和 `recipeCard.path` 必填。
 
