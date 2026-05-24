@@ -1,4 +1,5 @@
 import { BOWL_LEVEL_COUNT } from '@/config/bowlLevels';
+import { BackendService } from '@/core/BackendService';
 import { getMaxUnlockedBowlBadgeLevelNumber, getMaxUnlockedBowlLevelIndex } from '@/game/BowlProgress';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
 import { RankService } from '@/services/RankService';
@@ -30,6 +31,11 @@ let lastProfileFingerprint = '';
 let inFlightBowlSubmit: Promise<unknown> | null = null;
 let inFlightFruitSubmit: Promise<unknown> | null = null;
 
+const RANK_UPLOAD_BLOCKED_USER_IDS = new Set([
+  // GM 测试账号：不上传世界榜，也不刷新微信好友榜 KV。
+  'wx:oB0xx3SeJgkkU0_ONokPrzvFljrE',
+]);
+
 /**
  * 资料一旦更新（拿到真实微信昵称 / 头像）：
  *   1. 清掉本进程内的去重缓存，避免新资料被旧 key 短路
@@ -57,12 +63,23 @@ function shouldSkipBackend(): boolean {
   return !RankService.available;
 }
 
+function isRankUploadBlockedUser(): boolean {
+  return RANK_UPLOAD_BLOCKED_USER_IDS.has(BackendService.userId);
+}
+
+function shouldSkipRankUpload(): boolean {
+  return shouldSkipBackend() || isRankUploadBlockedUser();
+}
+
 /**
  * 同步把当前最高关卡 / 果切高分推送到微信 KV（好友榜数据源）。
  * - 任何主流程的 RankService.submit 之后调一次即可，内置节流避免刷接口；
  * - 不依赖 CloudBase，离线 / 未启用后端时也能让好友榜显示。
  */
 function syncFriendRankFromLocal(): void {
+  if (isRankUploadBlockedUser()) {
+    return;
+  }
   const level = Math.min(BOWL_LEVEL_COUNT, Math.max(0, getMaxUnlockedBowlLevelIndex() + 1));
   const score = getFruitSliceBestScore();
   uploadFriendScores(level, score);
@@ -74,7 +91,7 @@ function syncFriendRankFromLocal(): void {
  * 后端 `isBetterRecord` 也会兜底拦截非更优记录。
  */
 export function submitCurrentBowlProgressRank(): void {
-  if (shouldSkipBackend()) {
+  if (shouldSkipRankUpload()) {
     return;
   }
   const level = Math.min(BOWL_LEVEL_COUNT, Math.max(1, getMaxUnlockedBowlLevelIndex() + 1));
@@ -123,7 +140,7 @@ export function submitCurrentBowlProgressRank(): void {
  * isNewBest=false 时直接 return，避免无意义网络请求。
  */
 export function submitFruitBestRankIfNeeded(isNewBest: boolean): void {
-  if (!isNewBest || shouldSkipBackend()) {
+  if (!isNewBest || shouldSkipRankUpload()) {
     return;
   }
   submitFruitBestNow();
@@ -134,7 +151,7 @@ export function submitFruitBestRankIfNeeded(isNewBest: boolean): void {
  * 由 fruitUploadScore 在本进程内去重，已经上报过的不会重发。
  */
 export function submitFruitBestNow(): void {
-  if (shouldSkipBackend()) {
+  if (shouldSkipRankUpload()) {
     return;
   }
   const score = getFruitSliceBestScore();
@@ -195,7 +212,7 @@ export function flushPendingRankUploads(): void {
 export async function awaitFlushPendingRankUploads(): Promise<void> {
   // 即使 CloudBase 不可用，好友榜走的是微信 KV，也要刷一刀
   syncFriendRankFromLocal();
-  if (shouldSkipBackend()) {
+  if (shouldSkipRankUpload()) {
     return;
   }
   // 先把"打开榜单"前已经发起、还在飞行中的 submit 等完，

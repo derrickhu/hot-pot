@@ -7,6 +7,8 @@ export const BOWL_SOUP_KEYS = [
   'mango_coconut',
   'taro_purple',
   'cocoa',
+  'avocado_yogurt',
+  'pomegranate_soda',
 ] as const;
 
 export const BOWL_RIM_KEYS = [
@@ -16,6 +18,8 @@ export const BOWL_RIM_KEYS = [
   'sesame_clay',
   'gold_porcelain',
   'star_glass',
+  'coral_shell',
+  'honey_amber_glass',
 ] as const;
 
 export type BowlSoupKey = (typeof BOWL_SOUP_KEYS)[number];
@@ -31,6 +35,8 @@ export const BOWL_SOUP_ASSETS: Record<BowlSoupKey, string> = {
   mango_coconut: `${BOWL_IMAGES_ROOT}/bowl_soup_mango_coconut.png`,
   taro_purple: `${BOWL_IMAGES_ROOT}/bowl_soup_taro_purple.png`,
   cocoa: `${BOWL_IMAGES_ROOT}/bowl_soup_cocoa.png`,
+  avocado_yogurt: `${BOWL_IMAGES_ROOT}/bowl_soup_avocado_yogurt.png`,
+  pomegranate_soda: `${BOWL_IMAGES_ROOT}/bowl_soup_pomegranate_soda.png`,
 };
 
 export const BOWL_RIM_ASSETS: Record<BowlRimKey, string> = {
@@ -40,6 +46,8 @@ export const BOWL_RIM_ASSETS: Record<BowlRimKey, string> = {
   sesame_clay: `${BOWL_IMAGES_ROOT}/bowl_rim_sesame_clay.png`,
   gold_porcelain: `${BOWL_IMAGES_ROOT}/bowl_rim_gold_porcelain.png`,
   star_glass: `${BOWL_IMAGES_ROOT}/bowl_rim_star_glass.png`,
+  coral_shell: `${BOWL_IMAGES_ROOT}/bowl_rim_coral_shell.png`,
+  honey_amber_glass: `${BOWL_IMAGES_ROOT}/bowl_rim_honey_amber_glass.png`,
 };
 
 export const BOWL_SOUP_UNLOCKS: Array<{ levelNumber: number; key: BowlSoupKey; label: string }> = [
@@ -49,6 +57,8 @@ export const BOWL_SOUP_UNLOCKS: Array<{ levelNumber: number; key: BowlSoupKey; l
   { levelNumber: 14, key: 'mango_coconut', label: '芒果椰乳黄汤' },
   { levelNumber: 20, key: 'taro_purple', label: '芋泥紫汤' },
   { levelNumber: 26, key: 'cocoa', label: '可可巧克力汤' },
+  { levelNumber: 32, key: 'avocado_yogurt', label: '牛油果酸奶绿汤' },
+  { levelNumber: 36, key: 'pomegranate_soda', label: '石榴气泡红汤' },
 ];
 
 export const BOWL_RIM_UNLOCKS: Array<{ levelNumber: number; key: BowlRimKey; label: string }> = [
@@ -58,6 +68,8 @@ export const BOWL_RIM_UNLOCKS: Array<{ levelNumber: number; key: BowlRimKey; lab
   { levelNumber: 17, key: 'sesame_clay', label: '黑芝麻陶土碗' },
   { levelNumber: 23, key: 'gold_porcelain', label: '金边白瓷碗' },
   { levelNumber: 29, key: 'star_glass', label: '星空玻璃碗' },
+  { levelNumber: 34, key: 'coral_shell', label: '珊瑚贝壳碗' },
+  { levelNumber: 39, key: 'honey_amber_glass', label: '蜂蜜琥珀玻璃碗' },
 ];
 
 export interface BowlSkinUnlock {

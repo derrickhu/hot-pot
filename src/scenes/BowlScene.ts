@@ -116,6 +116,8 @@ const BADGE_SHARE_REWARD_BUTTON_TEXTURE_KEY = 'badge_share_reward_button';
 const BADGE_SHARE_REWARD_BUTTON_ASSET = `${BOWL_IMAGES_ROOT}/badge_share_reward_button.png`;
 const BOWL_BADGE_UNLOCK_TITLE_TEXTURE_KEY = 'bowl_badge_unlock_title';
 const BOWL_BADGE_UNLOCK_TITLE_ASSET = `${BOWL_IMAGES_ROOT}/bowl_badge_unlock_title.png`;
+const BOWL_ALL_CLEAR_RIBBON_TITLE_TEXTURE_KEY = 'bowl_all_clear_ribbon_title';
+const BOWL_ALL_CLEAR_RIBBON_TITLE_ASSET = `${BOWL_IMAGES_ROOT}/bowl_all_clear_ribbon_title.png`;
 const ICE_CUBE_ID: FruitId = 'ice_cube';
 const NON_ORDER_FRUIT_IDS = new Set<FruitId>([ICE_CUBE_ID]);
 
@@ -1272,6 +1274,7 @@ export class BowlScene implements Scene {
     jobs.push(TextureCache.load(BOWL_TOOL_REWARD_ICONS_TEXTURE_KEY, BOWL_TOOL_REWARD_ICONS_ASSET));
     jobs.push(TextureCache.load(BADGE_SHARE_REWARD_BUTTON_TEXTURE_KEY, BADGE_SHARE_REWARD_BUTTON_ASSET));
     jobs.push(TextureCache.load(BOWL_BADGE_UNLOCK_TITLE_TEXTURE_KEY, BOWL_BADGE_UNLOCK_TITLE_ASSET));
+    jobs.push(TextureCache.load(BOWL_ALL_CLEAR_RIBBON_TITLE_TEXTURE_KEY, BOWL_ALL_CLEAR_RIBBON_TITLE_ASSET));
     jobs.push(TextureCache.load(LEVEL_CLEAR_ACTION_ICONS_TEXTURE_KEY, LEVEL_CLEAR_ACTION_ICONS_ASSET));
     jobs.push(TextureCache.load(BOWL_UNLOCK_PANEL_TEXTURE_KEY, BOWL_UNLOCK_PANEL_ASSET));
     jobs.push(TextureCache.load(BOWL_NEXT_LEVEL_BUTTON_TEXTURE_KEY, BOWL_NEXT_LEVEL_BUTTON_ASSET));
@@ -1296,6 +1299,8 @@ export class BowlScene implements Scene {
       TextureCache.get(BOWL_NEXT_LEVEL_BUTTON_TEXTURE_KEY),
       TextureCache.get(BOWL_LEVEL_CLEAR_SIDE_ACTION_BUTTON_TEXTURE_KEY),
       TextureCache.get(BOWL_LEVEL_CLEAR_HOME_BUTTON_TEXTURE_KEY),
+      TextureCache.get(BOWL_ALL_CLEAR_RIBBON_TITLE_TEXTURE_KEY),
+      TextureCache.get(BADGE_SHARE_REWARD_BUTTON_TEXTURE_KEY),
     );
     this.settingsOverlay.setPanelTexture(TextureCache.get(BOWL_PAUSE_PANEL_TEXTURE_KEY));
     this.reviveOverlay.setPanelTexture(TextureCache.get(BOWL_FAIL_REVIVE_PANEL_TEXTURE_KEY));
@@ -3752,6 +3757,7 @@ export class BowlScene implements Scene {
         newSkinUnlocks: skinUnlocks,
         passRate,
         isLastLevel: isLast,
+        isAllClear: isLast,
         onHome: () => {
           this.levelClearOverlay.hide();
           SceneManager.switchTo('home');
@@ -3772,7 +3778,10 @@ export class BowlScene implements Scene {
             });
         },
         onShare: () => {
-          if (shareGame()) {
+          if (shareGame({
+            title: '40关全清！我把这碗水果捞满分通关了',
+            query: 'from=share&entry=bowl_all_clear',
+          })) {
             this.toast('转发成功');
           } else {
             this.toast('转发请在微信小游戏中使用');

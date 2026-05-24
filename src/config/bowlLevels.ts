@@ -41,7 +41,8 @@ const allTools = { allowAddDish: true, allowRemove: true, allowShuffle: true } a
 /**
  * 每关新解锁的食材（累积式：本关订单池 = 前 N 组并集）。
  * 节奏：L1=4、L2 解锁 4 但订单池压到 7、L3 解锁 4 但订单池压到 11；
- *      L4-15 保持原解锁节奏不动，L16-30 补齐全部小料/滋补/甜品食材。
+ *      L4-15 保持原解锁节奏不动，L16-30 补齐全部小料/滋补/甜品食材，
+ *      L31-40 开启鲜果续章。
  * 关卡通关弹窗的「下一关解锁」会显示对应组中的新水果。
  */
 const UNLOCK_GROUPS = [
@@ -75,6 +76,16 @@ const UNLOCK_GROUPS = [
   ['grass_jelly', 'taro_ball', 'taro_dice'],
   ['pop_boba'],
   ['dragonfruit'],
+  ['mangosteen', 'pear'],
+  ['avocado'],
+  ['pomegranate'],
+  ['yangjiaomi_melon', 'hawthorn'],
+  ['wax_apple'],
+  ['emblic'],
+  ['guava'],
+  ['papaya'],
+  ['fig'],
+  ['apricot'],
 ] as const satisfies readonly (readonly FruitId[])[];
 
 /** 图鉴只展示关卡体系内真正可获得的食材，避免通关后仍出现永远无法解锁的占位。 */
@@ -118,20 +129,33 @@ const POST_15_BASE_POOL = [
   'walnut_piece',
 ] as const satisfies readonly FruitId[];
 
-const POST_15_RECENT_GROUP_WINDOW = 8;
+const POST_15_RECENT_GROUP_WINDOW = 10;
 const POST_15_FIRST_LEVEL = 16;
 const POST_15_START_ORDER_COUNT = 54;
 const POST_15_ORDER_INCREMENT = 1;
 const POST_15_COPIES_PER_FRUIT = 6;
+const FINAL_CHAPTER_FIRST_LEVEL = 31;
+const FINAL_CHAPTER_START_ORDER_COUNT = 72;
+const FINAL_CHAPTER_END_ORDER_COUNT = 100;
 
 function uniqueFruitIds(ids: readonly FruitId[]): FruitId[] {
   return Array.from(new Set<FruitId>(ids));
 }
 
 function post15TargetFoodCount(levelNumber: number): number {
-  const orderCount =
-    POST_15_START_ORDER_COUNT + (levelNumber - POST_15_FIRST_LEVEL) * POST_15_ORDER_INCREMENT;
+  const orderCount = post15TargetOrderCount(levelNumber);
   return Math.ceil((orderCount * 3) / POST_15_COPIES_PER_FRUIT);
+}
+
+function post15TargetOrderCount(levelNumber: number): number {
+  if (levelNumber >= FINAL_CHAPTER_FIRST_LEVEL) {
+    const progress = Math.max(0, Math.min(1, (levelNumber - FINAL_CHAPTER_FIRST_LEVEL) / 9));
+    return Math.round(
+      FINAL_CHAPTER_START_ORDER_COUNT +
+        (FINAL_CHAPTER_END_ORDER_COUNT - FINAL_CHAPTER_START_ORDER_COUNT) * progress,
+    );
+  }
+  return POST_15_START_ORDER_COUNT + (levelNumber - POST_15_FIRST_LEVEL) * POST_15_ORDER_INCREMENT;
 }
 
 function targetFruitCountForEarlyLevel(levelNumber: number): number {
@@ -173,7 +197,12 @@ function levelFruits(levelNumber: number): FruitId[] {
     );
   }
   const recentStart = Math.max(15, idx - POST_15_RECENT_GROUP_WINDOW + 1);
-  const targetFoodCount = Math.max(1, post15TargetFoodCount(levelNumber) - 1);
+  const targetFoodCount = Math.max(
+    1,
+    levelNumber >= FINAL_CHAPTER_FIRST_LEVEL
+      ? post15TargetFoodCount(levelNumber)
+      : post15TargetFoodCount(levelNumber) - 1,
+  );
   return uniqueFruitIds([
     ...UNLOCK_GROUPS.slice(recentStart, idx + 1).flat(),
     ...POST_15_BASE_POOL,
@@ -182,7 +211,7 @@ function levelFruits(levelNumber: number): FruitId[] {
 }
 
 /**
- * 30 关数值（v7，平缓学习曲线 + 碗内"满当当"视觉）：
+ * 40 关数值（v8，平缓学习曲线 + 碗内"满当当"视觉）：
  *   `orderTarget` 全程 = 3（三消核心玩法不动）；
  *   `copiesPerFruit` 必须全程为 3 的倍数，避免生成无法凑满 x3 的尾数水果。
    *   `plateLanesInitial` 默认 = 2 —— 第 3/4 路订单盘上的「解锁」按钮点了才看广告解锁
@@ -196,8 +225,9 @@ function levelFruits(levelNumber: number): FruitId[] {
  *   B 段 习惯养成（L3-7）       — L3 起只增加水果种类与少量冰块，不再把订单量翻倍
  *   C 段 中阶（L8-15）          — 逐步加入冻果，障碍缓慢爬升，始终保留 5 个暂存盘
  *   D 段 长线（L16-30）         — 订单量小幅增长，靠新食材与背景变化提供新鲜感
+ *   E 段 续章（L31-40）         — 新鲜果回归，叠加新碗汤奖励，不再追加复杂机制
  *
- * 总订单单位 (`ordersRemaining`)：L1=4 → L3≈20 → L10≈40 → L15≈50 → L16≈54 → L30≈68
+ * 总订单单位 (`ordersRemaining`)：L1=4 → L3≈20 → L10≈40 → L15≈50 → L16≈54 → L30≈68 → L40≈100
  * `bufferSize`：全程 5 格保留安全感；加菜碟工具仍可扩到 7 格。
  * `initialVisibleCount`：跟随订单量慢慢提升；通过水果放大和更多上层水果来保持画面丰富，
  *   不再用过量可点击水果制造早期压迫感。
@@ -615,6 +645,146 @@ export const BOWL_LEVELS: BowlLevelDef[] = [
     frozenCount: 9,
     initialVisibleCount: 146,
     revealPerOrderComplete: 9,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 31,
+    displayName: '第31关 紫冠初席',
+    fruitIds: levelFruits(31),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 16,
+    frozenCount: 9,
+    initialVisibleCount: 148,
+    revealPerOrderComplete: 10,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 32,
+    displayName: '第32关 油绿奶香',
+    fruitIds: levelFruits(32),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 17,
+    frozenCount: 9,
+    initialVisibleCount: 150,
+    revealPerOrderComplete: 10,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 33,
+    displayName: '第33关 红宝石雨',
+    fruitIds: levelFruits(33),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 17,
+    frozenCount: 10,
+    initialVisibleCount: 152,
+    revealPerOrderComplete: 10,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 34,
+    displayName: '第34关 蜜瓜弯月',
+    fruitIds: levelFruits(34),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 18,
+    frozenCount: 10,
+    initialVisibleCount: 154,
+    revealPerOrderComplete: 10,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 35,
+    displayName: '第35关 莲雾粉雾',
+    fruitIds: levelFruits(35),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 18,
+    frozenCount: 10,
+    initialVisibleCount: 156,
+    revealPerOrderComplete: 10,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 36,
+    displayName: '第36关 回甘青果',
+    fruitIds: levelFruits(36),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 18,
+    frozenCount: 11,
+    initialVisibleCount: 158,
+    revealPerOrderComplete: 10,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 37,
+    displayName: '第37关 芭乐餐车',
+    fruitIds: levelFruits(37),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 19,
+    frozenCount: 11,
+    initialVisibleCount: 160,
+    revealPerOrderComplete: 11,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 38,
+    displayName: '第38关 木瓜暖盅',
+    fruitIds: levelFruits(38),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 19,
+    frozenCount: 11,
+    initialVisibleCount: 162,
+    revealPerOrderComplete: 11,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 39,
+    displayName: '第39关 无花蜜宴',
+    fruitIds: levelFruits(39),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 20,
+    frozenCount: 12,
+    initialVisibleCount: 164,
+    revealPerOrderComplete: 11,
+    plateLanesInitial: 2,
+    ...allTools,
+  },
+  {
+    levelNumber: 40,
+    displayName: '第40关 杏光终宴',
+    fruitIds: levelFruits(40),
+    copiesPerFruit: POST_15_COPIES_PER_FRUIT,
+    orderTarget: 3,
+    bufferSize: 5,
+    iceCount: 20,
+    frozenCount: 12,
+    initialVisibleCount: 166,
+    revealPerOrderComplete: 11,
     plateLanesInitial: 2,
     ...allTools,
   },

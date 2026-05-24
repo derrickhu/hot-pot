@@ -4,8 +4,9 @@ import { Game } from '@/core/Game';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { analytics } from '@/analytics';
+import { BOWL_LEVEL_COUNT } from '@/config/bowlLevels';
 import { getDailyLimitedLevelForDate } from '@/config/dailyLimitedLevels';
-import { getBowlLevelIndex } from '@/game/BowlProgress';
+import { getBowlLevelIndex, getMaxUnlockedBowlBadgeLevelNumber } from '@/game/BowlProgress';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH } from '@/gameobjects/CoinBar';
 import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
@@ -171,15 +172,22 @@ export class HomeScene implements Scene {
   }
 
   private refreshPlayEntryTitle(): void {
-    this.playEntryTitle.text = `第${getBowlLevelIndex() + 1}关`;
+    this.playEntryTitle.text = this.isAllBowlLevelsCleared() ? '已通关' : `第${getBowlLevelIndex() + 1}关`;
   }
 
   private refreshModeEntryTags(): void {
-    this.updateModeEntryTag(this.playEntryTag, [
-      { text: '第', color: 0x2f681b },
-      { text: `${getBowlLevelIndex() + 1}`, color: 0xf08a18 },
-      { text: '关', color: 0x2f681b },
-    ], 0xf7fff1, 0x4c9e2d);
+    if (this.isAllBowlLevelsCleared()) {
+      this.updateModeEntryTag(this.playEntryTag, [
+        { text: '已通关', color: 0xf08a18 },
+        { text: ' · 敬请期待', color: 0x2f681b },
+      ], 0xf7fff1, 0x4c9e2d);
+    } else {
+      this.updateModeEntryTag(this.playEntryTag, [
+        { text: '第', color: 0x2f681b },
+        { text: `${getBowlLevelIndex() + 1}`, color: 0xf08a18 },
+        { text: '关', color: 0x2f681b },
+      ], 0xf7fff1, 0x4c9e2d);
+    }
     this.updateModeEntryTag(
       this.dailyLimitedEntryTag,
       [
@@ -198,6 +206,10 @@ export class HomeScene implements Scene {
       0xfff5df,
       0xf08a1b,
     );
+  }
+
+  private isAllBowlLevelsCleared(): boolean {
+    return getMaxUnlockedBowlBadgeLevelNumber() >= BOWL_LEVEL_COUNT;
   }
 
   private async loadHomeBackdrop(width: number, height: number): Promise<void> {
@@ -827,6 +839,11 @@ export class HomeScene implements Scene {
 
   private async enterBowlWithLoading(): Promise<void> {
     if (this.enteringBowl) {
+      return;
+    }
+    if (this.isAllBowlLevelsCleared()) {
+      const api = typeof wx !== 'undefined' ? wx : null;
+      api?.showToast?.({ title: '已通关，请期待后续关卡', icon: 'none' });
       return;
     }
     this.enteringBowl = true;

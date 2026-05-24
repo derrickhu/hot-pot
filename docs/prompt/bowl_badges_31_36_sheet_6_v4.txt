@@ -1,0 +1,18 @@
+Create a 3 columns x 2 rows sprite sheet of six isolated mobile game dessert achievement icons matching the existing hot-pot badge style: standalone cup or bowl sticker icons, thick cream-white outer outline plus thin dark brown outline, glossy Q-style hand-painted mobile game art. No circular background disk, no round badge base, no card frame, no text, no labels, no letters, no numbers.
+
+Food logic constraints:
+- Mangosteen must be peeled edible white segments only in the drink; no hard purple shell in the cup, no unpeeled fruit served as topping.
+- Avocado must be blended smoothie/puree only; no avocado half, no pit, no hard peel in the cup.
+- Yangjiaomi melon must be peeled edible flesh only; no rind, no hard peel in the drink.
+
+Top row left to right:
+31. Mangosteen snow pear cup: clear dessert cup with pale pear drink, peeled white mangosteen segments, soft yellow pear cubes and pear slices, ice cubes, small green garnish. No purple shell inside the cup.
+32. Avocado yogurt smoothie cup: tall creamy avocado-green smoothie, white yogurt foam, soft green puree swirls and tiny avocado cubes, mint leaf. No avocado half, no pit, no peel.
+33. Pomegranate shaved ice bowl: ruby red shaved ice bowl covered with pomegranate seeds and red syrup, cute rounded bowl.
+
+Bottom row left to right:
+34. Peeled yangjiaomi melon hawthorn iced tea cup: amber tea cup with peeled pale green melon flesh crescents/cubes and red hawthorn berries, ice cubes. No melon rind or peel.
+35. Wax apple pink sparkling cup: pale pink soda cup with wax apple wedges, bubbles and ice.
+36. Emblic honey green tea cup: green-gold iced tea cup with small round green emblic fruits, ice and leaf garnish.
+
+Strict negative prompt: NO TEXT, no captions, no labels, no circular base, no colored circle, no card, no unpeeled mangosteen shell in drink, no avocado pit, no avocado half, no melon rind, no melon peel.

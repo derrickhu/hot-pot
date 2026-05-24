@@ -1,0 +1,17 @@
+Create a 3 columns x 2 rows sprite sheet of six isolated mobile game dessert achievement icons, matching the existing hot-pot badge style: one cute drink cup or dessert bowl object per cell, transparent background or plain light background, thick cream-white outer outline plus thin dark brown outline, glossy Q-style hand-painted mobile game art.
+
+IMPORTANT STYLE MATCH:
+- NO circular badge base, NO colored round disk behind the object, NO card frame, NO label area.
+- The silhouette should be the cup or bowl itself, like a standalone sticker icon.
+- Each cell contains only one complete drink/bowl object centered, filling about 80% of the cell.
+- NO TEXT anywhere, no captions under the icon, no numbers, no letters, no logo, no watermark.
+
+Icons:
+31. Purple mangosteen snow pear cup: clear dessert cup with pale pear iced drink, purple mangosteen shell crown on top, white mangosteen segments, soft yellow pear slices inside the cup, ice cubes, small green leaf garnish.
+32. Avocado yogurt smoothie cup: tall creamy avocado green smoothie cup, avocado half with pit on top, thick white yogurt foam, mint leaf, glossy cup highlights, cute clean outline.
+33. Ruby pomegranate shaved ice bowl: rounded dessert bowl filled with ruby red shaved ice and pomegranate seeds, red syrup shine, small ice crystals, golden sparkle garnish, no background disk.
+34. Crescent melon hawthorn iced tea cup: amber iced tea cup with crescent-shaped yangjiaomi melon slices, red hawthorn berries, ice cubes, tiny seashell garnish on the cup rim, no circular base.
+35. Wax apple pink sparkling cup: clear rounded cup with pale pink soda, glossy wax apple wedges, ice cubes, soft bubbles, aqua sparkle highlights, standalone cup icon only.
+36. Emblic honey green tea cup: green-gold iced fruit tea cup, small round emblic fruits, honey-gold tea glow, lime-green highlights, ice cubes, fresh leaf garnish.
+
+Strict negative prompt: NO TEXT, no labels, no captions, no writing anywhere, no letters, no numbers, no circular badge base, no colored circle behind icon, no round background, no card frame, no UI panel, no watermark, no logo, no realistic photo, no cropped object, no duplicate icon in one cell.

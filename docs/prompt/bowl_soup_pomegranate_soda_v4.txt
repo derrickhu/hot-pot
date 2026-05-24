@@ -1,0 +1,5 @@
+STRICT square 1:1 game texture. Match the existing game soup texture style: flat hand-painted mobile game material, soft cel-shaded highlights, simple clean circular disk, not realistic, not photo, not detailed 3D.
+
+TOP-DOWN orthographic view. A centered perfect circular liquid disk, diameter about 72% of frame width. Inside the circle: pomegranate soda soup in a stylized flat game texture. Use a bright ruby-red base with a soft coral center glow, simple lighter red swirl bands, a few small pale pink bubble dots, and a few tiny stylized pomegranate seed marks. Keep it clean and cartoon-like, with limited detail, no realistic bubbles, no photographic seeds, no heavy 3D lighting. It should look like the existing soup assets but with a red sparkling fruit-tea color identity.
+
+Outside the circle: ONLY flat solid chroma magenta RGB(255,0,255) #FF00FF. No bowl, no spoon, no shadow. NO TEXT, no labels, no captions, no watermark.

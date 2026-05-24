@@ -3,11 +3,13 @@ import type { BowlBadgeDef } from '@/config/bowlBadges';
 
 export interface BowlBadgeIconOptions {
   locked?: boolean;
+  spriteScale?: number;
+  spriteOffsetY?: number;
 }
 
-function fitSprite(sp: PIXI.Sprite, texture: PIXI.Texture, size: number): void {
+function fitSprite(sp: PIXI.Sprite, texture: PIXI.Texture, size: number, scale = 0.9): void {
   sp.anchor.set(0.5);
-  const maxSide = size * 0.9;
+  const maxSide = size * scale;
   if (texture.width >= texture.height) {
     sp.width = maxSide;
     sp.height = texture.width > 0 ? (texture.height / texture.width) * maxSide : maxSide;
@@ -119,7 +121,8 @@ export function mountBowlBadgeIcon(
 
   if (texture) {
     const sp = new PIXI.Sprite(texture);
-    fitSprite(sp, texture, size);
+    fitSprite(sp, texture, size, options.spriteScale);
+    sp.y = options.spriteOffsetY ?? 0;
     root.addChild(sp);
     return;
   }

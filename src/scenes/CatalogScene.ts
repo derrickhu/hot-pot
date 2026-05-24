@@ -651,7 +651,11 @@ export class CatalogScene implements Scene {
       const badgeMount = new PIXI.Container();
       badgeMount.position.set(-cellW / 2, 0);
       const badgeTex = TextureCache.get(slot.textureKey);
-      mountBowlBadgeIcon(badgeMount, slot.badge, badgeTex, cellW, { locked: !slot.unlocked });
+      mountBowlBadgeIcon(badgeMount, slot.badge, badgeTex, cellW, {
+        locked: !slot.unlocked,
+        spriteScale: 0.84,
+        spriteOffsetY: -4,
+      });
       cell.addChild(badgeMount);
 
       const levelLabel = new PIXI.Text(`第${slot.badge.levelNumber}关`, {

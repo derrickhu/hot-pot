@@ -13,6 +13,10 @@ const {
 const BOARD_BOWL = 'bowl_progress';
 const BOARD_FRUIT = 'fruit_best';
 const BOARDS = new Set([BOARD_BOWL, BOARD_FRUIT]);
+const RANK_SUBMIT_BLOCKED_USER_IDS = new Set([
+  // GM 测试账号：不再写入 / 更新排行榜数据，避免测试进度污染线上榜单。
+  'wx:oB0xx3SeJgkkU0_ONokPrzvFljrE',
+]);
 
 function normalizeBoard(value) {
   const board = String(value || '').trim();
@@ -151,6 +155,15 @@ async function handleSubmit(req) {
   const body = req.body || {};
   const board = normalizeBoard(body.board);
   const incoming = buildSubmitRecord(board, body);
+  if (RANK_SUBMIT_BLOCKED_USER_IDS.has(userId)) {
+    console.log(`[rank.submit] uid=${userId} board=${board} blocked GM test account`);
+    return {
+      board,
+      updated: false,
+      reason: 'GM_TEST_ACCOUNT',
+      record: null,
+    };
+  }
   const col = getRankingCollection();
   const existingRes = await col.where({ userId, board }).limit(1).get();
   const existing = (existingRes && Array.isArray(existingRes.data) && existingRes.data[0]) || null;

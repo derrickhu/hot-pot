@@ -1,0 +1,8 @@
+Create a 2 columns x 2 rows sprite sheet of four cute mobile game achievement badge icons, transparent background or plain pale background, consistent Q-style hand-painted art, thick white outline, glossy summer dessert look. Each cell contains exactly one round soft badge icon with one cup or bowl drink/dessert in the center.
+
+37. Guava fruit-cart milkshake badge: pale green guava milkshake cup, guava cross-section with pink center, creamy white foam, small fruit-cart striped accent, fresh tropical look.
+38. Papaya warm milk bowl badge: orange papaya milk dessert bowl, papaya cubes and wedge, creamy milk base, warm golden highlights, cozy but still refreshing dessert icon.
+39. Fig honey feast bowl badge: elegant purple fig dessert bowl, sliced figs with red seed centers, honey amber drizzle, cream highlights, premium golden rim sparkle.
+40. Apricot beach finale bowl badge: celebratory apricot fruit bowl, warm orange apricot halves, golden beach sunlight glow, tiny mint and ice sparkle, grand final badge feeling.
+
+Strict constraints: NO TEXT, no labels, no captions, no writing anywhere in the image, no watermark, no logo, no realistic photo, no messy background, no cropped object, no duplicate icon in one cell.

@@ -11,6 +11,8 @@ export interface BowlLevelClearOverlayOptions {
   passRate?: BowlLevelClearPassRate | null;
   /** 是否已是最后一关（文案区分「下一关」） */
   isLastLevel: boolean;
+  /** 全部关卡已通关：只显示完成提示和回首页按钮 */
+  isAllClear?: boolean;
   onHome: () => void;
   onNextLevel: () => void;
   onShare: () => void;
@@ -101,11 +103,22 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   private readonly shareIconHost = new PIXI.Container();
   private readonly homeHint: PIXI.Text;
   private readonly shareHint: PIXI.Text;
+  private readonly allClearRoot: PIXI.Container;
+  private readonly allClearTitleSprite: PIXI.Sprite;
+  private readonly allClearFallbackTitle: PIXI.Text;
+  private readonly allClearSubtitle: PIXI.Text;
+  private readonly allClearShareBtn: PIXI.Container;
+  private readonly allClearShareSprite: PIXI.Sprite;
+  private readonly allClearShareBg: PIXI.Graphics;
+  private readonly allClearShareLabel: PIXI.Text;
+  private allClearTitleTexture: PIXI.Texture | null = null;
+  private allClearShareButtonTexture: PIXI.Texture | null = null;
 
   private panelW = 480;
   private panelH = 520;
   private panelX = 0;
   private panelY = 0;
+  private usePanelSpriteForCurrentShow = true;
 
   private readonly screenW: number;
   private readonly screenH: number;
@@ -328,6 +341,71 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.shareHint.anchor.set(0.5, 0);
     this.addChild(this.shareHint);
 
+    this.allClearRoot = new PIXI.Container();
+    this.allClearRoot.visible = false;
+    this.addChild(this.allClearRoot);
+
+    this.allClearTitleSprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
+    this.allClearTitleSprite.anchor.set(0.5);
+    this.allClearTitleSprite.visible = false;
+    this.allClearRoot.addChild(this.allClearTitleSprite);
+
+    this.allClearFallbackTitle = new PIXI.Text('恭喜通关', {
+      fontSize: 54,
+      fill: 0xffef65,
+      fontWeight: '900',
+      stroke: 0x7b3518,
+      strokeThickness: 8,
+      dropShadow: true,
+      dropShadowBlur: 4,
+      dropShadowDistance: 3,
+      dropShadowColor: 0x2c1208,
+      lineJoin: 'round',
+    });
+    this.allClearFallbackTitle.anchor.set(0.5);
+    this.allClearRoot.addChild(this.allClearFallbackTitle);
+
+    this.allClearSubtitle = new PIXI.Text('40关全清达成！快晒出你的满分通关战绩', {
+      fontSize: 25,
+      fill: 0xfff6d8,
+      fontWeight: '900',
+      stroke: 0x5a2b16,
+      strokeThickness: 5,
+      lineJoin: 'round',
+      align: 'center',
+    });
+    this.allClearSubtitle.anchor.set(0.5);
+    this.allClearRoot.addChild(this.allClearSubtitle);
+
+    this.allClearShareBtn = new PIXI.Container();
+    this.allClearShareBtn.eventMode = 'static';
+    this.allClearShareBtn.cursor = 'pointer';
+    this.allClearShareBtn.hitArea = new PIXI.Rectangle(-140, -42, 280, 84);
+    this.allClearShareBtn.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      this.onShare();
+    });
+    this.allClearRoot.addChild(this.allClearShareBtn);
+
+    this.allClearShareBg = new PIXI.Graphics();
+    this.allClearShareBtn.addChild(this.allClearShareBg);
+
+    this.allClearShareSprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
+    this.allClearShareSprite.anchor.set(0.5);
+    this.allClearShareSprite.visible = false;
+    this.allClearShareBtn.addChild(this.allClearShareSprite);
+
+    this.allClearShareLabel = new PIXI.Text('分享', {
+      fontSize: 34,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x5b3a32,
+      strokeThickness: 6,
+      lineJoin: 'round',
+    });
+    this.allClearShareLabel.anchor.set(0.5);
+    this.allClearShareBtn.addChild(this.allClearShareLabel);
+
     this.redrawSparkles();
   }
 
@@ -336,6 +414,8 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     nextButtonTexture?: PIXI.Texture | null,
     sideActionButtonTexture?: PIXI.Texture | null,
     homeButtonTexture?: PIXI.Texture | null,
+    allClearTitleTexture?: PIXI.Texture | null,
+    allClearShareButtonTexture?: PIXI.Texture | null,
   ): void {
     if (panelTexture) {
       this.panelSprite.texture = panelTexture;
@@ -354,6 +434,12 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     if (homeButtonTexture) {
       this.homeWideSprite.texture = homeButtonTexture;
       this.homeWideSprite.visible = true;
+    }
+    if (allClearTitleTexture) {
+      this.allClearTitleTexture = allClearTitleTexture;
+    }
+    if (allClearShareButtonTexture) {
+      this.allClearShareButtonTexture = allClearShareButtonTexture;
     }
   }
 
@@ -463,7 +549,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
   }
 
   private redrawSparkles(): void {
-    if (this.panelSprite.visible) {
+    if (this.usePanelSpriteForCurrentShow && this.panelSprite.visible) {
       this.titleRoot.visible = false;
       return;
     }
@@ -494,8 +580,14 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.panelShadow.clear();
     this.panelBody.clear();
     this.panelInner.clear();
+    this.panelSprite.renderable = this.usePanelSpriteForCurrentShow;
 
-    if (this.panelSprite.visible && this.panelSprite.texture.width > 0 && this.panelSprite.texture.height > 0) {
+    if (
+      this.usePanelSpriteForCurrentShow &&
+      this.panelSprite.visible &&
+      this.panelSprite.texture.width > 0 &&
+      this.panelSprite.texture.height > 0
+    ) {
       this.panelSprite.position.set(pw / 2, ph / 2);
       this.panelSprite.width = pw;
       this.panelSprite.height = ph;
@@ -575,6 +667,93 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     g.endFill();
   }
 
+  private mountAllClearTitle(): void {
+    const tex = this.allClearTitleTexture;
+    if (tex && tex.width > 0 && tex.height > 0) {
+      this.allClearTitleSprite.texture = tex;
+      const maxW = Math.min(660, this.screenW * 0.92);
+      const maxH = 270;
+      const scale = Math.min(maxW / tex.width, maxH / tex.height);
+      this.allClearTitleSprite.scale.set(scale);
+      this.allClearTitleSprite.visible = true;
+      this.allClearFallbackTitle.visible = false;
+      return;
+    }
+    this.allClearTitleSprite.visible = false;
+    this.allClearFallbackTitle.visible = true;
+  }
+
+  private redrawAllClearShareButton(): void {
+    this.allClearShareBg.clear();
+    const tex = this.allClearShareButtonTexture;
+    const hasTexture = !!tex && tex.width > 0 && tex.height > 0;
+    this.allClearShareSprite.visible = hasTexture;
+    this.allClearShareLabel.visible = !hasTexture;
+    if (hasTexture && tex) {
+      this.allClearShareSprite.texture = tex;
+      const targetW = 260;
+      this.allClearShareSprite.scale.set(targetW / tex.width);
+      this.allClearShareBtn.hitArea = new PIXI.Rectangle(-130, -54, 260, 108);
+      return;
+    }
+
+    const g = this.allClearShareBg;
+    g.beginFill(0x2e2018, 0.28);
+    g.drawRoundedRect(-132, -38, 264, 76, 22);
+    g.endFill();
+    g.lineStyle(5, 0x6b4b42, 1);
+    g.beginFill(0xc9f6a6);
+    g.drawRoundedRect(-136, -44, 272, 78, 20);
+    g.endFill();
+    g.lineStyle(2, 0xffffff, 0.55);
+    g.beginFill(0xe3ffc7, 0.7);
+    g.drawRoundedRect(-124, -36, 248, 42, 16);
+    g.endFill();
+    this.allClearShareBtn.hitArea = new PIXI.Rectangle(-136, -44, 272, 78);
+  }
+
+  private showAllClear(options: BowlLevelClearOverlayOptions): void {
+    const w = this.screenW;
+    const h = this.screenH;
+
+    this.panelRoot.visible = false;
+    this.titleRoot.visible = false;
+    this.gridRoot.visible = false;
+    this.rewardRoot.visible = false;
+    this.passRateRoot.visible = false;
+    this.nextBtn.visible = false;
+    this.nextBtn.eventMode = 'none';
+    this.shareBtn.visible = false;
+    this.shareBtn.eventMode = 'none';
+    this.shareHint.visible = false;
+    this.homeHint.visible = false;
+    this.allClearRoot.visible = true;
+
+    this.mountAllClearTitle();
+    this.redrawAllClearShareButton();
+    this.homeActionBg.visible = false;
+    this.homeIconHost.visible = false;
+    this.homeBtn.getChildAt(0).visible = false;
+    this.homeBtn.getChildAt(1).visible = false;
+    this.redrawHomeWideButton();
+
+    this.allClearRoot.position.set(w / 2, 0);
+    this.allClearTitleSprite.position.set(0, Math.round(h * 0.25));
+    this.allClearFallbackTitle.position.set(0, Math.round(h * 0.25));
+    this.allClearSubtitle.position.set(0, Math.round(h * 0.48));
+    const shareBtnY = Math.round(h * 0.62);
+    const homeBtnY = Math.round(h * 0.73);
+    this.allClearShareBtn.position.set(0, shareBtnY);
+    this.homeBtn.position.set(w / 2, homeBtnY);
+    this.homeBtn.visible = true;
+    this.homeBtn.eventMode = 'static';
+
+    this.onHome = options.onHome;
+    this.onNextLevel = options.onNextLevel;
+    this.onShare = options.onShare;
+    this.visible = true;
+  }
+
   show(options: BowlLevelClearOverlayOptions): void {
     this.onHome = options.onHome;
     this.onNextLevel = options.onNextLevel;
@@ -583,16 +762,30 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     const w = this.screenW;
     const h = this.screenH;
 
+    if (options.isAllClear) {
+      this.showAllClear(options);
+      return;
+    }
+
+    this.panelRoot.visible = true;
+    this.gridRoot.visible = true;
+    this.allClearRoot.visible = false;
+
     const ids = options.newFruitIds;
     const skinUnlocks = options.newSkinUnlocks ?? [];
+    const isAllClear = !!options.isAllClear;
     const unlockCount = ids.length + skinUnlocks.length;
-    const hasPanelSkin = this.panelSprite.visible && this.panelSprite.texture.width > 0;
+    this.usePanelSpriteForCurrentShow = !isAllClear;
+    const hasPanelSkin =
+      this.usePanelSpriteForCurrentShow && this.panelSprite.visible && this.panelSprite.texture.width > 0;
     const panelMaxW = Math.min(hasPanelSkin ? 540 : 520, Math.floor(w * 0.88));
     const innerW = panelMaxW - (hasPanelSkin ? 72 : 40);
 
     const gridGap = hasPanelSkin ? 10 : 12;
     let rows: number;
-    if (unlockCount === 0) {
+    if (isAllClear) {
+      rows = 2;
+    } else if (unlockCount === 0) {
       rows = 1;
     } else {
       rows = Math.ceil(unlockCount / COLS);
@@ -616,7 +809,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
       topPad +
       headerH +
       gridTopGap +
-      (unlockCount === 0 ? 48 : gridH) +
+      (isAllClear ? 160 : unlockCount === 0 ? 48 : gridH) +
       footerH +
       bottomPad;
     const ph = hasPanelSkin
@@ -632,7 +825,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.redrawSparkles();
 
     this.titleRoot.position.set(w / 2, this.panelY + topPad + 8);
-    this.titleText.text = skinUnlocks.length > 0 || hasPanelSkin ? '解锁新内容' : '解锁新食材';
+    this.titleText.text = isAllClear ? '全部通关' : skinUnlocks.length > 0 || hasPanelSkin ? '解锁新内容' : '解锁新食材';
 
     this.gridRoot.position.set(this.panelX + (hasPanelSkin ? 46 : 20), this.panelY + topPad + headerH + gridTopGap + (hasPanelSkin ? 28 : 0));
 
@@ -641,11 +834,19 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.mountActionIconSprites();
 
     this.rewardRoot.visible = false;
-    this.renderPassRate(options.passRate ?? null);
+    this.renderPassRate(isAllClear ? null : options.passRate ?? null);
 
     const footY = this.panelY + ph - (hasPanelSkin ? 78 : bottomPad + 40);
     this.homeBtn.position.set(w / 2 - 112, footY);
     this.nextBtn.position.set(w / 2 + 112, footY);
+    if (isAllClear) {
+      this.homeBtn.position.set(w / 2, footY);
+      this.nextBtn.visible = false;
+      this.nextBtn.eventMode = 'none';
+    } else {
+      this.nextBtn.visible = true;
+      this.nextBtn.eventMode = 'static';
+    }
     this.shareBtn.visible = false;
     this.shareBtn.eventMode = 'none';
     this.shareHint.visible = false;
@@ -653,7 +854,7 @@ export class BowlLevelClearOverlay extends PIXI.Container {
     this.homeHint.visible = false;
     this.homeHint.position.set(this.homeBtn.x, this.homeBtn.y + 21);
     this.shareHint.position.set(this.shareBtn.x, this.shareBtn.y + 21);
-    const gridBottomY = this.gridRoot.y + (unlockCount === 0 ? 48 : gridH);
+    const gridBottomY = this.gridRoot.y + (isAllClear ? 160 : unlockCount === 0 ? 48 : gridH);
     const nextButtonTopY = footY - 38;
     const passRateCardH = 92;
     const passRateGapY = Math.max(16, Math.round((nextButtonTopY - gridBottomY - passRateCardH) / 2));
@@ -664,7 +865,18 @@ export class BowlLevelClearOverlay extends PIXI.Container {
 
     this.gridRoot.removeChildren();
 
-    if (unlockCount === 0) {
+    if (isAllClear) {
+      const empty = new PIXI.Text('恭喜通关全部关卡！\n更多水果关卡正在准备中\n敬请期待后续更新', {
+        fontSize: 23,
+        fill: 0x7a5c4e,
+        fontWeight: '800',
+        align: 'center',
+        lineHeight: 36,
+      });
+      empty.resolution = 2;
+      empty.position.set(innerW / 2 - empty.width / 2, 18);
+      this.gridRoot.addChild(empty);
+    } else if (unlockCount === 0) {
       const empty = new PIXI.Text('本关无新内容', {
         fontSize: 20,
         fill: 0x7a5c4e,

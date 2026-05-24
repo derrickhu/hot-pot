@@ -1,0 +1,5 @@
+STRICT square 1:1 game texture. Match the existing game soup texture style: flat hand-painted mobile game material, soft cel-shaded highlights, simple clean circular disk, not realistic, not photo, not detailed 3D.
+
+TOP-DOWN orthographic view. A centered perfect circular liquid disk, diameter about 72% of frame width. Inside the circle: avocado yogurt soup in a stylized flat game texture. Use a pale avocado green base with broad creamy white swirl bands and a few soft darker green arcs. Add only very subtle painted speckles, no realistic chunks, no 3D cubes, no photographic texture. It should look like the existing matcha/mango/taro soup assets but with a clearer avocado-green color identity.
+
+Outside the circle: ONLY flat solid chroma magenta RGB(255,0,255) #FF00FF. No bowl, no spoon, no shadow. NO TEXT, no labels, no captions, no watermark.

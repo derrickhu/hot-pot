@@ -1,0 +1,15 @@
+Create a 2 columns x 2 rows sprite sheet of four isolated mobile game dessert achievement icons, matching the existing hot-pot badge style: one cute drink cup or dessert bowl object per cell, transparent background or plain light background, thick cream-white outer outline plus thin dark brown outline, glossy Q-style hand-painted mobile game art.
+
+IMPORTANT STYLE MATCH:
+- NO circular badge base, NO colored round disk behind the object, NO card frame, NO label area.
+- The silhouette should be the cup or bowl itself, like a standalone sticker icon.
+- Each cell contains only one complete drink/bowl object centered, filling about 80% of the cell.
+- NO TEXT anywhere, no captions under the icon, no numbers, no letters, no logo, no watermark.
+
+Icons:
+37. Guava fruit-cart milkshake cup: pale green guava milkshake cup, guava cross-section with pink center, creamy white foam, tiny striped awning garnish attached to the cup, tropical sticker style.
+38. Papaya warm milk dessert bowl: orange papaya milk dessert bowl, papaya cubes and one papaya wedge, creamy milk base, warm golden highlights, rounded cute bowl silhouette.
+39. Fig honey feast bowl: elegant purple dessert bowl with sliced figs showing red seed centers, honey amber drizzle, cream highlights, premium dessert sticker style.
+40. Apricot beach finale bowl: celebratory apricot fruit bowl, warm orange apricot halves, golden beach sunlight glow, tiny mint and ice sparkle, grand final dessert icon.
+
+Strict negative prompt: NO TEXT, no labels, no captions, no writing anywhere, no letters, no numbers, no circular badge base, no colored circle behind icon, no round background, no card frame, no UI panel, no watermark, no logo, no realistic photo, no cropped object, no duplicate icon in one cell.
