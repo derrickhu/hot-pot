@@ -40,7 +40,12 @@ import {
 } from '@/gameobjects/BowlMechanicIntroOverlay';
 import { openLeaderboard } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_FRUIT } from '@/services/RankService';
-import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
+import {
+  loadBowlCoreSubpackage,
+  loadBowlSubpackage,
+  loadCatalogAssetsSubpackage,
+  loadFruitSliceSubpackage,
+} from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
 import { FRUIT_SLICE_REWARDED_AD_UNIT_ID, showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { isFruitSliceTutorialDone, markFruitSliceTutorialDone } from '@/utils/tutorialState';
@@ -111,11 +116,11 @@ const FRUIT_SLICE_VISUAL_SCALE: Partial<Record<FruitId, number>> = {
   pineapple: 1.08,
   starfruit: 1.12,
 };
-const FRUIT_SLICE_UI_DIR = 'subpackages/bowl_game/assets/images/fruit_slice';
+const FRUIT_SLICE_UI_DIR = 'subpackages/fruit_slice/assets/images/fruit_slice';
 const UI_PANEL_FREE_BTN_TEXTURE = `${BOWL_IMAGES_ROOT}/ui_panel_free_btn.png`;
 const FRUIT_SLICE_TOOL_ROUND_LIMIT = 2;
 const FRUIT_SLICE_UI_ASSETS = {
-  bg: `${FRUIT_SLICE_UI_DIR}/bg.png`,
+  bg: `${FRUIT_SLICE_UI_DIR}/bg.jpg`,
   scorePanel: `${FRUIT_SLICE_UI_DIR}/score_panel.png`,
   toolButtons: `${FRUIT_SLICE_UI_DIR}/tool_buttons.png`,
   slantedBoardLeft: `${FRUIT_SLICE_UI_DIR}/slanted_board_left.png`,
@@ -405,7 +410,12 @@ export class FruitSliceEndlessScene implements Scene {
 
   private async doPreloadAssets(): Promise<void> {
     try {
-      await loadBowlSubpackage();
+      await Promise.all([
+        loadBowlSubpackage(),
+        loadBowlCoreSubpackage(),
+        loadCatalogAssetsSubpackage(),
+        loadFruitSliceSubpackage(),
+      ]);
       const sliceIds = FRUIT_CONFIGS.filter((fruit) => FRUIT_SLICE_ID_SET.has(fruit.id));
       await Promise.all([
         TextureCache.load('fruit_slice_ui_bg', FRUIT_SLICE_UI_ASSETS.bg),
@@ -2904,7 +2914,7 @@ export class FruitSliceEndlessScene implements Scene {
         AudioManager.playButtonSound();
         if (!shareGame({
           title: '果切无尽新记录，来挑战你的眼力！',
-          imageUrl: 'assets/images/fruit_slice_share_card.jpg',
+          imageUrl: 'subpackages/fruit_slice/assets/images/fruit_slice/fruit_slice_share_card.jpg',
           query: 'from=share&entry=fruit_slice_record',
         })) {
           this.spawnCenterBanner('请在微信中分享');

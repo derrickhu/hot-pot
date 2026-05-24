@@ -144,7 +144,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_pineapple_sprite_slush',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/pineapple_sprite_slush_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/pineapple_sprite_slush_recipe_card_v3.jpg',
       catalogTitle: '菠萝冰',
       catalogSubtitle: '菠萝雪碧冰沙',
       shareTitle: '菠萝雪碧冰沙制作方法，酸甜清爽一口降温！',
@@ -205,7 +205,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_grape_cheese_ice',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/grape_cheese_ice_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/grape_cheese_ice_recipe_card_v3.jpg',
       catalogTitle: '多肉葡萄',
       catalogSubtitle: '葡萄青提茉莉冰饮',
       shareTitle: '多肉葡萄制作方法，清甜多汁果香浓郁！',
@@ -234,7 +234,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_peach_oolong',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/peach_oolong_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/peach_oolong_recipe_card_v3.jpg',
       catalogTitle: '多肉桃桃',
       catalogSubtitle: '桃子茉莉冰饮',
       shareTitle: '多肉桃桃制作方法，清甜多汁果香满满！',
@@ -266,7 +266,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_passionfruit_lemon',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/passionfruit_lemon_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/passionfruit_lemon_recipe_card_v3.jpg',
       catalogTitle: '百香果爆柠檬',
       catalogSubtitle: '百香果柠檬冰饮',
       shareTitle: '百香果爆柠檬制作方法，酸甜爽口冰凉一夏！',
@@ -295,7 +295,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_green_grape_jasmine',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/green_grape_jasmine_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/green_grape_jasmine_recipe_card_v3.jpg',
       catalogTitle: '青提茉莉茶',
       catalogSubtitle: '青提茉莉冰饮',
       shareTitle: '青提茉莉茶制作方法，清甜爽口花香淡雅！',
@@ -324,7 +324,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_grapefruit_jasmine',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/grapefruit_jasmine_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/grapefruit_jasmine_recipe_card_v3.jpg',
       catalogTitle: '西柚茉莉茶',
       catalogSubtitle: '西柚茉莉冰饮',
       shareTitle: '西柚茉莉茶制作方法，清新果香颜值满分！',
@@ -353,7 +353,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_strawberry_oolong',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/strawberry_oolong_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/strawberry_oolong_recipe_card_v3.jpg',
       catalogTitle: '草莓乌龙茶',
       catalogSubtitle: '草莓乌龙冰饮',
       shareTitle: '草莓乌龙茶制作方法，酸甜少女心爆棚！',
@@ -382,7 +382,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_mango_green_tea',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/mango_green_tea_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/mango_green_tea_recipe_card_v3.jpg',
       catalogTitle: '芒果绿茶',
       catalogSubtitle: '芒果绿茶冰饮',
       shareTitle: '芒果绿茶制作方法，热带果香清爽不腻！',
@@ -411,7 +411,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_lychee_rose',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/lychee_rose_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/lychee_rose_recipe_card_v3.jpg',
       catalogTitle: '荔枝玫瑰茶',
       catalogSubtitle: '荔枝玫瑰冰饮',
       shareTitle: '荔枝玫瑰茶制作方法，清甜花香仙气满满！',
@@ -443,7 +443,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_pineapple_coconut',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/pineapple_coconut_recipe_card_v4.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/pineapple_coconut_recipe_card_v4.jpg',
       catalogTitle: '菠萝椰子茶',
       catalogSubtitle: '菠萝椰乳冰饮',
       shareTitle: '菠萝椰子茶制作方法，清爽解腻一口降温！',
@@ -475,7 +475,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_orange_apple_tea',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/orange_apple_tea_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/orange_apple_tea_recipe_card_v3.jpg',
       catalogTitle: '橙子苹果茶',
       catalogSubtitle: '橙香苹果红茶',
       shareTitle: '橙子苹果茶制作方法，橙香苹果清甜暖茶！',
@@ -504,7 +504,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_lemon_honey_black_tea',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/lemon_honey_black_tea_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/lemon_honey_black_tea_recipe_card_v3.jpg',
       catalogTitle: '柠檬蜂蜜红茶',
       catalogSubtitle: '柠檬红茶冰饮',
       shareTitle: '柠檬蜂蜜红茶制作方法，暖胃经典酸甜舒服！',
@@ -562,7 +562,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_blueberry_mulberry',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/blueberry_mulberry_recipe_card_v3.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/blueberry_mulberry_recipe_card_v3.jpg',
       catalogTitle: '蓝莓桑葚茶',
       catalogSubtitle: '蓝莓桑葚冰饮',
       shareTitle: '蓝莓桑葚茶制作方法，酸甜浆果一口清爽！',
@@ -594,7 +594,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_watermelon_green_grape',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/watermelon_green_grape_tea_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/watermelon_green_grape_tea_recipe_card_v1.jpg',
       catalogTitle: '西瓜青提冰茶',
       catalogSubtitle: '西瓜青提茉莉冰饮',
       shareTitle: '西瓜青提冰茶制作方法，清甜多汁夏日冰茶！',
@@ -623,7 +623,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_blueberry_soda',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/blueberry_soda_tea_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/blueberry_soda_tea_recipe_card_v1.jpg',
       catalogTitle: '蓝莓气泡茶',
       catalogSubtitle: '蓝莓气泡冰饮',
       shareTitle: '蓝莓气泡茶制作方法，酸甜浆果气泡冰饮！',
@@ -655,7 +655,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_mango_banana_smoothie',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/mango_banana_smoothie_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/mango_banana_smoothie_recipe_card_v1.jpg',
       catalogTitle: '芒果香蕉冰饮',
       catalogSubtitle: '热带香甜顺滑冰饮',
       shareTitle: '芒果香蕉冰饮制作方法，热带香甜顺滑冰饮！',
@@ -713,7 +713,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_peach_lychee_lime',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/peach_lychee_lime_tea_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/peach_lychee_lime_tea_recipe_card_v1.jpg',
       catalogTitle: '桃子荔枝青柠茶',
       catalogSubtitle: '桃香荔枝青柠冰茶',
       shareTitle: '桃子荔枝青柠茶制作方法，桃香荔枝青柠冰茶！',
@@ -745,7 +745,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_kumquat_lemon',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/kumquat_lemon_tea_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/kumquat_lemon_tea_recipe_card_v1.jpg',
       catalogTitle: '金桔柠檬茶',
       catalogSubtitle: '酸甜清爽柑橘茶',
       shareTitle: '金桔柠檬茶制作方法，酸甜清爽不腻口！',
@@ -774,7 +774,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_apple_ginger',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/apple_ginger_tea_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/apple_ginger_tea_recipe_card_v1.jpg',
       catalogTitle: '苹果生姜茶',
       catalogSubtitle: '暖身苹果生姜茶',
       shareTitle: '苹果生姜茶制作方法，身上暖了不怕凉！',
@@ -806,7 +806,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_snow_pear_lily',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/snow_pear_lily_tea_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/snow_pear_lily_tea_recipe_card_v1.jpg',
       catalogTitle: '雪梨百合茶',
       catalogSubtitle: '温润雪梨百合茶',
       shareTitle: '雪梨百合茶制作方法，嗓子不干咳嗽少了！',
@@ -838,7 +838,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_orange_mint',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/orange_mint_tea_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/orange_mint_tea_recipe_card_v1.jpg',
       catalogTitle: '橙子薄荷茶',
       catalogSubtitle: '清爽橙子薄荷茶',
       shareTitle: '橙子薄荷茶制作方法，整个人清爽起来！',
@@ -870,7 +870,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_guava_avocado_smoothie',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/guava_avocado_smoothie_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/guava_avocado_smoothie_recipe_card_v1.jpg',
       catalogTitle: '芭乐牛油果奶昔',
       catalogSubtitle: '清甜顺滑夏日奶昔',
       shareTitle: '芭乐牛油果奶昔制作方法，清甜顺滑一杯就满足！',
@@ -902,7 +902,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_cucumber_pear_juice',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/cucumber_pear_juice_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/cucumber_pear_juice_recipe_card_v1.jpg',
       catalogTitle: '黄瓜雪梨汁',
       catalogSubtitle: '清爽润口果蔬汁',
       shareTitle: '黄瓜雪梨汁制作方法，清爽润口很适合夏天！',
@@ -934,7 +934,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_lychee_dragonfruit_drink',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/lychee_dragonfruit_drink_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/lychee_dragonfruit_drink_recipe_card_v1.jpg',
       catalogTitle: '荔枝火龙果饮',
       catalogSubtitle: '粉粉果香冰饮',
       shareTitle: '荔枝火龙果饮制作方法，粉粉果香清甜多汁！',
@@ -963,7 +963,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_pickled_cherry_tomato_plum',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/pickled_cherry_tomato_plum_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/pickled_cherry_tomato_plum_recipe_card_v1.jpg',
       catalogTitle: '梅渍小番茄',
       catalogSubtitle: '酸甜开胃冰爽小食',
       shareTitle: '梅渍小番茄制作方法，酸甜开胃冰爽入味！',
@@ -992,7 +992,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_pomegranate_ice_tea',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/pomegranate_ice_tea_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/pomegranate_ice_tea_recipe_card_v1.jpg',
       catalogTitle: '石榴冰茶',
       catalogSubtitle: '红宝石果粒冰茶',
       shareTitle: '石榴冰茶制作方法，红宝石果粒酸甜爆汁！',
@@ -1024,7 +1024,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_bayberry_lychee_drink',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/bayberry_lychee_drink_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/bayberry_lychee_drink_recipe_card_v1.jpg',
       catalogTitle: '杨梅荔枝饮',
       catalogSubtitle: '酸甜莓香荔枝饮',
       shareTitle: '杨梅荔枝饮制作方法，酸甜莓香清爽解暑！',
@@ -1059,7 +1059,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_bayberry_rena_ice',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/bayberry_rena_ice_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/bayberry_rena_ice_recipe_card_v1.jpg',
       catalogTitle: '杨梅瑞纳冰',
       catalogSubtitle: '酸甜杨梅沙冰饮',
       shareTitle: '杨梅瑞纳冰制作方法，酸甜冰爽还有杨梅颗粒感！',
@@ -1088,7 +1088,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_cantaloupe_oat_latte',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/cantaloupe_oat_latte_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/cantaloupe_oat_latte_recipe_card_v1.jpg',
       catalogTitle: '蜜瓜燕麦拿铁',
       catalogSubtitle: '清甜蜜瓜咖啡拿铁',
       shareTitle: '蜜瓜燕麦拿铁制作方法，清甜顺滑还带咖啡香！',
@@ -1120,7 +1120,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_guava_emblic_drink',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/guava_emblic_drink_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/guava_emblic_drink_recipe_card_v1.jpg',
       catalogTitle: '芭乐油柑饮',
       catalogSubtitle: '清爽回甘果茶饮',
       shareTitle: '芭乐油柑饮制作方法，清爽回甘越喝越香！',
@@ -1149,7 +1149,7 @@ export const DAILY_LIMITED_LEVELS: readonly DailyThemeLevelDef[] = [
     },
     recipeCard: {
       textureKey: 'daily_limited_recipe_papaya_milk',
-      path: 'subpackages/bowl_game/assets/images/daily_limited/recipes/papaya_milk_recipe_card_v1.jpg',
+      path: 'subpackages/daily_recipes/assets/images/daily_limited/recipes/papaya_milk_recipe_card_v1.jpg',
       catalogTitle: '木瓜牛奶',
       catalogSubtitle: '香甜暖润木瓜奶',
       shareTitle: '木瓜牛奶制作方法，香甜暖润一杯很舒服！',

@@ -2,20 +2,21 @@ import { USER_SETTINGS_KEY } from '@/config/CloudConfig';
 import { PersistService } from '@/core/PersistService';
 
 const DEFAULT_BGM_SRC = 'assets/audio/melon_spoon_loop.mp3';
-const FRUIT_SLICE_BGM_SRC = 'assets/audio/fruit_slice_bgm.mp3';
-const SCOOP_SFX_SRC = 'assets/audio/scoop_2.mp3';
-const ORDER_COMPLETE_SFX_SRC = 'assets/audio/order_complete.mp3';
+const SUBPACKAGE_AUDIO_ROOT = 'subpackages/bowl_game/assets/audio';
+const FRUIT_SLICE_BGM_SRC = `${SUBPACKAGE_AUDIO_ROOT}/fruit_slice_bgm.mp3`;
+const SCOOP_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/scoop_2.mp3`;
+const ORDER_COMPLETE_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/order_complete.mp3`;
 const BUTTON_SFX_SRC = 'assets/audio/button_common.mp3';
-const BADGE_UNLOCK_SFX_SRC = 'assets/audio/badge_unlock.mp3';
-const GACHA_PULL_SFX_SRC = 'assets/audio/gacha_pull.mp3';
-const GACHA_CAPSULE_POP_SFX_SRC = 'assets/audio/gacha_capsule_pop.mp3';
-const GACHA_REWARD_REVEAL_SFX_SRC = 'assets/audio/gacha_reward_reveal.mp3';
+const BADGE_UNLOCK_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/badge_unlock.mp3`;
+const GACHA_PULL_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/gacha_pull.mp3`;
+const GACHA_CAPSULE_POP_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/gacha_capsule_pop.mp3`;
+const GACHA_REWARD_REVEAL_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/gacha_reward_reveal.mp3`;
 const BUFFER_MATCH_SFX_SRC = GACHA_CAPSULE_POP_SFX_SRC;
 /**
  * 暂存盘全满时的紧迫警告音；建议 0.4–0.6s 双音节"叮叮 / 铛铛"短促 stinger，
  * mono / 干声 / 无尾混响。文件不存在时 onError 静默兜底，不影响玩法。
  */
-const BUFFER_PANIC_SFX_SRC = 'assets/audio/buffer_panic.mp3';
+const BUFFER_PANIC_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/buffer_panic.mp3`;
 
 interface UserAudioSettings {
   musicEnabled: boolean;

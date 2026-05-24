@@ -2,7 +2,7 @@ import type { BowlBadgeDef } from '@/config/bowlBadges';
 
 const CARD_W = 1000;
 const CARD_H = 800;
-const DEFAULT_SHARE_BG = 'assets/images/badge_share_card_bg.jpg';
+const DEFAULT_SHARE_BG = 'subpackages/bowl_game/assets/images/badge_share_card_bg.jpg';
 
 interface BadgeShareCardOptions {
   badge: BowlBadgeDef;

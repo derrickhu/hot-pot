@@ -1,6 +1,7 @@
 import {
   BACKEND_ANON_ID_KEY,
   BACKEND_BASE_URL,
+  BACKEND_GAME_CLUB_DECRYPT_PATH,
   BACKEND_LOGIN_PATH,
   BACKEND_LEVEL_PASS_RATES_PATH,
   BACKEND_PULL_PATH,
@@ -101,6 +102,15 @@ export interface LevelPassRateItem {
   is_sample_low: boolean;
 }
 
+export interface GameClubDataItem {
+  dataType: number | { type?: number };
+  value: number;
+}
+
+export interface GameClubDecryptedData {
+  dataList: GameClubDataItem[];
+}
+
 export interface BackendLevelPassRatesResult {
   game_key: string;
   mode_key: 'bowl';
@@ -188,6 +198,10 @@ class BackendServiceClass {
       mode_key: 'bowl',
       window_days: 30,
     });
+  }
+
+  decryptGameClubData(payload: { encryptedData: string; iv: string }): Promise<GameClubDecryptedData> {
+    return this.callWithAuth<GameClubDecryptedData>(BACKEND_GAME_CLUB_DECRYPT_PATH, payload);
   }
 
   clearToken(): void {

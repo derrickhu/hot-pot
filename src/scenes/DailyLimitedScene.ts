@@ -19,7 +19,13 @@ import { analytics } from '@/analytics';
 import { addCoins, spendCoins } from '@/game/Wallet';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH, createCoinIcon } from '@/gameobjects/CoinBar';
 import { BOWL_COMMON_MODAL_PANEL_ASSET, BOWL_COMMON_MODAL_PANEL_TEXTURE_KEY } from '@/gameobjects/BowlMechanicIntroOverlay';
-import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
+import {
+  loadBowlCoreSubpackage,
+  loadBowlSubpackage,
+  loadDailyLimitedSubpackage,
+  loadDailyRecipesSubpackage,
+  loadFruitSliceSubpackage,
+} from '@/utils/loadBowlSubpackage';
 import { showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { TextureCache } from '@/utils/TextureCache';
 import { shareGame } from '@/utils/wechatShare';
@@ -91,42 +97,42 @@ const DAILY_TEXTURE_PREFIX = 'daily_limited_fruit_';
 const DAILY_BG_VARIANTS = [
   {
     key: 'daily_limited_bg_meadow_picnic',
-    path: 'subpackages/bowl_game/assets/images/daily_limited/bg_meadow_picnic_v2.png',
+    path: 'subpackages/daily_limited/assets/images/daily_limited/bg_meadow_picnic_v2.jpg',
   },
   {
     key: 'daily_limited_bg_tropical_orchard',
-    path: 'subpackages/bowl_game/assets/images/daily_limited/bg_tropical_orchard_v2.png',
+    path: 'subpackages/daily_limited/assets/images/daily_limited/bg_tropical_orchard_v2.jpg',
   },
   {
     key: 'daily_limited_bg_bright_sunny_meadow',
-    path: 'subpackages/bowl_game/assets/images/daily_limited/daily_limited_bg_bright_sunny_meadow_v1.jpg',
+    path: 'subpackages/daily_limited/assets/images/daily_limited/daily_limited_bg_bright_sunny_meadow_v1.jpg',
   },
   {
     key: 'daily_limited_bg_bright_candy_creek',
-    path: 'subpackages/bowl_game/assets/images/daily_limited/daily_limited_bg_bright_candy_creek_v1.jpg',
+    path: 'subpackages/daily_limited/assets/images/daily_limited/daily_limited_bg_bright_candy_creek_v1.jpg',
   },
 ] as const;
 const DAILY_BOARD_FRAME_VARIANTS = [
   {
     key: 'daily_limited_frame_wood_material',
-    path: 'subpackages/bowl_game/assets/images/daily_limited/frame_wood_material_v4.png',
+    path: 'subpackages/daily_limited/assets/images/daily_limited/frame_wood_material_v4.png',
   },
   {
     key: 'daily_limited_frame_ice_glass_material',
-    path: 'subpackages/bowl_game/assets/images/daily_limited/frame_ice_glass_material_v4.png',
+    path: 'subpackages/daily_limited/assets/images/daily_limited/frame_ice_glass_material_v4.png',
   },
 ] as const;
 const DAILY_ICE_BOWL_TEXTURE_KEY = 'daily_limited_ice_bowl_with_ice';
-const DAILY_ICE_BOWL_PATH = 'subpackages/bowl_game/assets/images/daily_limited/ice_bowl_with_ice_v1.png';
+const DAILY_ICE_BOWL_PATH = 'subpackages/daily_limited/assets/images/daily_limited/ice_bowl_with_ice_v1.png';
 const DAILY_LIMITED_REWARDED_AD_UNIT_ID = 'adunit-bf1f15914de547fc';
 const DAILY_BACK_BUTTON_TEXTURE_KEY = 'daily_limited_back_button';
-const DAILY_BACK_BUTTON_PATH = 'subpackages/bowl_game/assets/images/fruit_slice/back_button.png';
+const DAILY_BACK_BUTTON_PATH = 'subpackages/fruit_slice/assets/images/fruit_slice/back_button.png';
 const DAILY_TOOL_BUTTONS_TEXTURE_KEY = 'daily_limited_tool_buttons_sheet';
-const DAILY_TOOL_BUTTONS_PATH = 'subpackages/bowl_game/assets/images/daily_limited/tool_buttons_sheet_v1.png';
+const DAILY_TOOL_BUTTONS_PATH = 'subpackages/daily_limited/assets/images/daily_limited/tool_buttons_sheet_v1.png';
 const DAILY_TOOL_PANELS_TEXTURE_KEY = 'daily_limited_tool_panels_sheet';
-const DAILY_TOOL_PANELS_PATH = 'subpackages/bowl_game/assets/images/daily_limited/tool_panels_sheet_v1.png';
+const DAILY_TOOL_PANELS_PATH = 'subpackages/daily_limited/assets/images/daily_limited/tool_panels_sheet_v1.png';
 const DAILY_CLEAR_BANNER_TEXTURE_KEY = 'daily_limited_clear_banner';
-const DAILY_CLEAR_BANNER_PATH = 'subpackages/bowl_game/assets/images/daily_limited/daily_limited_clear_banner_v1.png';
+const DAILY_CLEAR_BANNER_PATH = 'subpackages/daily_limited/assets/images/daily_limited/daily_limited_clear_banner_v1.png';
 const DAILY_SHARE_BUTTON_TEXTURE_KEY = 'daily_limited_badge_share_reward_button';
 const DAILY_SHARE_BUTTON_PATH = 'subpackages/bowl_game/assets/images/badge_share_reward_button.png';
 const DAILY_TOOL_KINDS: readonly DailyToolKind[] = ['shuffle', 'undo', 'lift'];
@@ -421,7 +427,13 @@ export class DailyLimitedScene implements Scene {
   }
 
   private async preloadAssets(): Promise<void> {
-    await loadBowlSubpackage();
+    await Promise.all([
+      loadBowlSubpackage(),
+      loadBowlCoreSubpackage(),
+      loadDailyLimitedSubpackage(),
+      loadDailyRecipesSubpackage(),
+      loadFruitSliceSubpackage(),
+    ]);
     await Promise.all([
       this.loadSceneTexture(this.dailyBackground.key, this.dailyBackground.path),
       this.loadSceneTexture(this.dailyBoardFrame.key, this.dailyBoardFrame.path),

@@ -2,6 +2,7 @@ const { handleLogin } = require('./lib/auth');
 const { handlePull, handlePush } = require('./lib/save');
 const { handleSubmit: handleRankSubmit, handleList: handleRankList, handleMine: handleRankMine } = require('./lib/rank');
 const { handleList: handleLevelPassRates } = require('./lib/level-pass-rates');
+const { handleDecrypt: handleGameClubDecrypt } = require('./lib/game-club');
 const { respond, parseEvent, preflight } = require('./lib/http');
 
 const ROUTES = {
@@ -13,6 +14,7 @@ const ROUTES = {
   'POST /rank/list': handleRankList,
   'POST /rank/mine': handleRankMine,
   'POST /level/pass-rates': handleLevelPassRates,
+  'POST /game-club/decrypt': handleGameClubDecrypt,
 };
 
 exports.main = async (event, context) => {

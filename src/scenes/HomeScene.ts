@@ -9,6 +9,7 @@ import { getBowlLevelIndex } from '@/game/BowlProgress';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH } from '@/gameobjects/CoinBar';
 import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
+import { GameClubWelfareOverlay } from '@/gameobjects/GameClubWelfareOverlay';
 import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
 import { openLeaderboard } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_BOWL } from '@/services/RankService';
@@ -23,14 +24,14 @@ const HOME_LEADERBOARD_ICON_TEXTURE = 'assets/images/home_footer_rank_btn_v2.png
 const HOME_GACHA_ICON_TEXTURE = 'assets/images/home_footer_gacha_btn_v2.png';
 /** 首页设置入口：音乐 / 音效图形按钮 */
 const HOME_SETTINGS_ICON_TEXTURE = 'assets/images/home_footer_settings_audio_btn_v2.png';
+/** 首页福利入口：游戏圈每日任务 */
+const HOME_WELFARE_ICON_TEXTURE = 'assets/images/home_footer_welfare_btn_v1.png';
 /** 首页三玩法入口：按钮、图标、标题、副标题均已烘焙在贴图内 */
 const HOME_PLAY_BTN_TEXTURE = 'assets/images/home_mode_btn_level_bowl_v2.png';
 const HOME_DAILY_LIMITED_BTN_TEXTURE = 'assets/images/home_mode_btn_daily_iced_drink_v2.png';
 const HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE = 'assets/images/home_mode_btn_fruit_slice_v2.png';
 /** 游戏字标「别捞水果」 */
 const HOME_LOGO_TITLE_TEXTURE = 'assets/images/game_logo_title.png';
-/** 游戏圈入口：靠底但仍需足够对比与点击区域（与微信原生按钮同尺寸基准） */
-const GAME_CLUB_LOGIC_RECT = { width: 140, height: 50 } as const;
 
 /** 关卡药丸贴图目标逻辑宽度（与历史实现一致） */
 function homePlayEntryTargetWidth(): number {
@@ -76,12 +77,14 @@ export class HomeScene implements Scene {
   readonly container = new PIXI.Container();
 
   private readonly settingsOverlay: SettingsPauseOverlay;
-  // onEnter 里串好的 syncGameClubNativeButton setTimeout 需在 onExit 取消，
+  private readonly gameClubWelfareOverlay: GameClubWelfareOverlay;
+  // onEnter 里串好的 welfare layout timer 需在 onExit 取消，
   // 否则离开主页后 wx 原生按钮还会被异步同步一次，盖到下个场景画布上。
   private readonly pendingHomeTimers = new Set<ReturnType<typeof setTimeout>>();
   private readonly homeFooterSlots: PIXI.Container[] = [];
   private readonly leaderboardEntryRoot = new PIXI.Container();
   private readonly gachaEntryRoot = new PIXI.Container();
+  private readonly welfareEntryRoot = new PIXI.Container();
   private readonly settingsEntryRoot = new PIXI.Container();
   private readonly homeCoinBar = new CoinBar();
   /** 进入关卡：贴图或紫底兜底 */
@@ -110,8 +113,6 @@ export class HomeScene implements Scene {
   private bgFill!: PIXI.Graphics;
   private gradFill!: PIXI.Graphics;
   private readonly footerNavBg = new PIXI.Graphics();
-  private readonly gameClubFallbackRoot = new PIXI.Container();
-  private gameClubButton: ReturnType<NonNullable<typeof wx.createGameClubButton>> | null = null;
   private enteringBowl = false;
   private enteringDailyLimited = false;
   private enteringFruitSlice = false;
@@ -125,6 +126,12 @@ export class HomeScene implements Scene {
       onHome: () => {},
       onContinue: () => {},
     }, { mode: 'home' });
+    this.gameClubWelfareOverlay = new GameClubWelfareOverlay(Game.logicWidth, Game.logicHeight, {
+      onClaimed: () => {
+        this.homeCoinBar.refresh();
+        this.homeCoinBar.bump();
+      },
+    });
     this.build();
     void this.loadHomeBackdrop(Game.logicWidth, Game.logicHeight);
     void this.loadHomeCatalogIcon();
@@ -136,10 +143,8 @@ export class HomeScene implements Scene {
     this.homeCoinBar.refresh();
     this.refreshModeEntryTags();
     this.layoutHomeMainColumn();
-    this.bringGameClubAboveHomeUi();
-    this.syncGameClubNativeButton();
-    this.scheduleHomeTimer(() => this.syncGameClubNativeButton(), 0);
-    this.scheduleHomeTimer(() => this.syncGameClubNativeButton(), 160);
+    this.scheduleHomeTimer(() => this.gameClubWelfareOverlay.layout(), 0);
+    this.scheduleHomeTimer(() => this.gameClubWelfareOverlay.layout(), 160);
     // 主页空闲时预热好友榜子域沙箱，把 ~100-500ms 的冷启动藏在 home 阶段，
     // 等玩家点开排行榜并切到好友榜 tab 时少等一截。失败完全静默。
     warmupFriendRankContext();
@@ -160,19 +165,8 @@ export class HomeScene implements Scene {
     this.pendingHomeTimers.clear();
   }
 
-  /** 保证在底图之上、且盖住同屏其它控件（仍低于设置全屏层） */
-  private bringGameClubAboveHomeUi(): void {
-    if (!this.gameClubFallbackRoot.parent) {
-      return;
-    }
-    const settings = this.settingsOverlay;
-    this.container.removeChild(this.gameClubFallbackRoot);
-    const insertAt = Math.max(0, this.container.getChildIndex(settings));
-    this.container.addChildAt(this.gameClubFallbackRoot, insertAt);
-  }
-
   onExit(): void {
-    this.hideGameClubNativeButton();
+    this.gameClubWelfareOverlay.close();
     this.clearAllHomeTimers();
   }
 
@@ -215,8 +209,10 @@ export class HomeScene implements Scene {
       TextureCache.load('game_logo_title', HOME_LOGO_TITLE_TEXTURE),
       TextureCache.load('home_leaderboard_icon', HOME_LEADERBOARD_ICON_TEXTURE),
       TextureCache.load('home_gacha_icon', HOME_GACHA_ICON_TEXTURE),
+      TextureCache.load('home_welfare_icon', HOME_WELFARE_ICON_TEXTURE),
       TextureCache.load('home_settings_icon', HOME_SETTINGS_ICON_TEXTURE),
       TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
+      GameClubWelfareOverlay.preloadTextures(),
     ]);
     const tex = TextureCache.get('__home_bg');
     if (!tex) {
@@ -228,7 +224,6 @@ export class HomeScene implements Scene {
       this.homeCoinBar.refreshIcon();
       this.refreshModeEntryTags();
       this.layoutHomeMainColumn();
-      this.bringGameClubAboveHomeUi();
       return;
     }
     const sp = new PIXI.Sprite(tex);
@@ -245,7 +240,6 @@ export class HomeScene implements Scene {
     this.homeCoinBar.refreshIcon();
     this.refreshModeEntryTags();
     this.layoutHomeMainColumn();
-    this.bringGameClubAboveHomeUi();
   }
 
   /** 字标：顶栏下缘与主按钮上缘之间居中，宽约屏 68% */
@@ -493,10 +487,10 @@ export class HomeScene implements Scene {
     this.fruitSliceEntryRoot.position.set(W / 2, fruitY);
     this.positionModeEntryTag(this.fruitSliceEntryTag, homeFruitSliceEntryTargetWidth(), fruitHalf, -4);
 
-    /** 底部入口：参考原型图，四个图标放在同一个奶油色圆角底栏内。 */
+    /** 底部入口：参考原型图，五个图标放在同一个奶油色圆角底栏内。 */
     const footerBarW = Math.min(650, W - 56);
     const footerBarCenterY = Math.round(fruitY + fruitHalf + 34 + HOME_FOOTER_BAR_H / 2);
-    const footerCellGap = footerBarW / 4;
+    const footerCellGap = footerBarW / 5;
     const footerLeft = W / 2 - footerBarW / 2;
     const footerY = footerBarCenterY;
 
@@ -531,17 +525,12 @@ export class HomeScene implements Scene {
 
     const bookSlot = this.homeFooterSlots[0];
     if (bookSlot) {
-      bookSlot.position.set(Math.round(footerLeft + footerCellGap * 2.5), footerY);
+      bookSlot.position.set(Math.round(footerLeft + footerCellGap * 3.5), footerY);
     }
     this.leaderboardEntryRoot.position.set(Math.round(footerLeft + footerCellGap * 0.5), footerY);
     this.gachaEntryRoot.position.set(Math.round(footerLeft + footerCellGap * 1.5), footerY);
-    this.settingsEntryRoot.position.set(Math.round(footerLeft + footerCellGap * 3.5), footerY);
-
-    /** 游戏圈紧贴屏幕底部，并与底栏留出足够呼吸感 */
-    const gameClubMinY = footerY + HOME_FOOTER_BAR_H / 2 + 24;
-    const gameClubY = Math.min(H - 48, Math.max(gameClubMinY, H - 76));
-    this.gameClubFallbackRoot.position.set(Math.round(W * 0.5), gameClubY);
-
+    this.welfareEntryRoot.position.set(Math.round(footerLeft + footerCellGap * 2.5), footerY);
+    this.settingsEntryRoot.position.set(Math.round(footerLeft + footerCellGap * 4.5), footerY);
   }
 
   /** 图鉴入口：白色卡片底 + 草莓贴图（无贴图时落入 emoji 兜底） */
@@ -709,7 +698,7 @@ export class HomeScene implements Scene {
 
     this.container.addChild(this.footerNavBg);
 
-    /** 底部入口：排行榜 / 扭蛋 / 图鉴 / 设置，参考原型图统一放入底栏 */
+    /** 底部入口：排行榜 / 扭蛋 / 福利 / 图鉴 / 设置，参考原型图统一放入底栏 */
     const bookSlot = new PIXI.Container();
     bookSlot.position.set(Math.round(W * 0.62), Math.max(playY + 220, H - 200));
     bookSlot.eventMode = 'static';
@@ -762,6 +751,28 @@ export class HomeScene implements Scene {
     });
     this.container.addChild(this.gachaEntryRoot);
 
+    this.welfareEntryRoot.position.set(Math.round(W * 0.5), Math.max(playY + 220, H - 200));
+    this.welfareEntryRoot.eventMode = 'static';
+    this.welfareEntryRoot.cursor = 'pointer';
+    this.welfareEntryRoot.hitArea = new PIXI.Rectangle(
+      -HOME_FOOTER_NAV_CELL_W / 2,
+      -HOME_FOOTER_NAV_CELL_H / 2,
+      HOME_FOOTER_NAV_CELL_W,
+      HOME_FOOTER_NAV_CELL_H,
+    );
+    this.mountFooterNavButton(
+      this.welfareEntryRoot,
+      'home_welfare_icon',
+      () => this.createWelfareCardIcon(),
+      '福利',
+      0xc43a2f,
+    );
+    this.welfareEntryRoot.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      this.gameClubWelfareOverlay.open();
+    });
+    this.container.addChild(this.welfareEntryRoot);
+
     this.leaderboardEntryRoot.position.set(Math.round(W * 0.38), Math.max(playY + 220, H - 200));
     this.leaderboardEntryRoot.eventMode = 'static';
     this.leaderboardEntryRoot.cursor = 'pointer';
@@ -781,7 +792,7 @@ export class HomeScene implements Scene {
     /** 只在玩家主动点排行榜时触发隐私授权；首页不预创建微信授权按钮。 */
     this.leaderboardEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
-      this.hideGameClubNativeButton();
+      this.gameClubWelfareOverlay.close();
       openLeaderboard(RANK_BOARD_BOWL);
     });
     this.container.addChild(this.leaderboardEntryRoot);
@@ -804,18 +815,14 @@ export class HomeScene implements Scene {
     );
     this.settingsEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
+      this.gameClubWelfareOverlay.close();
       this.settingsOverlay.visible = true;
     });
     this.container.addChild(this.settingsEntryRoot);
 
-    /** 游戏圈：靠下装饰带，略抬高避免贴底被手势条/误触 */
-    const provisionalSideY = Math.max(playY + 220, H - 160);
-    const gameClubY = Math.min(H - 48, Math.max(provisionalSideY + 72, H - 76));
-    this.mountGameClubFallback(Math.round(W * 0.5), gameClubY);
-
     this.layoutHomeMainColumn();
 
-    this.container.addChild(this.settingsOverlay);
+    this.container.addChild(this.settingsOverlay, this.gameClubWelfareOverlay);
   }
 
   private async enterBowlWithLoading(): Promise<void> {
@@ -823,7 +830,7 @@ export class HomeScene implements Scene {
       return;
     }
     this.enteringBowl = true;
-    this.hideGameClubNativeButton();
+    this.gameClubWelfareOverlay.close();
     const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
     Game.stage.addChild(loadingOverlay.container);
     try {
@@ -851,7 +858,7 @@ export class HomeScene implements Scene {
       return;
     }
     this.enteringFruitSlice = true;
-    this.hideGameClubNativeButton();
+    this.gameClubWelfareOverlay.close();
     const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
     Game.stage.addChild(loadingOverlay.container);
     try {
@@ -884,7 +891,7 @@ export class HomeScene implements Scene {
       return;
     }
     this.enteringDailyLimited = true;
-    this.hideGameClubNativeButton();
+    this.gameClubWelfareOverlay.close();
     const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
     Game.stage.addChild(loadingOverlay.container);
     try {
@@ -919,7 +926,7 @@ export class HomeScene implements Scene {
       return;
     }
     this.enteringGacha = true;
-    this.hideGameClubNativeButton();
+    this.gameClubWelfareOverlay.close();
     const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
     Game.stage.addChild(loadingOverlay.container);
     try {
@@ -940,164 +947,6 @@ export class HomeScene implements Scene {
       loadingOverlay.destroy();
       this.enteringGacha = false;
     }
-  }
-
-  private mountGameClubFallback(x: number, y: number): void {
-    const rect = this.getGameClubLogicRect(x, y);
-    this.gameClubFallbackRoot.position.set(x, y);
-    this.gameClubFallbackRoot.eventMode = 'static';
-    this.gameClubFallbackRoot.cursor = 'pointer';
-    this.gameClubFallbackRoot.hitArea = new PIXI.Rectangle(-rect.width / 2, -rect.height / 2, rect.width, rect.height);
-    this.gameClubFallbackRoot.visible = true;
-
-    const bg = new PIXI.Graphics();
-    bg.lineStyle(2, 0x4a9d8e, 0.95);
-    bg.beginFill(0xe6fff8, 0.92);
-    bg.drawRoundedRect(-rect.width / 2, -rect.height / 2, rect.width, rect.height, 14);
-    bg.endFill();
-    this.gameClubFallbackRoot.addChild(bg);
-
-    const text = new PIXI.Text('游戏圈', {
-      fontSize: 23,
-      fill: 0x144a40,
-      fontWeight: '800',
-      dropShadow: true,
-      dropShadowColor: 0xfafffe,
-      dropShadowBlur: 2,
-      dropShadowDistance: 0,
-    });
-    text.anchor.set(0.5);
-    this.gameClubFallbackRoot.addChild(text);
-    this.gameClubFallbackRoot.on('pointertap', () => {
-      AudioManager.playButtonSound();
-      const api = typeof wx !== 'undefined' ? wx : null;
-      if (api?.createGameClubButton) {
-        this.syncGameClubNativeButton();
-        api.showToast?.({ title: '请再点一次进入游戏圈', icon: 'none' });
-        return;
-      }
-      api?.showToast?.({ title: '游戏圈仅微信内可用', icon: 'none' });
-    });
-    this.container.addChild(this.gameClubFallbackRoot);
-  }
-
-  private syncGameClubCanvasButtonInteractivity(nativeVisible: boolean): void {
-    const isWechat = typeof wx !== 'undefined' && !!wx.createGameClubButton;
-    this.gameClubFallbackRoot.eventMode = isWechat && nativeVisible ? 'none' : 'static';
-    this.gameClubFallbackRoot.cursor = isWechat && nativeVisible ? 'default' : 'pointer';
-  }
-
-  private getGameClubNativeRectPx(): { left: number; top: number; width: number; height: number } | null {
-    const bounds = this.gameClubFallbackRoot.getLocalBounds();
-    if (bounds.width <= 0 || bounds.height <= 0) {
-      return null;
-    }
-    const topLeft = this.gameClubFallbackRoot.toGlobal(new PIXI.Point(bounds.x, bounds.y));
-    const bottomRight = this.gameClubFallbackRoot.toGlobal(
-      new PIXI.Point(bounds.x + bounds.width, bounds.y + bounds.height),
-    );
-    const left = topLeft.x / Game.dpr;
-    const top = topLeft.y / Game.dpr;
-    const width = (bottomRight.x - topLeft.x) / Game.dpr;
-    const height = (bottomRight.y - topLeft.y) / Game.dpr;
-    return {
-      left: Math.round(left),
-      top: Math.round(top),
-      width: Math.max(1, Math.round(width)),
-      height: Math.max(1, Math.round(height)),
-    };
-  }
-
-  private ensureGameClubNativeButton(): void {
-    const api = typeof wx !== 'undefined' ? wx : null;
-    if (this.gameClubButton || !api?.createGameClubButton) {
-      return;
-    }
-    const rect = this.getGameClubNativeRectPx();
-    if (!rect) {
-      return;
-    }
-    try {
-      this.gameClubButton = api.createGameClubButton({
-        type: 'text',
-        text: '',
-        style: {
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height,
-          backgroundColor: 'rgba(0,0,0,0.01)',
-          borderColor: 'rgba(0,0,0,0)',
-          borderWidth: 0,
-          borderRadius: Math.round(rect.height / 2),
-          color: 'rgba(0,0,0,0)',
-          textAlign: 'center',
-          fontSize: 1,
-          lineHeight: rect.height,
-        },
-      });
-      this.gameClubButton.hide?.();
-    } catch (error) {
-      console.warn('[HomeScene] createGameClubButton failed', error);
-    }
-  }
-
-  private hideGameClubNativeButton(): void {
-    if (!this.gameClubButton) {
-      return;
-    }
-    try {
-      this.gameClubButton.hide?.();
-    } catch {
-      // 原生按钮隐藏失败不影响页面切换。
-    }
-    this.syncGameClubCanvasButtonInteractivity(false);
-  }
-
-  private syncGameClubNativeButton(): void {
-    const api = typeof wx !== 'undefined' ? wx : null;
-    if (!api?.createGameClubButton) {
-      this.gameClubFallbackRoot.visible = true;
-      this.syncGameClubCanvasButtonInteractivity(false);
-      return;
-    }
-    this.ensureGameClubNativeButton();
-    if (!this.gameClubButton) {
-      this.syncGameClubCanvasButtonInteractivity(false);
-      return;
-    }
-    const rect = this.getGameClubNativeRectPx();
-    if (!rect) {
-      this.hideGameClubNativeButton();
-      return;
-    }
-    try {
-      if (this.gameClubButton.style) {
-        Object.assign(this.gameClubButton.style, {
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height,
-          borderRadius: Math.round(rect.height / 2),
-          lineHeight: rect.height,
-        });
-      }
-      this.gameClubButton.show?.();
-      this.syncGameClubCanvasButtonInteractivity(true);
-    } catch (error) {
-      console.warn('[HomeScene] sync game club button failed', error);
-      this.syncGameClubCanvasButtonInteractivity(false);
-    }
-  }
-
-  private getGameClubLogicRect(centerX = Game.logicWidth * 0.5, centerY = 0): { x: number; y: number; width: number; height: number } {
-    const y = centerY > 0 ? centerY : this.gameClubFallbackRoot.y;
-    return {
-      x: centerX - GAME_CLUB_LOGIC_RECT.width / 2,
-      y: y - GAME_CLUB_LOGIC_RECT.height / 2,
-      width: GAME_CLUB_LOGIC_RECT.width,
-      height: GAME_CLUB_LOGIC_RECT.height,
-    };
   }
 
   /** 底部图标卡片的白色圆角背板（带阴影 + 卡片描边，所有底部入口共用） */
@@ -1157,6 +1006,13 @@ export class HomeScene implements Scene {
       0xb94a12,
     );
     this.mountFooterNavButton(
+      this.welfareEntryRoot,
+      'home_welfare_icon',
+      () => this.createWelfareCardIcon(),
+      '福利',
+      0xc43a2f,
+    );
+    this.mountFooterNavButton(
       this.leaderboardEntryRoot,
       'home_leaderboard_icon',
       () => this.createLeaderboardCardIcon(),
@@ -1170,6 +1026,48 @@ export class HomeScene implements Scene {
       '设置',
       0x6f4b28,
     );
+  }
+
+  /** 福利入口图标：礼盒 + 金币，保持无需贴图即可显示。 */
+  private createWelfareCardIcon(): PIXI.Container {
+    const icon = this.createFooterCardTextureIcon('home_welfare_icon');
+    if (icon) {
+      return icon;
+    }
+
+    const root = new PIXI.Container();
+    const base = new PIXI.Graphics();
+    base.beginFill(0xffd86a, 0.45);
+    base.drawRoundedRect(-46, 30, 92, 12, 6);
+    base.endFill();
+    root.addChild(base);
+
+    const box = new PIXI.Graphics();
+    box.beginFill(0xf04b4b);
+    box.lineStyle(4, 0x8f2a2a, 1);
+    box.drawRoundedRect(-34, -18, 68, 54, 12);
+    box.endFill();
+    box.beginFill(0xffd34d);
+    box.drawRoundedRect(-34, -4, 68, 10, 4);
+    box.endFill();
+    box.beginFill(0xffd34d);
+    box.drawRoundedRect(-8, -28, 16, 64, 6);
+    box.endFill();
+    root.addChild(box);
+
+    const coin = new PIXI.Graphics();
+    coin.beginFill(0xffd34d);
+    coin.lineStyle(3, 0xc47a10, 1);
+    coin.drawCircle(28, 8, 18);
+    coin.endFill();
+    root.addChild(coin);
+
+    const sparkle = new PIXI.Graphics();
+    sparkle.beginFill(0xffffff);
+    this.drawTinyStar(sparkle, -28, -34, 5, 8, 3);
+    sparkle.endFill();
+    root.addChild(sparkle);
+    return root;
   }
 
   /** 扭蛋入口图标：金币和胶囊球，保持无需贴图即可显示。 */

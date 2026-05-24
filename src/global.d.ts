@@ -18,6 +18,8 @@ declare const wx: {
   removeStorageSync: (key: string) => void;
   request: (options: Record<string, unknown>) => void;
   onHide?: (handler: () => void) => void;
+  onShow?: (handler: () => void) => void;
+  offShow?: (handler: () => void) => void;
   onTouchStart: (handler: (event: any) => void) => void;
   onTouchMove: (handler: (event: any) => void) => void;
   onTouchEnd: (handler: (event: any) => void) => void;
@@ -53,6 +55,17 @@ declare const wx: {
     hide: () => void;
     destroy: () => void;
   };
+  getGameClubData?: (options: {
+    dataTypeList: Array<{ type: number; subKey?: string }>;
+    success?: (res: {
+      signature?: string;
+      encryptedData?: string;
+      iv?: string;
+      cloudID?: string;
+    }) => void;
+    fail?: (err: { errMsg?: string }) => void;
+    complete?: (res: unknown) => void;
+  }) => void;
   showToast?: (options: { title: string; icon?: string; duration?: number; mask?: boolean }) => void;
   vibrateShort?: (options?: { type?: 'light' | 'medium' | 'heavy'; success?: () => void; fail?: (err: unknown) => void; complete?: () => void }) => void;
   createRewardedVideoAd?: (options: { adUnitId: string }) => {

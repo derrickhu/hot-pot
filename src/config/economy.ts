@@ -34,6 +34,7 @@ export type GachaReward =
 
 export const DAILY_FIRST_FRUIT_SLICE_COINS = 5;
 export const DAILY_FIRST_FRUIT_SLICE_MIN_SCORE = 0;
+export const GAME_CLUB_DAILY_POST_COINS = 50;
 export const GACHA_PULL_COST = 20;
 
 export const FRUIT_SLICE_COIN_TIERS: FruitSliceCoinTier[] = [

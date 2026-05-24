@@ -11,7 +11,7 @@ export interface CatalogSlot {
   unlocked: boolean;
 }
 
-const FRUIT_BOOK_ROOT = 'subpackages/bowl_game/assets/images/fruit_book';
+const FRUIT_BOOK_ROOT = 'subpackages/catalog_assets/assets/images/fruit_book';
 
 /** 图鉴加载顺序：先碗内贴图（配料与水果一致），再果切/图鉴整果，最后通用 whole 文件名兜底 */
 function catalogAssetCandidates(fruit: FruitConfig): string[] {

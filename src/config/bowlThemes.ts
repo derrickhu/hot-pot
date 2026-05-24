@@ -1,4 +1,4 @@
-import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
+import { BOWL_THEME_IMAGES_ROOT } from '@/config/bowlAssets';
 
 export const BOWL_THEME_KEYS = [
   'mint_waterpark',
@@ -37,7 +37,7 @@ export const BOWL_THEMES: Record<BowlThemeKey, BowlThemeDef> = {
   mint_waterpark: {
     key: 'mint_waterpark',
     label: '薄荷水上乐园',
-    backdropAsset: `${BOWL_IMAGES_ROOT}/themes/bowl_theme_mint_waterpark.png`,
+    backdropAsset: `${BOWL_THEME_IMAGES_ROOT}/bowl_theme_mint_waterpark.jpg`,
     bgTop: 0xcff9df,
     bgBottom: 0xeaffcf,
     header: 0x90eadc,
@@ -57,7 +57,7 @@ export const BOWL_THEMES: Record<BowlThemeKey, BowlThemeDef> = {
   tropical_fruit_stand: {
     key: 'tropical_fruit_stand',
     label: '热带果摊',
-    backdropAsset: `${BOWL_IMAGES_ROOT}/themes/bowl_theme_tropical_fruit_stand.png`,
+    backdropAsset: `${BOWL_THEME_IMAGES_ROOT}/bowl_theme_tropical_fruit_stand.jpg`,
     bgTop: 0xfff0b8,
     bgBottom: 0xffffe8,
     header: 0xd9a961,
@@ -77,7 +77,7 @@ export const BOWL_THEMES: Record<BowlThemeKey, BowlThemeDef> = {
   pool_ice_drink: {
     key: 'pool_ice_drink',
     label: '泳池冰饮',
-    backdropAsset: `${BOWL_IMAGES_ROOT}/themes/bowl_theme_pool_ice_drink.png`,
+    backdropAsset: `${BOWL_THEME_IMAGES_ROOT}/bowl_theme_pool_ice_drink.jpg`,
     bgTop: 0xa4f2ff,
     bgBottom: 0xe6fff7,
     header: 0x7addec,
@@ -97,7 +97,7 @@ export const BOWL_THEMES: Record<BowlThemeKey, BowlThemeDef> = {
   garden_picnic: {
     key: 'garden_picnic',
     label: '花园野餐',
-    backdropAsset: `${BOWL_IMAGES_ROOT}/themes/bowl_theme_garden_picnic.png`,
+    backdropAsset: `${BOWL_THEME_IMAGES_ROOT}/bowl_theme_garden_picnic.jpg`,
     bgTop: 0xfff4e8,
     bgBottom: 0xf8fff0,
     header: 0xc8e8b0,
@@ -117,7 +117,7 @@ export const BOWL_THEMES: Record<BowlThemeKey, BowlThemeDef> = {
   seaside_night_market: {
     key: 'seaside_night_market',
     label: '海边夜市',
-    backdropAsset: `${BOWL_IMAGES_ROOT}/themes/bowl_theme_seaside_night_market.png`,
+    backdropAsset: `${BOWL_THEME_IMAGES_ROOT}/bowl_theme_seaside_night_market.jpg`,
     bgTop: 0x3e426c,
     bgBottom: 0xffba89,
     header: 0x4b3c67,
@@ -137,7 +137,7 @@ export const BOWL_THEMES: Record<BowlThemeKey, BowlThemeDef> = {
   fruit_restaurant: {
     key: 'fruit_restaurant',
     label: '果味餐厅',
-    backdropAsset: `${BOWL_IMAGES_ROOT}/themes/bowl_theme_fruit_restaurant.png`,
+    backdropAsset: `${BOWL_THEME_IMAGES_ROOT}/bowl_theme_fruit_restaurant.jpg`,
     bgTop: 0xfff0e8,
     bgBottom: 0xfffff5,
     header: 0xe8c4a8,
@@ -157,7 +157,7 @@ export const BOWL_THEMES: Record<BowlThemeKey, BowlThemeDef> = {
   beach_picnic: {
     key: 'beach_picnic',
     label: '沙滩野餐',
-    backdropAsset: `${BOWL_IMAGES_ROOT}/themes/bowl_theme_beach_picnic.png`,
+    backdropAsset: `${BOWL_THEME_IMAGES_ROOT}/bowl_theme_beach_picnic.jpg`,
     bgTop: 0xd4f4ff,
     bgBottom: 0xfff8e8,
     header: 0x8ad4e8,

@@ -1,4 +1,4 @@
-import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
+import { BOWL_BADGE_IMAGES_ROOT } from '@/config/bowlAssets';
 
 export interface BowlBadgeDef {
   levelNumber: number;
@@ -22,7 +22,7 @@ const badge = (
 ): BowlBadgeDef => ({
   levelNumber,
   title,
-  asset: `${BOWL_IMAGES_ROOT}/badges/bowl_badge_${String(levelNumber).padStart(2, '0')}.png`,
+  asset: `${BOWL_BADGE_IMAGES_ROOT}/bowl_badge_${String(levelNumber).padStart(2, '0')}.png`,
   vessel,
   drinkColor,
   accentColor,

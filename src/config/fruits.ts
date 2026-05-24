@@ -1,9 +1,9 @@
 /**
  * 碗内食材主表。贴图固定放在微信分包：
- *   subpackages/bowl_game/assets/images/bowl/<fruitId>_1.png
- *   subpackages/bowl_game/assets/images/bowl/<fruitId>_2.png
+ *   subpackages/bowl_core/assets/images/bowl/<fruitId>_1.png
+ *   subpackages/bowl_core/assets/images/bowl/<fruitId>_2.png
  */
-import { BOWL_IMAGES_ROOT } from '@/config/bowlAssets';
+import { BOWL_CORE_IMAGES_ROOT } from '@/config/bowlAssets';
 
 export const FRUIT_IDS = [
   'almond_slice',
@@ -108,7 +108,7 @@ export interface FruitConfig {
   bowlAsset2: string;
 }
 
-const bowl = (id: FruitId, slot: 1 | 2) => `${BOWL_IMAGES_ROOT}/bowl/${id}_${slot}.png`;
+const bowl = (id: FruitId, slot: 1 | 2) => `${BOWL_CORE_IMAGES_ROOT}/bowl/${id}_${slot}.png`;
 
 export const FRUIT_CONFIGS: FruitConfig[] = [
   { id: 'almond_slice', label: '杏仁片', color: 0xa66a2c, asset: bowl('almond_slice', 1), bowlAsset2: bowl('almond_slice', 2) },

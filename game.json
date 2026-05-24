@@ -12,6 +12,38 @@
     {
       "name": "bowl_game",
       "root": "subpackages/bowl_game/"
+    },
+    {
+      "name": "bowl_core",
+      "root": "subpackages/bowl_core/"
+    },
+    {
+      "name": "bowl_themes",
+      "root": "subpackages/bowl_themes/"
+    },
+    {
+      "name": "bowl_badges",
+      "root": "subpackages/bowl_badges/"
+    },
+    {
+      "name": "catalog_assets",
+      "root": "subpackages/catalog_assets/"
+    },
+    {
+      "name": "daily_limited",
+      "root": "subpackages/daily_limited/"
+    },
+    {
+      "name": "daily_recipes",
+      "root": "subpackages/daily_recipes/"
+    },
+    {
+      "name": "fruit_slice",
+      "root": "subpackages/fruit_slice/"
+    },
+    {
+      "name": "gacha_assets",
+      "root": "subpackages/gacha_assets/"
     }
   ]
 }

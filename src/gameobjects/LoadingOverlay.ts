@@ -16,6 +16,13 @@ export class LoadingOverlay {
   private readonly logoLayer = new PIXI.Container();
   private readonly barTrack = new PIXI.Graphics();
   private readonly barFill = new PIXI.Graphics();
+  private readonly progressLabel = new PIXI.Text('0%', {
+    fontSize: 22,
+    fill: 0x1a8f82,
+    fontWeight: '800',
+    stroke: 0xfffbec,
+    strokeThickness: 4,
+  });
   private progress = 0;
 
   constructor(width: number, height: number, safeTop: number) {
@@ -90,8 +97,10 @@ export class LoadingOverlay {
   }
 
   private buildProgressBar(): void {
+    this.progressLabel.anchor.set(0.5, 0);
     this.container.addChild(this.barTrack);
     this.container.addChild(this.barFill);
+    this.container.addChild(this.progressLabel);
     this.drawProgressBar();
   }
 
@@ -125,5 +134,9 @@ export class LoadingOverlay {
     this.barFill.beginFill(0x1aa997, 0.28);
     this.barFill.drawRoundedRect(x + 4, y + h - 7, Math.max(0, fillW - 8), 4, 2);
     this.barFill.endFill();
+
+    const percent = Math.round(this.progress * 100);
+    this.progressLabel.text = `${percent}%`;
+    this.progressLabel.position.set(this.width / 2, y + h + 14);
   }
 }

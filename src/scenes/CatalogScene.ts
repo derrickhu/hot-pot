@@ -9,7 +9,12 @@ import { DAILY_LIMITED_LEVELS } from '@/config/dailyLimitedLevels';
 import { BOWL_BADGES, type BowlBadgeDef } from '@/config/bowlBadges';
 import { getMaxUnlockedBowlBadgeLevelNumber } from '@/game/BowlProgress';
 import { mountBowlBadgeIcon } from '@/gameobjects/BowlBadgeIcon';
-import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
+import {
+  loadBowlCoreSubpackage,
+  loadBowlBadgesSubpackage,
+  loadCatalogAssetsSubpackage,
+  loadDailyRecipesSubpackage,
+} from '@/utils/loadBowlSubpackage';
 import { showInterstitialAd } from '@/utils/interstitialAd';
 import { TextureCache } from '@/utils/TextureCache';
 
@@ -48,10 +53,10 @@ interface TabButton {
   refresh: () => void;
 }
 
-const CHROME_TEX_BASEBOARD = 'subpackages/bowl_game/assets/images/catalog/catalog_baseboard.png';
-const CHROME_TEX_TAB_ACTIVE = 'subpackages/bowl_game/assets/images/catalog/catalog_tab_active.png';
-const CHROME_TEX_TAB_INACTIVE = 'subpackages/bowl_game/assets/images/catalog/catalog_tab_inactive.png';
-const CHROME_TEX_ITEM_CARD = 'subpackages/bowl_game/assets/images/catalog/catalog_item_card.png';
+const CHROME_TEX_BASEBOARD = 'subpackages/catalog_assets/assets/images/catalog/catalog_baseboard.png';
+const CHROME_TEX_TAB_ACTIVE = 'subpackages/catalog_assets/assets/images/catalog/catalog_tab_active.png';
+const CHROME_TEX_TAB_INACTIVE = 'subpackages/catalog_assets/assets/images/catalog/catalog_tab_inactive.png';
+const CHROME_TEX_ITEM_CARD = 'subpackages/catalog_assets/assets/images/catalog/catalog_item_card.png';
 const DAILY_LIMITED_REWARD_STATE_KEY = 'hot_pot_daily_limited_reward_v1';
 
 /** 底板 PNG 内已经画好的"图鉴"标题 / 返回按钮在缩到 logicWidth 后的近似坐标 */
@@ -172,8 +177,8 @@ export class CatalogScene implements Scene {
   }
 
   private async loadChromeTextures(): Promise<void> {
-    // chrome 4 张 PNG 已下沉到 bowl_game 分包，必须先把分包载入再加载贴图
-    await loadBowlSubpackage();
+    // chrome 4 张 PNG 已下沉到 catalog_assets 分包，必须先把分包载入再加载贴图
+    await loadCatalogAssetsSubpackage();
     await Promise.all([
       TextureCache.load('catalog_baseboard', CHROME_TEX_BASEBOARD),
       TextureCache.load('catalog_tab_active', CHROME_TEX_TAB_ACTIVE),
@@ -396,9 +401,8 @@ export class CatalogScene implements Scene {
     this.loading = true;
     try {
       if (!this.loadedTabs.has(tab)) {
-        // 水果图鉴贴图（fruit_book/）和徽章贴图都已经在 bowl_game 分包里
-        await loadBowlSubpackage();
         if (tab === 'fruit') {
+          await Promise.all([loadBowlCoreSubpackage(), loadCatalogAssetsSubpackage()]);
           const slots = getCatalogSlots();
           const loads = slots
             .filter((slot) => slot.unlocked)
@@ -407,6 +411,7 @@ export class CatalogScene implements Scene {
             );
           await Promise.all(loads);
         } else if (tab === 'badge') {
+          await loadBowlBadgesSubpackage();
           await Promise.all(
             BOWL_BADGES.map((badge) => this.loadContentTexture(this.badgeTextureKey(badge), badge.asset)),
           );
@@ -772,6 +777,7 @@ export class CatalogScene implements Scene {
   }
 
   private async showRecipePreview(slot: DrinkRecipeCatalogSlot): Promise<void> {
+    await loadDailyRecipesSubpackage();
     const tex = TextureCache.get(slot.textureKey) ?? await this.loadContentTexture(slot.textureKey, slot.asset);
     if (!tex) {
       return;

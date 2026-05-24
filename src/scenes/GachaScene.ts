@@ -13,16 +13,20 @@ import {
   createCoinIcon,
 } from '@/gameobjects/CoinBar';
 import { TextureCache } from '@/utils/TextureCache';
-import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
+import {
+  loadBowlSubpackage,
+  loadFruitSliceSubpackage,
+  loadGachaAssetsSubpackage,
+} from '@/utils/loadBowlSubpackage';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
-const GACHA_IMAGE_DIR = 'subpackages/bowl_game/assets/images/gacha';
+const GACHA_IMAGE_DIR = 'subpackages/gacha_assets/assets/images/gacha';
 const GACHA_BG_KEY = 'gacha_bg';
-const GACHA_BG_PATH = `${GACHA_IMAGE_DIR}/gacha_bg.png`;
+const GACHA_BG_PATH = `${GACHA_IMAGE_DIR}/gacha_bg.jpg`;
 const GACHA_TITLE_KEY = 'gacha_title';
 const GACHA_TITLE_PATH = `${GACHA_IMAGE_DIR}/gacha_title.png`;
 const GACHA_BACK_BTN_KEY = 'gacha_back_btn';
-const GACHA_BACK_BTN_PATH = 'subpackages/bowl_game/assets/images/fruit_slice/back_button.png';
+const GACHA_BACK_BTN_PATH = 'subpackages/fruit_slice/assets/images/fruit_slice/back_button.png';
 const GACHA_PULL_BTN_KEY = 'gacha_pull_btn';
 const GACHA_PULL_BTN_PATH = `${GACHA_IMAGE_DIR}/gacha_pull_button.png`;
 const GACHA_POOL_PANEL_KEY = 'gacha_pool_panel';
@@ -200,7 +204,11 @@ export class GachaScene implements Scene {
 
   /** 预加载本场景全部贴图，每张失败都允许，运行时各自走兜底。 */
   private async preloadGachaTextures(): Promise<void> {
-    await loadBowlSubpackage();
+    await Promise.all([
+      loadBowlSubpackage(),
+      loadFruitSliceSubpackage(),
+      loadGachaAssetsSubpackage(),
+    ]);
     const jobs: Array<Promise<unknown>> = [
       TextureCache.load(GACHA_BG_KEY, GACHA_BG_PATH).then((tex) => this.applyBgTexture(tex)),
       TextureCache.load(GACHA_TITLE_KEY, GACHA_TITLE_PATH).then((tex) => this.applyTitleTexture(tex)),

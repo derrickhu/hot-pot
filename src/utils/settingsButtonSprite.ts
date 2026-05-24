@@ -4,7 +4,7 @@ import { TextureCache } from '@/utils/TextureCache';
 export const SETTINGS_BTN_TEXTURE_KEY = 'ui_settings_btn';
 export const SETTINGS_BTN_PATH = 'assets/images/settings_btn.png';
 export const PAUSE_ENTRY_BTN_TEXTURE_KEY = 'bowl_pause_entry_back_btn';
-export const PAUSE_ENTRY_BTN_PATH = 'subpackages/bowl_game/assets/images/fruit_slice/back_button.png';
+export const PAUSE_ENTRY_BTN_PATH = 'subpackages/fruit_slice/assets/images/fruit_slice/back_button.png';
 
 export function loadSettingsButtonTexture(): Promise<PIXI.Texture | null> {
   return Promise.all([

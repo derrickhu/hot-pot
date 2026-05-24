@@ -33,7 +33,7 @@ export const FRUIT_SLICE_IDS = [
 export type FruitSliceId = (typeof FRUIT_SLICE_IDS)[number];
 
 // fruit_book/ 整体下沉到 bowl_game 分包，主包零体积
-const FRUIT_BOOK_DIR = 'subpackages/bowl_game/assets/images/fruit_book';
+const FRUIT_BOOK_DIR = 'subpackages/catalog_assets/assets/images/fruit_book';
 
 export const FRUIT_SLICE_WHOLE_PATH: Record<FruitSliceId, string> = {
   blueberry: `${FRUIT_BOOK_DIR}/fruit_blueberry_a.png`,

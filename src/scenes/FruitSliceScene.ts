@@ -5,7 +5,7 @@ import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { FRUIT_CONFIGS, type FruitConfig, type FruitId } from '@/config/fruits';
 import { fruitSliceWholeTextureKey, FRUIT_SLICE_IDS, FRUIT_SLICE_WHOLE_PATH } from '@/config/fruitSliceWhole';
-import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
+import { loadCatalogAssetsSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
 
 type FruitSliceNode = PIXI.Container & { fruitId: FruitId };
@@ -46,8 +46,8 @@ export class FruitSliceScene implements Scene {
 
   private async preloadAndMountFruits(): Promise<void> {
     try {
-      // 整果贴图已下沉到 bowl_game 分包，进玩法前确保分包完成加载
-      await loadBowlSubpackage();
+      // 整果贴图已下沉到 catalog_assets 分包，进玩法前确保分包完成加载
+      await loadCatalogAssetsSubpackage();
       const jobs = FRUIT_SLICE_IDS.map((id) =>
         TextureCache.load(fruitSliceWholeTextureKey(id), FRUIT_SLICE_WHOLE_PATH[id]),
       );

@@ -38,7 +38,12 @@ import {
   toolLabel,
   type ToolKind,
 } from '@/game/ToolInventory';
-import { loadBowlSubpackage } from '@/utils/loadBowlSubpackage';
+import {
+  loadBowlSubpackage,
+  loadBowlCoreSubpackage,
+  loadBowlThemesSubpackage,
+  loadBowlBadgesSubpackage,
+} from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 import { createBadgeShareCard } from '@/utils/badgeShareCard';
@@ -1253,7 +1258,12 @@ export class BowlScene implements Scene {
   }
 
   private async preloadTextures(): Promise<void> {
-    await loadBowlSubpackage();
+    await Promise.all([
+      loadBowlSubpackage(),
+      loadBowlCoreSubpackage(),
+      loadBowlThemesSubpackage(),
+      loadBowlBadgesSubpackage(),
+    ]);
     const jobs: Promise<unknown>[] = [];
     jobs.push(TextureCache.load('bowl_tool_sheet', BOWL_TOOL_SHEET_TEXTURE));
     jobs.push(TextureCache.load('bowl_tool_panels', BOWL_TOOL_PANELS_TEXTURE));
