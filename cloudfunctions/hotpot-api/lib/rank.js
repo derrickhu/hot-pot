@@ -81,11 +81,20 @@ function sanitizeAvatarUrl(value, fallback) {
 function isBetterRecord(board, next, prev) {
   if (!prev) return true;
   if (board === BOARD_BOWL) {
-    const prevLevel = Number(prev.level) || 0;
-    const prevBadge = Number(prev.badgeLevel) || 0;
-    return next.level > prevLevel || (next.level === prevLevel && next.badgeLevel > prevBadge);
+    const prevBadge = bowlClearedLevel(prev);
+    const nextBadge = Number(next.badgeLevel) || 0;
+    return nextBadge > prevBadge;
   }
   return next.score > (Number(prev.score) || 0);
+}
+
+function bowlClearedLevel(doc) {
+  if (!doc) return 0;
+  if (doc.badgeLevel !== undefined && doc.badgeLevel !== null) {
+    return Number(doc.badgeLevel) || 0;
+  }
+  // 极旧记录如果没有 badgeLevel，则回退到 level，避免真实上榜记录消失。
+  return Number(doc.level) || 0;
 }
 
 function publicRecord(doc, userId, rank) {
@@ -99,8 +108,9 @@ function publicRecord(doc, userId, rank) {
     updatedAt: Number(doc.updatedAt) || 0,
   };
   if (doc.board === BOARD_BOWL) {
-    out.level = Number(doc.level) || 0;
-    out.badgeLevel = Number(doc.badgeLevel) || 0;
+    const clearedLevel = bowlClearedLevel(doc);
+    out.level = clearedLevel;
+    out.badgeLevel = clearedLevel;
   } else {
     out.score = Number(doc.score) || 0;
   }
@@ -110,7 +120,7 @@ function publicRecord(doc, userId, rank) {
 function orderedQuery(col, board) {
   let query = col.where({ board });
   if (board === BOARD_BOWL) {
-    query = query.orderBy('level', 'desc').orderBy('badgeLevel', 'desc').orderBy('updatedAt', 'asc');
+    query = query.orderBy('badgeLevel', 'desc').orderBy('updatedAt', 'asc');
   } else {
     query = query.orderBy('score', 'desc').orderBy('updatedAt', 'asc');
   }
@@ -120,7 +130,9 @@ function orderedQuery(col, board) {
 async function findMineRank(col, board, userId) {
   const scanLimit = Math.max(getRankListMaxLimit(), getRankMineScanLimit());
   const res = await orderedQuery(col, board).limit(scanLimit).get();
-  const list = (res && Array.isArray(res.data) ? res.data : []);
+  const list = (res && Array.isArray(res.data) ? res.data : []).filter(
+    (item) => board !== BOARD_BOWL || bowlClearedLevel(item) > 0,
+  );
   const index = list.findIndex((item) => item.userId === userId);
   if (index < 0) {
     return null;
@@ -133,13 +145,13 @@ async function findMineRank(col, board, userId) {
 
 function buildSubmitRecord(board, body) {
   if (board === BOARD_BOWL) {
-    const level = normalizeNonNegativeInt(body.level, 'level');
-    const badgeLevel = normalizeNonNegativeInt(body.badgeLevel || 0, 'badgeLevel');
+    const badgeLevel = normalizeNonNegativeInt(body.badgeLevel ?? body.level ?? 0, 'badgeLevel');
     const maxLevel = getRankBowlMaxLevel();
-    if (level > maxLevel) {
-      throw httpError(400, 'LEVEL_TOO_HIGH', `level 超出上限: ${level} > ${maxLevel}`);
+    if (badgeLevel > maxLevel) {
+      throw httpError(400, 'LEVEL_TOO_HIGH', `badgeLevel 超出上限: ${badgeLevel} > ${maxLevel}`);
     }
-    return { level, badgeLevel, score: 0 };
+    // level 与 badgeLevel 统一为「已通关关数」，兼容旧客户端仍传 level 的情况
+    return { level: badgeLevel, badgeLevel, score: 0 };
   }
 
   const score = normalizeNonNegativeInt(body.score, 'score');
@@ -155,6 +167,14 @@ async function handleSubmit(req) {
   const body = req.body || {};
   const board = normalizeBoard(body.board);
   const incoming = buildSubmitRecord(board, body);
+  if (board === BOARD_BOWL && incoming.badgeLevel <= 0) {
+    return {
+      board,
+      updated: false,
+      reason: 'NO_PROGRESS',
+      record: null,
+    };
+  }
   if (RANK_SUBMIT_BLOCKED_USER_IDS.has(userId)) {
     console.log(`[rank.submit] uid=${userId} board=${board} blocked GM test account`);
     return {
@@ -250,7 +270,9 @@ async function handleList(req) {
   const offset = normalizeOffset(body.offset);
   const col = getRankingCollection();
   const res = await orderedQuery(col, board).skip(offset).limit(limit).get();
-  const rows = (res && Array.isArray(res.data) ? res.data : []);
+  const rows = (res && Array.isArray(res.data) ? res.data : []).filter(
+    (doc) => board !== BOARD_BOWL || bowlClearedLevel(doc) > 0,
+  );
   const list = rows.map((doc, index) => publicRecord(doc, userId, offset + index + 1));
   const mineRank = await findMineRank(col, board, userId);
   const mine = mineRank ? publicRecord(mineRank.doc, userId, mineRank.rank) : null;

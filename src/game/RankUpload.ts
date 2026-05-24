@@ -1,6 +1,6 @@
 import { BOWL_LEVEL_COUNT } from '@/config/bowlLevels';
 import { BackendService } from '@/core/BackendService';
-import { getMaxUnlockedBowlBadgeLevelNumber, getMaxUnlockedBowlLevelIndex } from '@/game/BowlProgress';
+import { getMaxUnlockedBowlBadgeLevelNumber } from '@/game/BowlProgress';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
 import { RankService } from '@/services/RankService';
 import { UserProfileService } from '@/services/UserProfileService';
@@ -9,7 +9,7 @@ import { uploadFriendScores } from '@/utils/friendRanking';
 /**
  * 客户端排行榜上报模块
  * ---------------------------------------------------------------
- * - `submitCurrentBowlProgressRank()` 通关时上报最高关 + 徽章
+ * - `submitCurrentBowlProgressRank()` 通关时上报已通关关数（badgeLevel）
  * - `submitFruitBestRankIfNeeded(isNewBest)` 果切刷新最高分时上报
  * - `flushPendingRankUploads()` / `awaitFlushPendingRankUploads()` 打开榜单时兜底
  *
@@ -71,8 +71,13 @@ function shouldSkipRankUpload(): boolean {
   return shouldSkipBackend() || isRankUploadBlockedUser();
 }
 
+/** 排行榜口径：已通关关数；尚未通关任何关时返回 0（不上榜）。 */
+function getBowlClearedLevelForRank(): number {
+  return Math.min(BOWL_LEVEL_COUNT, Math.max(0, getMaxUnlockedBowlBadgeLevelNumber()));
+}
+
 /**
- * 同步把当前最高关卡 / 果切高分推送到微信 KV（好友榜数据源）。
+ * 同步把当前已通关关数 / 果切高分推送到微信 KV（好友榜数据源）。
  * - 任何主流程的 RankService.submit 之后调一次即可，内置节流避免刷接口；
  * - 不依赖 CloudBase，离线 / 未启用后端时也能让好友榜显示。
  */
@@ -80,25 +85,27 @@ function syncFriendRankFromLocal(): void {
   if (isRankUploadBlockedUser()) {
     return;
   }
-  const level = Math.min(BOWL_LEVEL_COUNT, Math.max(0, getMaxUnlockedBowlLevelIndex() + 1));
+  const clearedLevel = getBowlClearedLevelForRank();
   const score = getFruitSliceBestScore();
-  uploadFriendScores(level, score);
+  uploadFriendScores(clearedLevel, score);
 }
 
 /**
- * 把"当前本地最高关卡进度"上报到 bowl 排行榜。
- * 进程内会按 `${level}:${badgeLevel}` 去重，重复调用零开销；
+ * 把"当前本地已通关关数"上报到 bowl 排行榜。
+ * 进程内会按 `${clearedLevel}:${fp}` 去重，重复调用零开销；
  * 后端 `isBetterRecord` 也会兜底拦截非更优记录。
  */
 export function submitCurrentBowlProgressRank(): void {
   if (shouldSkipRankUpload()) {
     return;
   }
-  const level = Math.min(BOWL_LEVEL_COUNT, Math.max(1, getMaxUnlockedBowlLevelIndex() + 1));
-  const badgeLevel = Math.max(0, getMaxUnlockedBowlBadgeLevelNumber());
+  const clearedLevel = getBowlClearedLevelForRank();
+  if (clearedLevel <= 0) {
+    return;
+  }
   const profile = UserProfileService.getProfileForRankSubmit();
   const fp = profileFingerprint();
-  const key = `${level}:${badgeLevel}:${fp}`;
+  const key = `${clearedLevel}:${fp}`;
   // 微信好友榜 KV 节流 10s，跟后端去重独立；通关后同步刷一刀确保好友榜也是最新
   syncFriendRankFromLocal();
   if (key === bowlUploadKey) {
@@ -107,10 +114,10 @@ export function submitCurrentBowlProgressRank(): void {
   bowlUploadKey = key;
   lastProfileFingerprint = fp;
   console.log(
-    `[RankUpload] submit bowl level=${level} badge=${badgeLevel}` +
+    `[RankUpload] submit bowl cleared=${clearedLevel}` +
       ` name=${profile.displayName || '(default)'} avatarUrl=${profile.avatarUrl ? 'yes' : 'no'}`,
   );
-  const flight = RankService.submitBowlProgress(level, badgeLevel, profile)
+  const flight = RankService.submitBowlProgress(clearedLevel, clearedLevel, profile)
     .then((result) => {
       maybeUnlockDedupeOnMismatch('bowl', profile, result);
       console.log(
@@ -230,16 +237,15 @@ export async function awaitFlushPendingRankUploads(): Promise<void> {
   const profile = UserProfileService.getProfileForRankSubmit();
   const fp = profileFingerprint();
 
-  const level = Math.min(BOWL_LEVEL_COUNT, Math.max(1, getMaxUnlockedBowlLevelIndex() + 1));
-  const badgeLevel = Math.max(0, getMaxUnlockedBowlBadgeLevelNumber());
-  const bowlKey = `${level}:${badgeLevel}:${fp}`;
-  if (bowlKey !== bowlUploadKey) {
+  const clearedLevel = getBowlClearedLevelForRank();
+  const bowlKey = clearedLevel > 0 ? `${clearedLevel}:${fp}` : '';
+  if (bowlKey && bowlKey !== bowlUploadKey) {
     bowlUploadKey = bowlKey;
     console.log(
-      `[RankUpload] flush bowl level=${level} badge=${badgeLevel}` +
+      `[RankUpload] flush bowl cleared=${clearedLevel}` +
         ` name=${profile.displayName || '(default)'} avatarUrl=${profile.avatarUrl ? 'yes' : 'no'}`,
     );
-    const flight = RankService.submitBowlProgress(level, badgeLevel, profile)
+    const flight = RankService.submitBowlProgress(clearedLevel, clearedLevel, profile)
       .then((result) => {
         maybeUnlockDedupeOnMismatch('bowl', profile, result);
         console.log(

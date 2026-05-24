@@ -160,7 +160,7 @@ export function resetFriendRankPrefetchThrottle(): void {
  * - 同时支持 bowl（通关进度）与 fruit（最佳分数），各自独立校验
  * - 节流：相同值 10s 内不重复发；force=true 可绕过
  *
- * 注意：bowlLevel / fruitScore 应该使用「已通关最高关卡」「水果切切乐历史最高分」，
+ * 注意：bowlLevel / fruitScore 应该使用「已通关最高关数」「水果切切乐历史最高分」，
  *       由调用方在 RankUpload 路径上保证一致。
  */
 export function uploadFriendScores(

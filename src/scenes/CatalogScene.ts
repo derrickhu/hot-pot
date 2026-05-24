@@ -77,6 +77,16 @@ const GRID_GAP = 14;
 const GRID_COLS = 3;
 const ROW_GAP_Y = 22;
 
+/** 冰饮 tab 缩略图分批加载，避免一次性解码过多大图 */
+const DRINK_THUMB_LOAD_BATCH = 6;
+
+interface DrinkRecipeThumbMount {
+  slot: DrinkRecipeCatalogSlot;
+  thumbRoot: PIXI.Container;
+  iconH: number;
+  cellW: number;
+}
+
 function destroyContainerChildren(container: PIXI.Container): void {
   const children = container.removeChildren();
   children.forEach((child) => child.destroy({ children: true }));
@@ -115,6 +125,8 @@ export class CatalogScene implements Scene {
   private domDragCleanup: (() => void) | null = null;
   private readonly loadedContentTextureKeys = new Set<string>();
   private recipePreview: PIXI.Container | null = null;
+  /** 取消进行中的冰饮缩略图灌图（切 tab / 重建网格时递增） */
+  private drinkThumbHydrateGen = 0;
   private active = false;
 
   constructor() {
@@ -416,7 +428,7 @@ export class CatalogScene implements Scene {
             BOWL_BADGES.map((badge) => this.loadContentTexture(this.badgeTextureKey(badge), badge.asset)),
           );
         } else {
-          // 菜谱卡是竖版大图，列表里不预加载；点击预览时按需加载，关闭后释放。
+          await loadDailyRecipesSubpackage();
         }
         this.loadedTabs.add(tab);
       }
@@ -694,6 +706,7 @@ export class CatalogScene implements Scene {
   }
 
   private buildDrinkRecipeGrid(slots: DrinkRecipeCatalogSlot[]): void {
+    this.drinkThumbHydrateGen += 1;
     destroyContainerChildren(this.gridRoot);
 
     if (slots.length === 0) {
@@ -727,6 +740,8 @@ export class CatalogScene implements Scene {
     );
     this.setScrollY(Math.min(this.scrollY, this.maxScrollY));
 
+    const thumbMounts: DrinkRecipeThumbMount[] = [];
+
     slots.forEach((slot, i) => {
       const col = i % GRID_COLS;
       const row = Math.floor(i / GRID_COLS);
@@ -742,26 +757,9 @@ export class CatalogScene implements Scene {
         void this.showRecipePreview(slot);
       });
 
-      const card = new PIXI.Graphics();
-      card.beginFill(0xfff6dd, 0.98);
-      card.lineStyle(4, 0xd68b4a, 0.95);
-      card.drawRoundedRect(-cellW * 0.36, iconH * 0.08, cellW * 0.72, iconH * 0.84, 18);
-      card.endFill();
-      card.beginFill(0xffdf8e, 0.86);
-      card.drawRoundedRect(-cellW * 0.25, iconH * 0.18, cellW * 0.5, 22, 11);
-      card.endFill();
-      cell.addChild(card);
-      const recipeMark = new PIXI.Text('制作', {
-        fontSize: 28,
-        fill: 0xa14a0d,
-        fontWeight: '900',
-        stroke: 0xffffff,
-        strokeThickness: 4,
-      });
-      recipeMark.anchor.set(0.5);
-      recipeMark.resolution = 2;
-      recipeMark.position.set(0, iconH * 0.48);
-      cell.addChild(recipeMark);
+      const thumbRoot = new PIXI.Container();
+      cell.addChild(thumbRoot);
+      thumbMounts.push({ slot, thumbRoot, iconH, cellW });
 
       const title = this.createCellLabel(slot.title, true, 18);
       title.position.set(0, iconH + 6);
@@ -778,6 +776,44 @@ export class CatalogScene implements Scene {
 
       this.gridRoot.addChild(cell);
     });
+
+    void this.hydrateDrinkRecipeThumbnails(thumbMounts, this.drinkThumbHydrateGen);
+  }
+
+  private mountDrinkRecipeThumb(mount: DrinkRecipeThumbMount, fullTex: PIXI.Texture): void {
+    destroyContainerChildren(mount.thumbRoot);
+
+    const sp = new PIXI.Sprite(fullTex);
+    sp.anchor.set(0.5, 0);
+    const scale = Math.min(mount.cellW / fullTex.width, mount.iconH / fullTex.height);
+    sp.scale.set(scale);
+    const drawnH = fullTex.height * scale;
+    sp.position.set(0, Math.max(0, (mount.iconH - drawnH) / 2));
+    mount.thumbRoot.addChild(sp);
+  }
+
+  private async hydrateDrinkRecipeThumbnails(
+    mounts: DrinkRecipeThumbMount[],
+    hydrateGen: number,
+  ): Promise<void> {
+    for (let i = 0; i < mounts.length; i += DRINK_THUMB_LOAD_BATCH) {
+      if (!this.active || this.activeTab !== 'drink' || hydrateGen !== this.drinkThumbHydrateGen) {
+        return;
+      }
+      const batch = mounts.slice(i, i + DRINK_THUMB_LOAD_BATCH);
+      await Promise.all(
+        batch.map((mount) => this.loadContentTexture(mount.slot.textureKey, mount.slot.asset)),
+      );
+      if (!this.active || this.activeTab !== 'drink' || hydrateGen !== this.drinkThumbHydrateGen) {
+        return;
+      }
+      for (const mount of batch) {
+        const tex = TextureCache.get(mount.slot.textureKey);
+        if (tex) {
+          this.mountDrinkRecipeThumb(mount, tex);
+        }
+      }
+    }
   }
 
   private async showRecipePreview(slot: DrinkRecipeCatalogSlot): Promise<void> {
@@ -836,8 +872,6 @@ export class CatalogScene implements Scene {
     preview.addChild(close);
     preview.on('pointertap', () => {
       this.destroyRecipePreview();
-      TextureCache.unload(slot.textureKey);
-      this.loadedContentTextureKeys.delete(slot.textureKey);
     });
     this.container.addChild(preview);
   }

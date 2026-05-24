@@ -1570,7 +1570,7 @@ export class LeaderboardScene implements Scene {
           avatarUrl: '',
           isMe: true,
           updatedAt: 0,
-          level: 1,
+          level: 0,
           badgeLevel: 0,
           score: 0,
         } as RankRecord;
@@ -2143,10 +2143,10 @@ export class LeaderboardScene implements Scene {
   }
 
   private formatRecordValue(record: RankRecord): string {
-    // 当前 UI 图统一展示为「N关」；果切高分时改成「N分」更直观
+    // 当前 UI 图统一展示为「N关」；捞水果榜口径为已通关关数（badgeLevel）
     if (record.board === RANK_BOARD_BOWL) {
-      const level = Math.max(1, Math.floor(record.level || 1));
-      return `${level}关`;
+      const cleared = Math.max(0, Math.floor(record.badgeLevel ?? record.level ?? 0));
+      return cleared > 0 ? `${cleared}关` : '—';
     }
     if (record.board === RANK_BOARD_FRUIT) {
       return `${Math.max(0, Math.floor(record.score || 0))}分`;

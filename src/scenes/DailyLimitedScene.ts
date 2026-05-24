@@ -24,7 +24,6 @@ import {
   loadBowlSubpackage,
   loadDailyLimitedSubpackage,
   loadDailyRecipesSubpackage,
-  loadFruitSliceSubpackage,
 } from '@/utils/loadBowlSubpackage';
 import { showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { TextureCache } from '@/utils/TextureCache';
@@ -126,7 +125,7 @@ const DAILY_ICE_BOWL_TEXTURE_KEY = 'daily_limited_ice_bowl_with_ice';
 const DAILY_ICE_BOWL_PATH = 'subpackages/daily_limited/assets/images/daily_limited/ice_bowl_with_ice_v1.png';
 const DAILY_LIMITED_REWARDED_AD_UNIT_ID = 'adunit-bf1f15914de547fc';
 const DAILY_BACK_BUTTON_TEXTURE_KEY = 'daily_limited_back_button';
-const DAILY_BACK_BUTTON_PATH = 'subpackages/fruit_slice/assets/images/fruit_slice/back_button.png';
+const DAILY_BACK_BUTTON_PATH = 'assets/images/gameplay_back_button.png';
 const DAILY_TOOL_BUTTONS_TEXTURE_KEY = 'daily_limited_tool_buttons_sheet';
 const DAILY_TOOL_BUTTONS_PATH = 'subpackages/daily_limited/assets/images/daily_limited/tool_buttons_sheet_v1.png';
 const DAILY_TOOL_PANELS_TEXTURE_KEY = 'daily_limited_tool_panels_sheet';
@@ -432,7 +431,6 @@ export class DailyLimitedScene implements Scene {
       loadBowlCoreSubpackage(),
       loadDailyLimitedSubpackage(),
       loadDailyRecipesSubpackage(),
-      loadFruitSliceSubpackage(),
     ]);
     await Promise.all([
       this.loadSceneTexture(this.dailyBackground.key, this.dailyBackground.path),

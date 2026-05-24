@@ -15,7 +15,6 @@ import {
 import { TextureCache } from '@/utils/TextureCache';
 import {
   loadBowlSubpackage,
-  loadFruitSliceSubpackage,
   loadGachaAssetsSubpackage,
 } from '@/utils/loadBowlSubpackage';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
@@ -26,7 +25,7 @@ const GACHA_BG_PATH = `${GACHA_IMAGE_DIR}/gacha_bg.jpg`;
 const GACHA_TITLE_KEY = 'gacha_title';
 const GACHA_TITLE_PATH = `${GACHA_IMAGE_DIR}/gacha_title.png`;
 const GACHA_BACK_BTN_KEY = 'gacha_back_btn';
-const GACHA_BACK_BTN_PATH = 'subpackages/fruit_slice/assets/images/fruit_slice/back_button.png';
+const GACHA_BACK_BTN_PATH = 'assets/images/gameplay_back_button.png';
 const GACHA_PULL_BTN_KEY = 'gacha_pull_btn';
 const GACHA_PULL_BTN_PATH = `${GACHA_IMAGE_DIR}/gacha_pull_button.png`;
 const GACHA_POOL_PANEL_KEY = 'gacha_pool_panel';
@@ -206,7 +205,6 @@ export class GachaScene implements Scene {
   private async preloadGachaTextures(): Promise<void> {
     await Promise.all([
       loadBowlSubpackage(),
-      loadFruitSliceSubpackage(),
       loadGachaAssetsSubpackage(),
     ]);
     const jobs: Array<Promise<unknown>> = [

@@ -128,7 +128,7 @@ const FRUIT_SLICE_UI_ASSETS = {
   horizontalKnife: `${FRUIT_SLICE_UI_DIR}/horizontal_knife.png`,
   pipeWoodBlock: `${FRUIT_SLICE_UI_DIR}/pipe_wood_block.png`,
   titleLogo: `${FRUIT_SLICE_UI_DIR}/title_logo.png`,
-  backButton: `${FRUIT_SLICE_UI_DIR}/back_button.png`,
+  backButton: 'assets/images/gameplay_back_button.png',
   genericPanel: `${FRUIT_SLICE_UI_DIR}/generic_panel.png`,
   failPanel: `${FRUIT_SLICE_UI_DIR}/fail_panel.png`,
   newRecordPanel: `${FRUIT_SLICE_UI_DIR}/new_record_panel.png`,

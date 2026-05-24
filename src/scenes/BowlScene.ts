@@ -3764,9 +3764,7 @@ export class BowlScene implements Scene {
         },
         onNextLevel: () => {
           this.levelClearOverlay.hide();
-          if (isLast) {
-            setBowlLevelIndex(0);
-          } else {
+          if (!isLast) {
             setBowlLevelIndex(idx + 1);
           }
           void this.ensureTexturesForLevel(getBowlLevelIndex())
