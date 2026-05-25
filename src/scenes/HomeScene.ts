@@ -6,7 +6,7 @@ import { SceneManager } from '@/core/SceneManager';
 import { analytics } from '@/analytics';
 import { BOWL_LEVEL_COUNT } from '@/config/bowlLevels';
 import { getDailyLimitedLevelForDate } from '@/config/dailyLimitedLevels';
-import { getBowlLevelIndex, getMaxUnlockedBowlBadgeLevelNumber } from '@/game/BowlProgress';
+import { getBowlLevelIndex, getMaxUnlockedBowlBadgeLevelNumber, markBowlProgressStarted } from '@/game/BowlProgress';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH } from '@/gameobjects/CoinBar';
 import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
@@ -854,6 +854,7 @@ export class HomeScene implements Scene {
       loadingOverlay.setProgress(0.12);
       await loadingOverlay.loadAssets();
       loadingOverlay.setProgress(0.42);
+      markBowlProgressStarted();
       await SceneManager.prepare('bowl');
       loadingOverlay.setProgress(1);
       SceneManager.switchTo('bowl');

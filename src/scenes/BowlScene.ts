@@ -152,6 +152,10 @@ const FRUIT_DRIFT_MAX_X = 16;
 const FRUIT_DRIFT_MAX_Y = 11;
 const FRUIT_SURFACE_BOB_THRESHOLD = 0.45;
 const FRUIT_SUBMERGE_BOB_THRESHOLD = -0.65;
+/** 碗面主展示层容量：优先把普通水果留在上层，超过容量的才自然沉到下层。 */
+const SURFACE_FILL_TARGET_COUNT = 30;
+const SURFACE_FILL_GRID_COLS = 5;
+const SURFACE_FILL_GRID_ROWS = 4;
 const HIDDEN_RESERVE_REBALANCE_RATIO = 0.35;
 const HIDDEN_RESERVE_REBALANCE_MIN_VISIBLE = 36;
 const HIDDEN_RESERVE_REBALANCE_MAX_BATCH = 14;
@@ -758,6 +762,7 @@ export class BowlScene implements Scene {
       }
     }
 
+    this.rebalanceSurfaceFruitFill();
     this.submergedFruitLayer.sortChildren();
     this.surfaceFruitLayer.sortChildren();
     this.flyingFruitLayer.sortChildren();
@@ -4457,6 +4462,81 @@ export class BowlScene implements Scene {
     fruit.position.copyFrom(target.toLocal(world));
     target.addChild(fruit);
     this.applyFruitSoupVisual(fruit);
+  }
+
+  private rebalanceSurfaceFruitFill(): void {
+    const visibleFruits = this.fruits.filter(
+      (fruit) =>
+        fruit.phase === 'bowl' &&
+        !fruit.picked &&
+        !fruit.hiddenReserve &&
+        !NON_ORDER_FRUIT_IDS.has(fruit.fruitId),
+    );
+    if (visibleFruits.length <= 0) {
+      return;
+    }
+
+    const targetSurfaceCount = Math.min(visibleFruits.length, SURFACE_FILL_TARGET_COUNT);
+    const { hx, hy } = this.getFruitSoupHalfExtents();
+    const buckets: FruitItem[][] = Array.from(
+      { length: SURFACE_FILL_GRID_COLS * SURFACE_FILL_GRID_ROWS },
+      () => [],
+    );
+
+    const cellIndexFor = (fruit: FruitItem): number => {
+      const nx = Math.max(0, Math.min(0.999, (fruit.x - this.bowlCenter.x + hx) / (hx * 2)));
+      const ny = Math.max(0, Math.min(0.999, (fruit.y - this.bowlCenter.y + hy) / (hy * 2)));
+      const col = Math.floor(nx * SURFACE_FILL_GRID_COLS);
+      const row = Math.floor(ny * SURFACE_FILL_GRID_ROWS);
+      return row * SURFACE_FILL_GRID_COLS + col;
+    };
+
+    for (const fruit of visibleFruits) {
+      buckets[cellIndexFor(fruit)]!.push(fruit);
+    }
+
+    const selected = new Set<FruitItem>();
+    const sortBySurfaceStability = (a: FruitItem, b: FruitItem): number => {
+      if (a === this.tutorialTargetFruit) return -1;
+      if (b === this.tutorialTargetFruit) return 1;
+      const aSurface = a.parent === this.surfaceFruitLayer ? 0 : 1;
+      const bSurface = b.parent === this.surfaceFruitLayer ? 0 : 1;
+      return aSurface - bSurface || a.y - b.y || a.depthJitter - b.depthJitter;
+    };
+
+    // 第一轮：每个有水果的区域至少挑一颗在上层，避免局部空洞下面却有半透明水果。
+    for (const bucket of buckets) {
+      if (bucket.length <= 0 || selected.size >= targetSurfaceCount) {
+        continue;
+      }
+      bucket.sort(sortBySurfaceStability);
+      selected.add(bucket[0]!);
+    }
+
+    // 第二轮：剩余上层名额按区域轮询补齐，让密集区域也能有足够的上层水果但不集中爆堆。
+    let progressed = true;
+    while (selected.size < targetSurfaceCount && progressed) {
+      progressed = false;
+      for (const bucket of buckets) {
+        if (selected.size >= targetSurfaceCount) {
+          break;
+        }
+        const next = bucket.find((fruit) => !selected.has(fruit));
+        if (next) {
+          selected.add(next);
+          progressed = true;
+        }
+      }
+    }
+
+    for (const fruit of visibleFruits) {
+      const targetLayer = selected.has(fruit) ? this.surfaceFruitLayer : this.submergedFruitLayer;
+      if (fruit.parent !== targetLayer) {
+        this.moveFruitToSoupLayer(fruit, targetLayer);
+      } else {
+        this.applyFruitSoupVisual(fruit);
+      }
+    }
   }
 
   private applyFruitSoupVisual(fruit: FruitItem): void {
