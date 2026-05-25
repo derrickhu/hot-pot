@@ -66,6 +66,10 @@
       },
       {
         "type": "folder",
+        "value": "softcopyright"
+      },
+      {
+        "type": "folder",
         "value": "cloudfunctions"
       },
       {
