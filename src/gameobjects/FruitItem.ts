@@ -8,6 +8,7 @@ export class FruitItem extends PIXI.Container {
   readonly fruitId: FruitId;
   readonly display: PIXI.DisplayObject;
   private readonly contactShadow: PIXI.Graphics;
+  private readonly wetHighlight: PIXI.Graphics;
   private readonly highlightRing: PIXI.Graphics;
   /** 冻果冰块覆盖层：仅在 frozen=true 时可见；与 display 同生同灭 */
   readonly frostOverlay: PIXI.Container;
@@ -81,6 +82,11 @@ export class FruitItem extends PIXI.Container {
     this.addChild(this.contactShadow);
 
     this.addChild(this.display);
+
+    this.wetHighlight = new PIXI.Graphics();
+    this.wetHighlight.eventMode = 'none';
+    this.wetHighlight.visible = false;
+    this.addChild(this.wetHighlight);
 
     this.highlightRing = new PIXI.Graphics();
     this.highlightRing.eventMode = 'none';
@@ -167,20 +173,39 @@ export class FruitItem extends PIXI.Container {
   setSoupDepthVisual(mode: 'surface' | 'submerged' | 'hidden' | 'standalone'): void {
     if (mode === 'hidden') {
       this.contactShadow.alpha = 0;
+      this.wetHighlight.visible = false;
       return;
     }
     if (mode === 'submerged') {
       this.contactShadow.alpha = 0.08;
       this.contactShadow.scale.set(0.82, 0.72);
+      this.drawWetHighlight(0.08, 0.72);
       return;
     }
     if (mode === 'standalone') {
       this.contactShadow.alpha = 0.16;
       this.contactShadow.scale.set(0.9, 0.76);
+      this.wetHighlight.visible = false;
       return;
     }
     this.contactShadow.alpha = 0.26;
     this.contactShadow.scale.set(1, 0.88);
+    this.drawWetHighlight(0.1, 0.72);
+  }
+
+  private drawWetHighlight(alpha: number, scale = 1): void {
+    this.wetHighlight.visible = alpha > 0;
+    this.wetHighlight.clear();
+    if (alpha <= 0) {
+      return;
+    }
+    this.wetHighlight.lineStyle(3 * scale, 0xffffff, alpha);
+    this.wetHighlight.drawEllipse(-11, -13, 15 * scale, 5 * scale);
+    this.wetHighlight.lineStyle(1.8 * scale, 0xffffff, alpha * 0.66);
+    this.wetHighlight.drawEllipse(12, 8, 12 * scale, 4 * scale);
+    this.wetHighlight.beginFill(0xffffff, alpha * 0.28);
+    this.wetHighlight.drawEllipse(-18, -2, 3.2 * scale, 1.8 * scale);
+    this.wetHighlight.endFill();
   }
 
   playTapPop(kind: 'order' | 'buffer' | 'frozen' = 'order'): void {

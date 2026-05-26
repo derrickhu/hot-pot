@@ -1,0 +1,27 @@
+Create one isolated grapefruit wedge slice game ingredient for a mobile casual fruit-bowl puzzle game.
+
+Reference style:
+- Match the existing hand-painted bowl ingredient style: cozy 2D cartoon food art, thick dark brown outer outline, warm watercolor texture, bright appetizing colors.
+- Top-down with slight 3/4 perspective, like a fruit piece floating in soup.
+- Strong readable silhouette at small size, glossy juicy surface, subtle top-left highlight, soft painted thickness at the peel edge.
+
+Object:
+- A single pink grapefruit wedge / pomelo wedge slice.
+- Crescent wedge shape, not a full round slice.
+- Pink-red translucent juicy flesh with clear citrus segment fan lines.
+- Pale white pith and orange-pink peel along the curved bottom edge.
+- A few tiny citrus pulp dots and natural highlights, but no holes, no transparent gaps inside the fruit.
+- Complete closed outline around the entire ingredient.
+
+Composition:
+- One object only, centered.
+- Transparent or plain very light background suitable for background removal.
+- Leave a little clean margin around the object.
+- No shadow outside the object except a very subtle painted contact shadow attached to the ingredient.
+
+Strict constraints:
+- NO TEXT, no labels, no captions, no watermark, no logo, no UI.
+- No plate, no bowl, no table, no props.
+- Do not crop the ingredient.
+- Do not create photorealistic 3D render.
+- Do not leave any holes or transparent-looking cutouts inside the grapefruit flesh.

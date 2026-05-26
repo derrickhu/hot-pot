@@ -141,26 +141,31 @@ const ORDER_BUBBLE_H = 56;
 const ORDER_BUBBLE_ICON_SIDE = 38;
 const ORDER_PLATE_ROW_OFFSET = 162;
 const ORDER_BUBBLE_EXTRA_Y = 50;
-const ORDER_PLATE_RADIUS = 86;
-const ORDER_LOCK_PLATE_RADIUS = 88;
+const ORDER_PLATE_RADIUS = 96;
+const ORDER_LOCK_PLATE_RADIUS = 98;
 const BUFFER_STRIP_ROW_OFFSET = 208;
 const ORDER_PROGRESS_GAP = 14;
-const FRUIT_BOB_SPEED = 0.000075;
-const FRUIT_ROTATION_SPEED = 0.00048;
-const FRUIT_DRIFT_PULSE_SEC = 2.8;
-const FRUIT_DRIFT_MAX_X = 16;
-const FRUIT_DRIFT_MAX_Y = 11;
-const FRUIT_SURFACE_BOB_THRESHOLD = 0.45;
-const FRUIT_SUBMERGE_BOB_THRESHOLD = -0.65;
+const FRUIT_BOB_SPEED = 0.000055;
+const FRUIT_ROTATION_SPEED = 0.00058;
+const FRUIT_DRIFT_PULSE_SEC = 2.35;
+const FRUIT_DRIFT_MAX_X = 19;
+const FRUIT_DRIFT_MAX_Y = 13;
+const FRUIT_SURFACE_BOB_THRESHOLD = 0.78;
+const FRUIT_SUBMERGE_BOB_THRESHOLD = -0.86;
 /** 碗面主展示层容量：优先把普通水果留在上层，超过容量的才自然沉到下层。 */
-const SURFACE_FILL_TARGET_COUNT = 30;
-const SURFACE_FILL_GRID_COLS = 5;
-const SURFACE_FILL_GRID_ROWS = 4;
+const SURFACE_FILL_TARGET_COUNT = 42;
+const SURFACE_FILL_TARGET_RATIO = 0.52;
+const SURFACE_FILL_TARGET_MAX = 62;
+const SURFACE_FILL_GRID_COLS = 6;
+const SURFACE_FILL_GRID_ROWS = 5;
 const HIDDEN_RESERVE_REBALANCE_RATIO = 0.35;
 const HIDDEN_RESERVE_REBALANCE_MIN_VISIBLE = 36;
 const HIDDEN_RESERVE_REBALANCE_MAX_BATCH = 14;
-const BOWL_FRUIT_SCALE_MIN = 1.32;
-const BOWL_FRUIT_SCALE_MAX = 1.62;
+const BOWL_FRUIT_SCALE_MIN = 1.62;
+const BOWL_FRUIT_SCALE_MAX = 2.04;
+const HIDDEN_RESERVE_ALPHA = 0.16;
+const SUBMERGED_FRUIT_ALPHA = 0.82;
+const TAP_SOUP_RIPPLE_MAX = 12;
 const BOWL_FRUIT_SIZE_MULTIPLIER: Partial<Record<FruitId, number>> = {
   basil_seed: 0.58,
   black_rice: 0.58,
@@ -282,6 +287,17 @@ type SoupSurfaceSprite = PIXI.Sprite & {
   flowSpeed?: number;
 };
 
+type SoupLightStreak = PIXI.Graphics & {
+  baseX?: number;
+  baseY?: number;
+  baseRot?: number;
+  baseAlpha?: number;
+  driftX?: number;
+  driftY?: number;
+  phase?: number;
+  spin?: number;
+};
+
 type SoupDisplacementSprite = PIXI.Sprite & {
   flowVX?: number;
   flowVY?: number;
@@ -310,10 +326,22 @@ type SoupRollPatch = PIXI.Graphics & {
   spin?: number;
 };
 
+type SoupTapRipple = PIXI.Graphics & {
+  elapsedSec?: number;
+  delaySec?: number;
+  durationSec?: number;
+  baseRx?: number;
+  baseRy?: number;
+  baseAlpha?: number;
+  color?: number;
+  lineWidth?: number;
+  spin?: number;
+};
+
 /** 四枚圆盘（左起两单 + 两格解锁）圆心 X，整体在 logicWidth 内居中，避免贴边裁切 */
 function computeOrderPlateCenters(logicWidth: number): [number, number, number, number] {
-  const radii = [58, 58, 60, 60] as const;
-  const gap = 20;
+  const radii = [64, 64, 66, 66] as const;
+  const gap = 22;
   const xc: number[] = [];
   let c = radii[0];
   xc.push(c);
@@ -406,17 +434,21 @@ export class BowlScene implements Scene {
   private readonly soupDepthVeilLayer = new PIXI.Container();
   private readonly soupDepthVeil = new PIXI.Graphics();
   private readonly soupRollLayer = new PIXI.Container();
+  private readonly soupShimmerLayer = new PIXI.Container();
   private readonly soupEdgeWave = new PIXI.Graphics();
   private readonly soupRippleLayer = new PIXI.Container();
+  private readonly soupTapRippleLayer = new PIXI.Container();
   private readonly soupBubbleLayer = new PIXI.Container();
   private readonly soupEdgeBubbleLayer = new PIXI.Container();
   private readonly soupFlowLayer = new PIXI.Container();
   private readonly soupSurfaceOverlaySprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
   private readonly soupFlowSprites: PIXI.Sprite[] = [];
+  private readonly soupLightStreakItems: SoupLightStreak[] = [];
   private readonly soupRollItems: SoupRollPatch[] = [];
   private readonly soupBubbleItems: SoupBubble[] = [];
   private readonly soupEdgeBubbleItems: SoupBubble[] = [];
   private readonly soupDetailItems: PIXI.Container[] = [];
+  private readonly soupTapRippleItems: SoupTapRipple[] = [];
   private readonly soupDisplacementSprite = new PIXI.Sprite(PIXI.Texture.EMPTY) as SoupDisplacementSprite;
   private soupDisplacementFilter: PIXI.DisplacementFilter | null = null;
   private submergedDisplacementFilter: PIXI.DisplacementFilter | null = null;
@@ -425,6 +457,7 @@ export class BowlScene implements Scene {
   private readonly bowlContentMask = new PIXI.Graphics();
   private soupRippleTime = 0;
   private soupDisturbanceSec = 0;
+  private soupEdgeWaveBoostSec = 0;
   private currentSoupKey: BowlSoupKey = DEFAULT_BOWL_SOUP_KEY;
   /** 碗内叠放顺序（自下而上）：水晶碗沿 → 汤 → 程序兜底汤 */
   private readonly bowlStack = new PIXI.Container();
@@ -712,8 +745,8 @@ export class BowlScene implements Scene {
       this.keepFruitInsideBowlEllipse(fruit, hx, hy);
 
       const bob = Math.sin(now * FRUIT_BOB_SPEED + fruit.bobSeed);
-      fruit.rotation = Math.sin(now * FRUIT_ROTATION_SPEED + fruit.bobSeed) * 0.028;
-      fruit.display.y = bob * 3.2;
+      fruit.rotation = Math.sin(now * FRUIT_ROTATION_SPEED + fruit.bobSeed) * 0.036;
+      fruit.display.y = bob * 4.6;
       if (
         this.tutorialActive &&
         this.tutorialStep === 'fruit' &&
@@ -1008,8 +1041,10 @@ export class BowlScene implements Scene {
     this.soupDepthVeilLayer.eventMode = 'none';
     this.soupDepthVeil.eventMode = 'none';
     this.soupRollLayer.eventMode = 'none';
+    this.soupShimmerLayer.eventMode = 'none';
     this.soupEdgeWave.eventMode = 'none';
     this.soupRippleLayer.eventMode = 'none';
+    this.soupTapRippleLayer.eventMode = 'none';
     this.soupBubbleLayer.eventMode = 'none';
     this.soupEdgeBubbleLayer.eventMode = 'none';
     this.soupOverlayLayer.addChild(this.soupRippleLayer);
@@ -1027,7 +1062,6 @@ export class BowlScene implements Scene {
     this.rimSprite.anchor.set(0.5);
     this.rimSprite.position.set(this.bowlCenter.x, this.bowlCenter.y);
     this.rimSprite.visible = false;
-
     this.soupSprite.anchor.set(0.5);
     this.soupSprite.position.set(this.bowlCenter.x, this.bowlCenter.y);
     this.soupSprite.visible = false;
@@ -1381,9 +1415,9 @@ export class BowlScene implements Scene {
     const bowlW = this.bowlRadiusX * 2 * margin;
     const bowlH = this.bowlRadiusY * 2 * margin;
     /** 碗沿横向占满；汤为碗沿缩放的固定比例，保证多露一圈边 */
-    const rimTargetW = Game.logicWidth * 0.995;
-    /** 相对碗沿缩放：汤整体比碗小一圈（约 0.82 = 直径约 82%，露边更明显） */
-    const soupToRimScale = 0.82;
+    const rimTargetW = Game.logicWidth * 1.08;
+    /** 相对碗沿缩放：碗跟着放大，但汤面略收一圈，留出真实碗沿。 */
+    const soupToRimScale = 0.89;
 
     let rimScale = 0;
     if (rimTex) {
@@ -1404,7 +1438,7 @@ export class BowlScene implements Scene {
       const sx = bowlW / soupTex.width;
       const sy = bowlH / soupTex.height;
       const sFit = Math.min(sx, sy) * 0.98;
-      const soupWide = (Game.logicWidth * 0.88) / Math.max(soupTex.width, soupTex.height);
+      const soupWide = (Game.logicWidth * 0.96) / Math.max(soupTex.width, soupTex.height);
       let sSoup = Math.max(sFit, soupWide);
       if (rimScale > 0) {
         sSoup = Math.min(sSoup, rimScale * soupToRimScale);
@@ -1465,18 +1499,18 @@ export class BowlScene implements Scene {
     this.soupDisplacementSprite.texture = texture;
     this.soupDisplacementSprite.anchor.set(0.5);
     this.soupDisplacementSprite.position.set(this.bowlCenter.x, this.bowlCenter.y);
-    this.soupDisplacementSprite.scale.set(3.2);
-    this.soupDisplacementSprite.flowVX = 12;
-    this.soupDisplacementSprite.flowVY = 7;
+    this.soupDisplacementSprite.scale.set(2.45);
+    this.soupDisplacementSprite.flowVX = 18;
+    this.soupDisplacementSprite.flowVY = 11;
     this.soupDisplacementSprite.eventMode = 'none';
     this.soupDisplacementSprite.renderable = false;
 
-    this.soupDisplacementFilter = new PIXI.DisplacementFilter(this.soupDisplacementSprite, 4);
-    this.submergedDisplacementFilter = new PIXI.DisplacementFilter(this.soupDisplacementSprite, 2);
-    this.submergedBlurFilter = new PIXI.BlurFilter(0.45, 2, 1);
+    this.soupDisplacementFilter = new PIXI.DisplacementFilter(this.soupDisplacementSprite, 7);
+    this.submergedDisplacementFilter = new PIXI.DisplacementFilter(this.soupDisplacementSprite, 3.4);
+    this.submergedBlurFilter = new PIXI.BlurFilter(0.32, 2, 1);
     this.submergedColorFilter = new PIXI.ColorMatrixFilter();
-    this.submergedColorFilter.brightness(0.92, false);
-    this.submergedColorFilter.saturate(-0.08, true);
+    this.submergedColorFilter.brightness(0.96, false);
+    this.submergedColorFilter.saturate(-0.04, true);
     this.soupSprite.filters = [this.soupDisplacementFilter];
     this.soupFlowLayer.filters = [this.soupDisplacementFilter];
     this.submergedFruitLayer.filters = [
@@ -1547,12 +1581,16 @@ export class BowlScene implements Scene {
     this.soupDepthVeil.clear();
     this.soupRollLayer.removeChildren();
     this.soupRollItems.length = 0;
+    this.soupShimmerLayer.removeChildren();
+    this.soupLightStreakItems.length = 0;
     this.soupEdgeWave.clear();
     this.soupDetailLayer.removeChildren();
     this.soupBubbleLayer.removeChildren();
     this.soupBubbleItems.length = 0;
     this.soupEdgeBubbleLayer.removeChildren();
     this.soupEdgeBubbleItems.length = 0;
+    this.soupTapRippleLayer.removeChildren();
+    this.soupTapRippleItems.length = 0;
     const { hx, hy } = this.getSoupVisualHalfExtents();
     const overlay = this.getSoupOverlayStyle();
     const soupTexture =
@@ -1585,16 +1623,14 @@ export class BowlScene implements Scene {
     wash.beginFill(overlay.washColor, overlay.washAlpha);
     wash.drawEllipse(this.bowlCenter.x, this.bowlCenter.y, hx, hy);
     wash.endFill();
-    wash.beginFill(overlay.highlightColor, overlay.highlightAlpha);
-    wash.drawEllipse(this.bowlCenter.x - hx * 0.16, this.bowlCenter.y - hy * 0.18, hx * 0.58, hy * 0.28);
-    wash.endFill();
     this.soupOverlayLayer.addChild(wash);
 
     this.redrawSoupDepthVeil(hx, hy, overlay);
     this.soupDepthVeilLayer.addChild(this.soupDepthVeil);
 
     this.redrawSoupRollPatches(hx, hy, overlay);
-    this.soupOverlayLayer.addChild(this.soupRollLayer, this.soupEdgeWave);
+    this.redrawSoupShimmerLayer(hx, hy, overlay);
+    this.soupOverlayLayer.addChild(this.soupShimmerLayer, this.soupRollLayer, this.soupEdgeWave);
 
     this.redrawSoupBubbles(hx, hy, overlay);
     this.soupOverlayLayer.addChild(this.soupBubbleLayer);
@@ -1602,9 +1638,10 @@ export class BowlScene implements Scene {
 
     this.soupRippleLayer.removeChildren();
     const rippleDefs = [
-      { rx: 0.5, ry: 0.18, y: -0.12, rot: -0.16, alpha: overlay.rippleAlpha },
-      { rx: 0.38, ry: 0.14, y: 0.06, rot: 0.24, alpha: overlay.rippleAlpha * 0.66 },
-      { rx: 0.62, ry: 0.22, y: 0.2, rot: -0.28, alpha: overlay.rippleAlpha * 0.42 },
+      { rx: 0.36, ry: 0.09, y: -0.14, rot: -0.16, alpha: Math.max(0.13, overlay.rippleAlpha * 1.1) },
+      { rx: 0.28, ry: 0.072, y: 0.05, rot: 0.24, alpha: Math.max(0.1, overlay.rippleAlpha * 0.86) },
+      { rx: 0.42, ry: 0.098, y: 0.2, rot: -0.28, alpha: Math.max(0.08, overlay.rippleAlpha * 0.66) },
+      { rx: 0.22, ry: 0.056, y: -0.02, rot: -0.46, alpha: Math.max(0.08, overlay.rippleAlpha * 0.62) },
     ] as const;
     for (const def of rippleDefs) {
       const g = new PIXI.Graphics();
@@ -1616,6 +1653,7 @@ export class BowlScene implements Scene {
       this.soupRippleLayer.addChild(g);
     }
     this.soupOverlayLayer.addChild(this.soupRippleLayer);
+    this.soupOverlayLayer.addChild(this.soupTapRippleLayer);
     this.redrawSoupSurfaceDetails(hx, hy, overlay);
   }
 
@@ -1629,12 +1667,47 @@ export class BowlScene implements Scene {
     g.beginFill(overlay.depthVeilColor, overlay.depthVeilAlpha);
     g.drawEllipse(this.bowlCenter.x, this.bowlCenter.y, hx * 0.98, hy * 0.98);
     g.endFill();
-    g.beginFill(overlay.highlightColor, overlay.depthVeilAlpha * 0.34);
-    g.drawEllipse(this.bowlCenter.x - hx * 0.18, this.bowlCenter.y - hy * 0.2, hx * 0.48, hy * 0.22);
-    g.endFill();
-    g.beginFill(0xffffff, overlay.depthVeilAlpha * 0.2);
-    g.drawEllipse(this.bowlCenter.x + hx * 0.22, this.bowlCenter.y + hy * 0.12, hx * 0.34, hy * 0.16);
-    g.endFill();
+  }
+
+  private redrawSoupShimmerLayer(
+    hx: number,
+    hy: number,
+    overlay: ReturnType<BowlScene['getSoupOverlayStyle']>,
+  ): void {
+    const defs = [
+      { x: -0.36, y: -0.22, len: 0.52, rot: -0.34, alpha: 0.2, width: 7, phase: 0.2 },
+      { x: 0.22, y: -0.08, len: 0.42, rot: -0.28, alpha: 0.16, width: 5, phase: 1.4 },
+      { x: -0.12, y: 0.18, len: 0.48, rot: -0.3, alpha: 0.14, width: 5, phase: 2.6 },
+      { x: 0.34, y: 0.24, len: 0.3, rot: -0.22, alpha: 0.12, width: 4, phase: 3.8 },
+    ] as const;
+    for (const def of defs) {
+      const streak = new PIXI.Graphics() as SoupLightStreak;
+      const len = hx * def.len;
+      streak.lineStyle(def.width + 3, 0x4a6d76, def.alpha * 0.1);
+      streak.moveTo(-len, 0);
+      streak.bezierCurveTo(-len * 0.35, -hy * 0.018, len * 0.28, hy * 0.02, len, 0);
+      streak.lineStyle(def.width, overlay.highlightColor, def.alpha);
+      streak.moveTo(-len, 0);
+      streak.bezierCurveTo(-len * 0.35, -hy * 0.018, len * 0.28, hy * 0.02, len, 0);
+      streak.lineStyle(Math.max(1.5, def.width * 0.38), 0xffffff, def.alpha * 0.62);
+      streak.moveTo(-len * 0.42, -hy * 0.012);
+      streak.bezierCurveTo(-len * 0.16, -hy * 0.028, len * 0.12, hy * 0.006, len * 0.42, -hy * 0.008);
+      streak.position.set(this.bowlCenter.x + hx * def.x, this.bowlCenter.y + hy * def.y);
+      streak.rotation = def.rot;
+      streak.alpha = 0.88;
+      streak.blendMode = PIXI.BLEND_MODES.ADD;
+      streak.eventMode = 'none';
+      streak.baseX = streak.x;
+      streak.baseY = streak.y;
+      streak.baseRot = def.rot;
+      streak.baseAlpha = def.alpha;
+      streak.driftX = hx * 0.045;
+      streak.driftY = hy * 0.018;
+      streak.phase = def.phase;
+      streak.spin = 0.012;
+      this.soupShimmerLayer.addChild(streak);
+      this.soupLightStreakItems.push(streak);
+    }
   }
 
   private redrawSoupRollPatches(
@@ -1643,23 +1716,39 @@ export class BowlScene implements Scene {
     overlay: ReturnType<BowlScene['getSoupOverlayStyle']>,
   ): void {
     const defs = [
-      { x: -0.24, y: -0.16, rx: 0.34, ry: 0.15, rot: -0.24, alpha: 0.12, tint: 'light' },
-      { x: 0.22, y: -0.08, rx: 0.3, ry: 0.13, rot: 0.32, alpha: 0.1, tint: 'dark' },
-      { x: -0.03, y: 0.13, rx: 0.44, ry: 0.18, rot: -0.08, alpha: 0.11, tint: 'light' },
-      { x: 0.28, y: 0.25, rx: 0.26, ry: 0.12, rot: -0.28, alpha: 0.08, tint: 'dark' },
-      { x: -0.34, y: 0.28, rx: 0.24, ry: 0.1, rot: 0.2, alpha: 0.08, tint: 'light' },
+      { x: -0.24, y: -0.16, rx: 0.28, ry: 0.055, rot: -0.24, alpha: 0.18, tint: 'light' },
+      { x: 0.22, y: -0.08, rx: 0.22, ry: 0.046, rot: 0.32, alpha: 0.12, tint: 'dark' },
+      { x: -0.03, y: 0.13, rx: 0.34, ry: 0.06, rot: -0.08, alpha: 0.16, tint: 'light' },
+      { x: 0.28, y: 0.25, rx: 0.2, ry: 0.04, rot: -0.28, alpha: 0.1, tint: 'dark' },
+      { x: -0.34, y: 0.28, rx: 0.18, ry: 0.036, rot: 0.2, alpha: 0.12, tint: 'light' },
+      { x: 0.02, y: -0.28, rx: 0.2, ry: 0.034, rot: 0.18, alpha: 0.14, tint: 'light' },
+      { x: 0.38, y: 0.02, rx: 0.16, ry: 0.03, rot: -0.18, alpha: 0.1, tint: 'light' },
     ] as const;
 
     for (let i = 0; i < defs.length; i += 1) {
       const def = defs[i]!;
       const patch = new PIXI.Graphics() as SoupRollPatch;
       const color = def.tint === 'light' ? overlay.rollLightColor : overlay.rollShadowColor;
-      patch.beginFill(color, def.alpha);
-      patch.drawEllipse(0, 0, hx * def.rx, hy * def.ry);
-      patch.endFill();
-      patch.beginFill(0xffffff, def.alpha * 0.35);
-      patch.drawEllipse(-hx * def.rx * 0.24, -hy * def.ry * 0.22, hx * def.rx * 0.38, hy * def.ry * 0.34);
-      patch.endFill();
+      patch.lineStyle(def.tint === 'light' ? 4 : 3, color, def.alpha);
+      patch.moveTo(-hx * def.rx, 0);
+      patch.bezierCurveTo(
+        -hx * def.rx * 0.36,
+        -hy * def.ry,
+        hx * def.rx * 0.36,
+        hy * def.ry,
+        hx * def.rx,
+        0,
+      );
+      patch.lineStyle(2, 0xffffff, def.alpha * 0.42);
+      patch.moveTo(-hx * def.rx * 0.62, -hy * def.ry * 0.18);
+      patch.bezierCurveTo(
+        -hx * def.rx * 0.2,
+        -hy * def.ry * 0.68,
+        hx * def.rx * 0.24,
+        hy * def.ry * 0.28,
+        hx * def.rx * 0.68,
+        -hy * def.ry * 0.08,
+      );
       patch.baseX = this.bowlCenter.x + hx * def.x;
       patch.baseY = this.bowlCenter.y + hy * def.y;
       patch.baseRot = def.rot;
@@ -1672,7 +1761,7 @@ export class BowlScene implements Scene {
       patch.spin = i % 2 === 0 ? 0.035 : -0.028;
       patch.position.set(patch.baseX, patch.baseY);
       patch.rotation = def.rot;
-      patch.blendMode = def.tint === 'light' ? PIXI.BLEND_MODES.ADD : PIXI.BLEND_MODES.MULTIPLY;
+      patch.blendMode = def.tint === 'light' ? PIXI.BLEND_MODES.ADD : PIXI.BLEND_MODES.NORMAL;
       patch.eventMode = 'none';
       this.soupRollLayer.addChild(patch);
       this.soupRollItems.push(patch);
@@ -1684,14 +1773,18 @@ export class BowlScene implements Scene {
     g.clear();
     const points = 96;
     const t = this.soupRippleTime;
+    const boost = Math.max(0, Math.min(1, this.soupEdgeWaveBoostSec / 0.52));
+    const waveScale = 1 + boost * 1.05;
+    const alphaScale = 1 + boost * 0.75;
     const drawLoop = (radiusOffset: number, color: number, alpha: number, lineWidth: number): void => {
-      g.lineStyle(lineWidth, color, alpha);
+      g.lineStyle(lineWidth + boost * 1.4, color, Math.min(0.55, alpha * alphaScale));
       for (let i = 0; i <= points; i += 1) {
         const a = (i / points) * Math.PI * 2;
         const wave =
-          Math.sin(a * 3 + t * 0.8) * 3.6 +
-          Math.sin(a * 5.5 - t * 0.55) * 2.2 +
-          Math.sin(a * 8.0 + t * 1.1) * 1.1;
+          (Math.sin(a * 3 + t * 0.8) * 3.6 +
+            Math.sin(a * 5.5 - t * 0.55) * 2.2 +
+            Math.sin(a * 8.0 + t * 1.1) * 1.1) *
+          waveScale;
         const x = this.bowlCenter.x + Math.cos(a) * (hx + radiusOffset + wave);
         const y = this.bowlCenter.y + Math.sin(a) * (hy + radiusOffset + wave * 0.55);
         if (i === 0) {
@@ -1913,18 +2006,22 @@ export class BowlScene implements Scene {
   } {
     switch (this.currentSoupKey) {
       case 'berry_tomato':
-        return { washColor: 0xd94d3f, washAlpha: 0.1, highlightColor: 0xffb79c, highlightAlpha: 0.08, rippleAlpha: 0.045, textureAlpha: 0.36, detailColor: 0xffd0b2, bubbleColor: 0xffead8, bubbleAlpha: 0.34, rollLightColor: 0xffd3ac, rollShadowColor: 0xb7362b, edgeWaveAlpha: 0.18, depthVeilColor: 0xdd4a38, depthVeilAlpha: 0.1 };
+        return { washColor: 0xd94d3f, washAlpha: 0.13, highlightColor: 0xffc3aa, highlightAlpha: 0.13, rippleAlpha: 0.095, textureAlpha: 0.46, detailColor: 0xffdfc4, bubbleColor: 0xfff2de, bubbleAlpha: 0.44, rollLightColor: 0xffd9b7, rollShadowColor: 0xb7362b, edgeWaveAlpha: 0.28, depthVeilColor: 0xdd4a38, depthVeilAlpha: 0.09 };
       case 'matcha':
-        return { washColor: 0x9fc763, washAlpha: 0.1, highlightColor: 0xe7f5bd, highlightAlpha: 0.08, rippleAlpha: 0.045, textureAlpha: 0.36, detailColor: 0xf0ffd0, bubbleColor: 0xfbffe4, bubbleAlpha: 0.28, rollLightColor: 0xf4ffd2, rollShadowColor: 0x79a94b, edgeWaveAlpha: 0.16, depthVeilColor: 0xa8c96b, depthVeilAlpha: 0.09 };
+        return { washColor: 0x9fc763, washAlpha: 0.13, highlightColor: 0xeeffd0, highlightAlpha: 0.13, rippleAlpha: 0.09, textureAlpha: 0.45, detailColor: 0xf6ffd8, bubbleColor: 0xffffe8, bubbleAlpha: 0.38, rollLightColor: 0xf8ffd6, rollShadowColor: 0x79a94b, edgeWaveAlpha: 0.25, depthVeilColor: 0xa8c96b, depthVeilAlpha: 0.08 };
       case 'mango_coconut':
-        return { washColor: 0xf0a92f, washAlpha: 0.1, highlightColor: 0xffdf89, highlightAlpha: 0.08, rippleAlpha: 0.045, textureAlpha: 0.36, detailColor: 0xfff2bd, bubbleColor: 0xffffdf, bubbleAlpha: 0.29, rollLightColor: 0xffffc0, rollShadowColor: 0xd68b20, edgeWaveAlpha: 0.17, depthVeilColor: 0xf3aa35, depthVeilAlpha: 0.09 };
+        return { washColor: 0xf0a92f, washAlpha: 0.13, highlightColor: 0xffe89a, highlightAlpha: 0.13, rippleAlpha: 0.09, textureAlpha: 0.45, detailColor: 0xffffc8, bubbleColor: 0xffffe4, bubbleAlpha: 0.39, rollLightColor: 0xffffc8, rollShadowColor: 0xd68b20, edgeWaveAlpha: 0.26, depthVeilColor: 0xf3aa35, depthVeilAlpha: 0.08 };
       case 'taro_purple':
-        return { washColor: 0x9b77c8, washAlpha: 0.1, highlightColor: 0xd9bbef, highlightAlpha: 0.08, rippleAlpha: 0.045, textureAlpha: 0.36, detailColor: 0xf0d8ff, bubbleColor: 0xffefff, bubbleAlpha: 0.28, rollLightColor: 0xf3dcff, rollShadowColor: 0x7c59aa, edgeWaveAlpha: 0.16, depthVeilColor: 0xa784d0, depthVeilAlpha: 0.09 };
+        return { washColor: 0x9b77c8, washAlpha: 0.13, highlightColor: 0xe3c8ff, highlightAlpha: 0.13, rippleAlpha: 0.09, textureAlpha: 0.45, detailColor: 0xf5e0ff, bubbleColor: 0xfff2ff, bubbleAlpha: 0.38, rollLightColor: 0xf7e3ff, rollShadowColor: 0x7c59aa, edgeWaveAlpha: 0.25, depthVeilColor: 0xa784d0, depthVeilAlpha: 0.08 };
       case 'cocoa':
-        return { washColor: 0x6f4a32, washAlpha: 0.14, highlightColor: 0xb8875d, highlightAlpha: 0.07, rippleAlpha: 0.038, textureAlpha: 0.42, detailColor: 0xd9aa78, bubbleColor: 0xffdcba, bubbleAlpha: 0.22, rollLightColor: 0xd7a06b, rollShadowColor: 0x4f321e, edgeWaveAlpha: 0.13, depthVeilColor: 0x765033, depthVeilAlpha: 0.12 };
+        return { washColor: 0x6f4a32, washAlpha: 0.16, highlightColor: 0xc89568, highlightAlpha: 0.1, rippleAlpha: 0.075, textureAlpha: 0.48, detailColor: 0xe4b382, bubbleColor: 0xffe0c1, bubbleAlpha: 0.3, rollLightColor: 0xdfaa75, rollShadowColor: 0x4f321e, edgeWaveAlpha: 0.2, depthVeilColor: 0x765033, depthVeilAlpha: 0.11 };
+      case 'avocado_yogurt':
+        return { washColor: 0x96c97d, washAlpha: 0.13, highlightColor: 0xf3ffd4, highlightAlpha: 0.13, rippleAlpha: 0.092, textureAlpha: 0.45, detailColor: 0xf7ffe0, bubbleColor: 0xffffea, bubbleAlpha: 0.4, rollLightColor: 0xf8ffd6, rollShadowColor: 0x6fa25b, edgeWaveAlpha: 0.26, depthVeilColor: 0x9dcc80, depthVeilAlpha: 0.08 };
+      case 'pomegranate_soda':
+        return { washColor: 0xd74262, washAlpha: 0.13, highlightColor: 0xffadc2, highlightAlpha: 0.14, rippleAlpha: 0.105, textureAlpha: 0.48, detailColor: 0xffd5e0, bubbleColor: 0xfff0f5, bubbleAlpha: 0.48, rollLightColor: 0xffc4d4, rollShadowColor: 0xb72e4c, edgeWaveAlpha: 0.3, depthVeilColor: 0xd94262, depthVeilAlpha: 0.09 };
       case 'milk':
       default:
-        return { washColor: 0xfff1d2, washAlpha: 0.1, highlightColor: 0xffffff, highlightAlpha: 0.1, rippleAlpha: 0.06, textureAlpha: 0.32, detailColor: 0xffffff, bubbleColor: 0xffffff, bubbleAlpha: 0.26, rollLightColor: 0xffffff, rollShadowColor: 0xe1c486, edgeWaveAlpha: 0.15, depthVeilColor: 0xffefd0, depthVeilAlpha: 0.1 };
+        return { washColor: 0xfff1d2, washAlpha: 0.13, highlightColor: 0xffffff, highlightAlpha: 0.15, rippleAlpha: 0.105, textureAlpha: 0.42, detailColor: 0xffffff, bubbleColor: 0xffffff, bubbleAlpha: 0.36, rollLightColor: 0xffffff, rollShadowColor: 0xe1c486, edgeWaveAlpha: 0.25, depthVeilColor: 0xffefd0, depthVeilAlpha: 0.08 };
     }
   }
 
@@ -1933,6 +2030,7 @@ export class BowlScene implements Scene {
       return;
     }
     this.soupRippleTime += dt;
+    this.soupEdgeWaveBoostSec = Math.max(0, this.soupEdgeWaveBoostSec - dt);
     const overlaySprite = this.soupSurfaceOverlaySprite as SoupSurfaceSprite;
     if (this.soupSurfaceOverlaySprite.parent) {
       const phase = this.soupRippleTime * 0.62;
@@ -1950,19 +2048,19 @@ export class BowlScene implements Scene {
     if (this.soupDisplacementFilter) {
       this.soupDisturbanceSec = Math.max(0, this.soupDisturbanceSec - dt);
       const phase = this.soupRippleTime * 1.1;
-      const tapBoost = this.soupDisturbanceSec > 0 ? (this.soupDisturbanceSec / 0.32) * 3.2 : 0;
+      const tapBoost = this.soupDisturbanceSec > 0 ? (this.soupDisturbanceSec / 0.46) * 7.2 : 0;
       this.soupDisplacementSprite.x += (this.soupDisplacementSprite.flowVX ?? 10) * dt;
       this.soupDisplacementSprite.y += (this.soupDisplacementSprite.flowVY ?? 6) * dt;
-      this.soupDisplacementSprite.rotation = Math.sin(phase * 0.45) * 0.08;
+      this.soupDisplacementSprite.rotation = Math.sin(phase * 0.48) * 0.13;
       this.soupDisplacementFilter.scale.set(
-        3.2 + tapBoost + Math.sin(phase) * 0.8,
-        2.2 + tapBoost * 0.72 + Math.cos(phase * 0.8) * 0.55,
+        5.4 + tapBoost + Math.sin(phase) * 1.35,
+        3.8 + tapBoost * 0.72 + Math.cos(phase * 0.8) * 0.95,
       );
       this.submergedDisplacementFilter?.scale.set(
-        1.3 + tapBoost * 0.4 + Math.sin(phase + 0.7) * 0.35,
-        0.95 + tapBoost * 0.28 + Math.cos(phase * 0.7) * 0.25,
+        2.3 + tapBoost * 0.42 + Math.sin(phase + 0.7) * 0.62,
+        1.7 + tapBoost * 0.3 + Math.cos(phase * 0.7) * 0.42,
       );
-      this.soupDepthVeil.alpha = 0.82 + Math.sin(phase * 0.72) * 0.08;
+      this.soupDepthVeil.alpha = 0.76 + Math.sin(phase * 0.72) * 0.08;
     }
     for (let i = 0; i < this.soupFlowSprites.length; i += 1) {
       const sp = this.soupFlowSprites[i] as FlowSprite;
@@ -1974,6 +2072,14 @@ export class BowlScene implements Scene {
       sp.scale.set(baseScale * pulse * flipX, (baseScale / pulse) * flipY);
       sp.rotation += dt * (sp.flowSpeed ?? 0.03);
       sp.alpha = (sp.flowBaseAlpha ?? 0.12) * (0.66 + Math.sin(phase + 0.6) * 0.26);
+    }
+    for (let i = 0; i < this.soupLightStreakItems.length; i += 1) {
+      const streak = this.soupLightStreakItems[i]!;
+      const phase = this.soupRippleTime * (0.55 + i * 0.08) + (streak.phase ?? 0);
+      streak.x = (streak.baseX ?? streak.x) + Math.sin(phase) * (streak.driftX ?? 0);
+      streak.y = (streak.baseY ?? streak.y) + Math.cos(phase * 0.8) * (streak.driftY ?? 0);
+      streak.rotation = (streak.baseRot ?? 0) + Math.sin(phase * 0.6) * (streak.spin ?? 0.01);
+      streak.alpha = 0.72 + Math.sin(phase + 0.4) * 0.16;
     }
     if (this.soupRollItems.length > 0) {
       const { hx, hy } = this.getSoupVisualHalfExtents();
@@ -2028,7 +2134,74 @@ export class BowlScene implements Scene {
       const s = 1 + Math.sin(phase) * 0.025;
       child.scale.set(s, 1 / s);
       child.rotation += dt * (i % 2 === 0 ? 0.035 : -0.028);
-      child.alpha = 0.78 + Math.sin(phase + 0.8) * 0.14;
+      child.alpha = 0.96 + Math.sin(phase + 0.8) * 0.18;
+    }
+    this.updateTapSoupRipples(dt);
+  }
+
+  private spawnTapSoupRipples(x: number, y: number, kind: BowlTapFeedbackKind): void {
+    const { hx, hy } = this.getSoupVisualHalfExtents();
+    const color = kind === 'frozen' ? 0xdff8ff : kind === 'invalid' ? 0xffd0c7 : 0xffffff;
+    const baseAlpha = kind === 'order' ? 0.62 : kind === 'frozen' ? 0.52 : 0.46;
+    const defs = [
+      { delay: 0, rx: hx * 0.12, ry: hy * 0.048, duration: 0.46, width: 5.2 },
+      { delay: 0.055, rx: hx * 0.18, ry: hy * 0.07, duration: 0.56, width: 3.8 },
+      { delay: 0.12, rx: hx * 0.25, ry: hy * 0.092, duration: 0.68, width: 2.7 },
+    ] as const;
+
+    for (const def of defs) {
+      while (this.soupTapRippleItems.length >= TAP_SOUP_RIPPLE_MAX) {
+        const oldest = this.soupTapRippleItems.shift();
+        oldest?.parent?.removeChild(oldest);
+      }
+      const ripple = new PIXI.Graphics() as SoupTapRipple;
+      ripple.position.set(x, y + 8);
+      ripple.rotation = (Math.random() - 0.5) * 0.36;
+      ripple.elapsedSec = 0;
+      ripple.delaySec = def.delay;
+      ripple.durationSec = def.duration;
+      ripple.baseRx = def.rx;
+      ripple.baseRy = def.ry;
+      ripple.baseAlpha = baseAlpha;
+      ripple.color = color;
+      ripple.lineWidth = def.width;
+      ripple.spin = (Math.random() < 0.5 ? -1 : 1) * (0.18 + Math.random() * 0.12);
+      ripple.eventMode = 'none';
+      this.soupTapRippleLayer.addChild(ripple);
+      this.soupTapRippleItems.push(ripple);
+    }
+  }
+
+  private updateTapSoupRipples(dt: number): void {
+    for (let i = this.soupTapRippleItems.length - 1; i >= 0; i -= 1) {
+      const ripple = this.soupTapRippleItems[i]!;
+      ripple.elapsedSec = (ripple.elapsedSec ?? 0) + dt;
+      const delay = ripple.delaySec ?? 0;
+      const duration = ripple.durationSec ?? 0.5;
+      const t = (ripple.elapsedSec - delay) / duration;
+      ripple.clear();
+      if (t < 0) {
+        ripple.visible = false;
+        continue;
+      }
+      if (t >= 1) {
+        ripple.parent?.removeChild(ripple);
+        this.soupTapRippleItems.splice(i, 1);
+        continue;
+      }
+      ripple.visible = true;
+      const eased = 1 - (1 - t) * (1 - t);
+      const fade = 1 - t;
+      ripple.rotation += dt * (ripple.spin ?? 0.18);
+      ripple.lineStyle(
+        Math.max(1.2, (ripple.lineWidth ?? 3) * fade),
+        ripple.color ?? 0xffffff,
+        (ripple.baseAlpha ?? 0.5) * fade,
+      );
+      ripple.drawEllipse(0, 0, (ripple.baseRx ?? 40) * eased, (ripple.baseRy ?? 16) * eased);
+      ripple.beginFill(ripple.color ?? 0xffffff, (ripple.baseAlpha ?? 0.5) * 0.1 * fade);
+      ripple.drawEllipse(0, 0, (ripple.baseRx ?? 40) * eased * 0.72, (ripple.baseRy ?? 16) * eased * 0.58);
+      ripple.endFill();
     }
   }
 
@@ -2617,6 +2790,8 @@ export class BowlScene implements Scene {
     this.unfreezeAllFrozenFruits();
     this.shuffleDepthSwapSec = SHUFFLE_DEPTH_SWAP_SEC;
     this.shuffleIceResurfaceSec = SHUFFLE_ICE_RESURFACE_SEC;
+    this.soupDisturbanceSec = Math.max(this.soupDisturbanceSec, 0.7);
+    this.soupEdgeWaveBoostSec = Math.max(this.soupEdgeWaveBoostSec, 0.82);
     for (const fruit of this.fruits) {
       if (fruit.phase !== 'bowl' || fruit.picked || fruit.hiddenReserve) {
         continue;
@@ -3680,7 +3855,9 @@ export class BowlScene implements Scene {
   private playFruitTapFeedback(fruit: FruitItem, kind: BowlTapFeedbackKind): void {
     fruit.playTapPop(kind === 'frozen' ? 'frozen' : kind === 'order' ? 'order' : 'buffer');
     this.bowlVfxLayer.playTapRipple(fruit.x, fruit.y + 10, kind);
-    this.soupDisturbanceSec = Math.max(this.soupDisturbanceSec, kind === 'order' ? 0.32 : 0.22);
+    this.spawnTapSoupRipples(fruit.x, fruit.y + 10, kind);
+    this.soupDisturbanceSec = Math.max(this.soupDisturbanceSec, kind === 'order' ? 0.46 : 0.34);
+    this.soupEdgeWaveBoostSec = Math.max(this.soupEdgeWaveBoostSec, kind === 'order' ? 0.58 : 0.44);
     if (kind === 'order') {
       Haptics.medium();
     } else {
@@ -3914,6 +4091,9 @@ export class BowlScene implements Scene {
     if (emptyIdx < 0) {
       fruit.playInvalidShake();
       this.bowlVfxLayer.playTapRipple(fruit.x, fruit.y, 'invalid');
+      this.spawnTapSoupRipples(fruit.x, fruit.y, 'invalid');
+      this.soupDisturbanceSec = Math.max(this.soupDisturbanceSec, 0.3);
+      this.soupEdgeWaveBoostSec = Math.max(this.soupEdgeWaveBoostSec, 0.38);
       Haptics.heavy();
       this.showLoseOverlay();
       return;
@@ -4476,7 +4656,13 @@ export class BowlScene implements Scene {
       return;
     }
 
-    const targetSurfaceCount = Math.min(visibleFruits.length, SURFACE_FILL_TARGET_COUNT);
+    const targetSurfaceCount = Math.min(
+      visibleFruits.length,
+      Math.min(
+        SURFACE_FILL_TARGET_MAX,
+        Math.max(SURFACE_FILL_TARGET_COUNT, Math.ceil(visibleFruits.length * SURFACE_FILL_TARGET_RATIO)),
+      ),
+    );
     const { hx, hy } = this.getFruitSoupHalfExtents();
     const buckets: FruitItem[][] = Array.from(
       { length: SURFACE_FILL_GRID_COLS * SURFACE_FILL_GRID_ROWS },
@@ -4542,7 +4728,7 @@ export class BowlScene implements Scene {
   private applyFruitSoupVisual(fruit: FruitItem): void {
     const display = fruit.display as PIXI.DisplayObject & { tint?: number };
     if (fruit.hiddenReserve) {
-      fruit.alpha = 0.08;
+      fruit.alpha = HIDDEN_RESERVE_ALPHA;
       fruit.setSoupDepthVisual('hidden');
       if (typeof display.tint === 'number') {
         display.tint = this.getSubmergedFruitTint();
@@ -4550,7 +4736,7 @@ export class BowlScene implements Scene {
       return;
     }
     if (fruit.parent === this.submergedFruitLayer) {
-      fruit.alpha = 0.72;
+      fruit.alpha = SUBMERGED_FRUIT_ALPHA;
       fruit.setSoupDepthVisual('submerged');
       if (typeof display.tint === 'number') {
         display.tint = this.getSubmergedFruitTint();
@@ -4750,7 +4936,7 @@ export class BowlScene implements Scene {
 
   private randomBowlPoint(): PIXI.IPointData {
     const { hx, hy } = this.getFruitSoupHalfExtents();
-    const rMax = 0.92;
+    const rMax = 0.9;
     const angle = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * rMax;
     return {
@@ -4792,8 +4978,8 @@ export class BowlScene implements Scene {
    */
   private getFruitSoupHalfExtents(): { hx: number; hy: number } {
     if (this.soupSprite.visible && this.soupSprite.width > 16 && this.soupSprite.height > 16) {
-      const padX = 72;
-      const padY = 66;
+      const padX = 84;
+      const padY = 78;
       return {
         hx: Math.max(36, this.soupSprite.width / 2 - padX),
         hy: Math.max(32, this.soupSprite.height / 2 - padY),
