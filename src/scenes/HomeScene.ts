@@ -290,16 +290,16 @@ export class HomeScene implements Scene {
     this.levelMilestoneGiftExclaim.resolution = 2;
     this.levelMilestoneGiftPulseRoot.addChild(this.levelMilestoneGiftExclaim);
 
-    this.levelMilestoneGiftHint = new PIXI.Text('大礼包', {
-      fontSize: 18,
+    this.levelMilestoneGiftHint = new PIXI.Text('免费礼包', {
+      fontSize: 17,
       fill: 0xfff4c2,
       fontWeight: '900',
       stroke: 0x8b1a2a,
       strokeThickness: 5,
       lineJoin: 'round',
     });
-    this.levelMilestoneGiftHint.anchor.set(0.5);
-    this.levelMilestoneGiftHint.position.set(0, 46);
+    this.levelMilestoneGiftHint.anchor.set(0.5, 0);
+    this.levelMilestoneGiftHint.position.set(0, 34);
     this.levelMilestoneGiftHint.resolution = 2;
     this.levelMilestoneGiftPulseRoot.addChild(this.levelMilestoneGiftHint);
 
@@ -355,7 +355,6 @@ export class HomeScene implements Scene {
     }
     this.levelMilestoneGiftSprite.texture = tex;
     this.updateLevelMilestoneGiftLayoutMetrics();
-    this.levelMilestoneGiftHint.visible = false;
   }
 
   private updateLevelMilestoneGiftLayoutMetrics(): void {
@@ -367,13 +366,15 @@ export class HomeScene implements Scene {
     this.levelMilestoneGiftSprite!.scale.set(scale);
     const displayW = tex.width * scale;
     const displayH = tex.height * scale;
+    this.levelMilestoneGiftExclaim.position.set(displayW * 0.34, -displayH * 0.42);
+    this.levelMilestoneGiftHint.position.set(0, displayH * 0.5 - 4);
+    const labelH = 22;
     this.levelMilestoneGiftRoot.hitArea = new PIXI.Rectangle(
       -displayW / 2 - 10,
       -displayH / 2 - 10,
       displayW + 20,
-      displayH + 20,
+      displayH + 20 + labelH,
     );
-    this.levelMilestoneGiftExclaim.position.set(displayW * 0.34, -displayH * 0.42);
   }
 
   private layoutLevelMilestoneGiftEntry(): void {
@@ -398,7 +399,7 @@ export class HomeScene implements Scene {
     const status = getLevelMilestoneGiftStatus(gift);
     const claimable = status === 'claimable';
     this.levelMilestoneGiftExclaim.visible = claimable;
-    this.levelMilestoneGiftHint.visible = false;
+    this.levelMilestoneGiftHint.visible = true;
     this.levelMilestoneGiftGlow.clear();
     this.levelMilestoneGiftGlow.beginFill(0xffe566, claimable ? 0.55 : 0.38);
     this.levelMilestoneGiftGlow.drawCircle(0, 0, claimable ? 72 : 66);
