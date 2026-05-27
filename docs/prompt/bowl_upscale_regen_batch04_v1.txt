@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 04 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (lychee):
+  Cell 1: peeled lychee, white jelly flesh, small brown seed
+  Cell 2: two lychees peeled, same scale, rotated
+Row 2 (cucumber):
+  Cell 3: small cucumber coin slice, green rind edge, pale green flesh
+  Cell 4: angled cucumber chunk, same thickness, different rotation
+Row 3 (mulberry):
+  Cell 5: single dark purple mulberry, elongated cluster shape
+  Cell 6: two mulberries, same style, slight angle
+Row 4 (taro_ball):
+  Cell 7: purple taro ball, soft matte lavender sphere
+  Cell 8: same taro ball, highlight shifted, slight rotation
+Row 5 (sago):
+  Cell 9: small pile of white sago pearls, translucent dots
+  Cell 10: same sago pearl mound, different scatter angle
+Row 6 (cherry_tomato):
+  Cell 11: cherry tomato round slice cross-section, red flesh, seeds visible, green calyx hint
+  Cell 12: same cherry tomato round slice, rotated ~25°
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

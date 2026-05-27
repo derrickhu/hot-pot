@@ -1,0 +1,27 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 12 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (apple):
+  Cell 1: small apple wedge 1/8, red skin edge, pale yellow flesh
+  Cell 2: same apple wedge, rotated angle
+Row 2 (grape):
+  Cell 3: 2-3 purple grape berries, glossy purple, short stem
+  Cell 4: 4 purple grapes small cluster, same style
+Row 3 (kiwi):
+  Cell 5: kiwi round slice, green flesh, black seeds ring, white center
+  Cell 6: same kiwi slice, rotated ~30°
+Row 4 (watermelon):
+  Cell 7: small watermelon cube dice, red flesh, black seeds, NO green rind
+  Cell 8: same watermelon dice, rotated angle
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

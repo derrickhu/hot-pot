@@ -5,6 +5,7 @@ import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { analytics } from '@/analytics';
 import { BOWL_LEVEL_COUNT } from '@/config/bowlLevels';
+import { MILK_TEA_DEMO_ENTRY_ENABLED } from '@/config/featureFlags';
 import { getDailyLimitedLevelForDate } from '@/config/dailyLimitedLevels';
 import { getBowlLevelIndex, getMaxUnlockedBowlBadgeLevelNumber, markBowlProgressStarted } from '@/game/BowlProgress';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
@@ -106,6 +107,10 @@ export class HomeScene implements Scene {
   private dailyLimitedEntryTitle!: PIXI.Text;
   private dailyLimitedEntrySprite: PIXI.Sprite | null = null;
   private readonly dailyLimitedEntryTag = new PIXI.Container();
+  /** 奶茶店托盘 Demo：首版开发测试入口 */
+  private readonly milkTeaDemoEntryRoot = new PIXI.Container();
+  private milkTeaDemoEntryBg!: PIXI.Graphics;
+  private milkTeaDemoEntryTitle!: PIXI.Text;
   /** 顶栏与主按钮之间的 Logo 区（有贴图再显示） */
   private readonly homeLogoRoot = new PIXI.Container();
   private readonly homeLogoSprite = new PIXI.Sprite();
@@ -118,6 +123,7 @@ export class HomeScene implements Scene {
   private enteringDailyLimited = false;
   private enteringFruitSlice = false;
   private enteringGacha = false;
+  private enteringMilkTeaDemo = false;
 
   constructor() {
     this.settingsOverlay = new SettingsPauseOverlay(Game.logicWidth, Game.logicHeight, {
@@ -489,6 +495,8 @@ export class HomeScene implements Scene {
       dailyHalf = 44;
     }
 
+    const demoHalf = MILK_TEA_DEMO_ENTRY_ENABLED ? 38 : 0;
+
     const gap = 24;
     this.playEntryRoot.position.set(W / 2, playY);
     this.positionModeEntryTag(this.playEntryTag, homePlayEntryTargetWidth(), playHalf, 0);
@@ -498,10 +506,16 @@ export class HomeScene implements Scene {
     const fruitY = dailyY + dailyHalf + gap + fruitHalf;
     this.fruitSliceEntryRoot.position.set(W / 2, fruitY);
     this.positionModeEntryTag(this.fruitSliceEntryTag, homeFruitSliceEntryTargetWidth(), fruitHalf, -4);
+    let footerAnchorY = fruitY + fruitHalf;
+    if (MILK_TEA_DEMO_ENTRY_ENABLED) {
+      const demoY = fruitY + fruitHalf + 18 + demoHalf;
+      this.milkTeaDemoEntryRoot.position.set(W / 2, demoY);
+      footerAnchorY = demoY + demoHalf;
+    }
 
     /** 底部入口：参考原型图，五个图标放在同一个奶油色圆角底栏内。 */
     const footerBarW = Math.min(650, W - 56);
-    const footerBarCenterY = Math.round(fruitY + fruitHalf + 34 + HOME_FOOTER_BAR_H / 2);
+    const footerBarCenterY = Math.round(footerAnchorY + 28 + HOME_FOOTER_BAR_H / 2);
     const footerCellGap = footerBarW / 5;
     const footerLeft = W / 2 - footerBarW / 2;
     const footerY = footerBarCenterY;
@@ -707,6 +721,48 @@ export class HomeScene implements Scene {
       void this.enterFruitSliceWithLoading();
     });
     this.container.addChild(this.fruitSliceEntryRoot);
+
+    if (MILK_TEA_DEMO_ENTRY_ENABLED) {
+      this.milkTeaDemoEntryRoot.position.set(W / 2, playY + 230);
+      this.milkTeaDemoEntryRoot.eventMode = 'static';
+      this.milkTeaDemoEntryRoot.cursor = 'pointer';
+      this.milkTeaDemoEntryRoot.hitArea = new PIXI.Rectangle(-220, -38, 440, 76);
+      this.milkTeaDemoEntryBg = new PIXI.Graphics();
+      this.milkTeaDemoEntryBg.beginFill(0xffe0a6, 0.98);
+      this.milkTeaDemoEntryBg.lineStyle(4, 0xc8782f, 1);
+      this.milkTeaDemoEntryBg.drawRoundedRect(-220, -38, 440, 76, 28);
+      this.milkTeaDemoEntryBg.endFill();
+      this.milkTeaDemoEntryRoot.addChild(this.milkTeaDemoEntryBg);
+      this.milkTeaDemoEntryTitle = new PIXI.Text('奶茶店 Demo', {
+        fontSize: 32,
+        fill: 0x8a4217,
+        fontWeight: '900',
+        stroke: 0xfff6dc,
+        strokeThickness: 5,
+        lineJoin: 'round',
+      });
+      this.milkTeaDemoEntryTitle.anchor.set(0.5);
+      this.milkTeaDemoEntryTitle.resolution = 2;
+      this.milkTeaDemoEntryTitle.position.set(0, -8);
+      this.milkTeaDemoEntryRoot.addChild(this.milkTeaDemoEntryTitle);
+      const milkTeaDemoSub = new PIXI.Text('托盘合并测试', {
+        fontSize: 18,
+        fill: 0x9b5a28,
+        fontWeight: '900',
+      });
+      milkTeaDemoSub.anchor.set(0.5);
+      milkTeaDemoSub.resolution = 2;
+      milkTeaDemoSub.position.set(0, 21);
+      this.milkTeaDemoEntryRoot.addChild(milkTeaDemoSub);
+      this.milkTeaDemoEntryRoot.on('pointertap', () => {
+        AudioManager.playButtonSound();
+        void this.enterMilkTeaDemoWithLoading();
+      });
+      this.container.addChild(this.milkTeaDemoEntryRoot);
+    } else {
+      this.milkTeaDemoEntryRoot.eventMode = 'none';
+      this.milkTeaDemoEntryRoot.visible = false;
+    }
 
     this.container.addChild(this.footerNavBg);
 
@@ -936,6 +992,41 @@ export class HomeScene implements Scene {
       }
       loadingOverlay.destroy();
       this.enteringDailyLimited = false;
+    }
+  }
+
+  private async enterMilkTeaDemoWithLoading(): Promise<void> {
+    if (!MILK_TEA_DEMO_ENTRY_ENABLED) {
+      return;
+    }
+    if (this.enteringMilkTeaDemo) {
+      return;
+    }
+    this.enteringMilkTeaDemo = true;
+    this.gameClubWelfareOverlay.close();
+    const loadingOverlay = new LoadingOverlay(Game.logicWidth, Game.logicHeight, Game.safeTop);
+    Game.stage.addChild(loadingOverlay.container);
+    try {
+      loadingOverlay.setProgress(0.22);
+      await loadingOverlay.loadAssets();
+      loadingOverlay.setProgress(0.72);
+      await SceneManager.prepare('milkTeaTrayDemo');
+      loadingOverlay.setProgress(1);
+      analytics.track('gameplay_mode_enter', {
+        mode: 'milk_tea_tray_demo',
+        source: 'home',
+      });
+      SceneManager.switchTo('milkTeaTrayDemo');
+    } catch (error) {
+      console.error('[HomeScene] enter milk tea demo failed', error);
+      const api = typeof wx !== 'undefined' ? wx : null;
+      api?.showToast?.({ title: '加载失败，请重试', icon: 'none' });
+    } finally {
+      if (loadingOverlay.container.parent) {
+        loadingOverlay.container.parent.removeChild(loadingOverlay.container);
+      }
+      loadingOverlay.destroy();
+      this.enteringMilkTeaDemo = false;
     }
   }
 

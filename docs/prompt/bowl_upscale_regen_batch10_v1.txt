@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 10 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (blueberry):
+  Cell 1: single blueberry, deep blue-purple, star calyx, white bloom
+  Cell 2: two blueberries, same size, slight angle
+Row 2 (crystal_jelly):
+  Cell 3: clear crystal jelly cube, icy blue highlight
+  Cell 4: same jelly cube, rotated corner
+Row 3 (sour_plum):
+  Cell 5: pickled sour plum, wrinkled green-yellow skin
+  Cell 6: same sour plum, rotated angle
+Row 4 (sweet_potato):
+  Cell 7: orange sweet potato cube, roasted golden orange
+  Cell 8: same sweet potato cube, rotated
+Row 5 (water_chestnut):
+  Cell 9: water chestnut slice, white crisp flesh, brown peel edge
+  Cell 10: same water chestnut piece, rotated
+Row 6 (almond_slice):
+  Cell 11: almond slice, pale ivory teardrop
+  Cell 12: two almond slices, same scale, fan angle
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

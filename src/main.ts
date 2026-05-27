@@ -13,6 +13,7 @@ import { FruitSliceEndlessScene } from '@/scenes/FruitSliceEndlessScene';
 import { GachaScene } from '@/scenes/GachaScene';
 import { HomeScene } from '@/scenes/HomeScene';
 import { LeaderboardScene } from '@/scenes/LeaderboardScene';
+import { MilkTeaTrayDemoScene } from '@/scenes/MilkTeaTrayDemoScene';
 import { setupWechatShare } from '@/utils/wechatShare';
 
 async function main(): Promise<void> {
@@ -66,6 +67,7 @@ async function main(): Promise<void> {
     const gachaScene = new GachaScene();
     const catalogScene = new CatalogScene();
     const leaderboardScene = new LeaderboardScene();
+    const milkTeaTrayDemoScene = new MilkTeaTrayDemoScene();
     SceneManager.register(homeScene);
     SceneManager.register(bowlScene);
     SceneManager.register(dailyLimitedScene);
@@ -73,6 +75,7 @@ async function main(): Promise<void> {
     SceneManager.register(gachaScene);
     SceneManager.register(catalogScene);
     SceneManager.register(leaderboardScene);
+    SceneManager.register(milkTeaTrayDemoScene);
     loadingOverlay.setProgress(1);
     Game.stage.removeChild(loadingOverlay.container);
     loadingOverlay.destroy();

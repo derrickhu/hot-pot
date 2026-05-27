@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 01 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (nectarine):
+  Cell 1: small nectarine wedge, fuzzy red-orange skin rim, golden flesh, tiny pit hint
+  Cell 2: same nectarine wedge, rotated ~30°
+Row 2 (chestnut):
+  Cell 3: roasted chestnut piece, glossy brown shell, pale yellow flesh peeking
+  Cell 4: same chestnut piece, slight tilt
+Row 3 (kumquat):
+  Cell 5: thin kumquat citrus wheel slice, golden-orange pulp segments, thin rind ring
+  Cell 6: same kumquat wheel slice, rotated ~30°, identical thickness
+Row 4 (blackberry):
+  Cell 7: single plump blackberry, dark purple drupelets, tiny green cap
+  Cell 8: same single blackberry, rotated ~30°, same scale
+Row 5 (blackcurrant):
+  Cell 9: single blackcurrant berry, deep purple-black, subtle bloom
+  Cell 10: same single blackcurrant, rotated ~30°, same scale
+Row 6 (raspberry):
+  Cell 11: single red raspberry cone, bumpy drupelets, small green hull
+  Cell 12: same single raspberry, rotated ~30°, same scale
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

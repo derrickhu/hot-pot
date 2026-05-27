@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 03 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (cranberry):
+  Cell 1: single cranberry, small red oval, glossy highlight
+  Cell 2: two cranberries, same scale, different angle
+Row 2 (boba_pearl):
+  Cell 3: single dark brown tapioca boba pearl, glossy sphere
+  Cell 4: two boba pearls touching, same size, slight offset
+Row 3 (cherry):
+  Cell 5: single cherry with stem, deep red, heart-shaped shine
+  Cell 6: two cherries with stems, same style, crossed angle
+Row 4 (gooseberry):
+  Cell 7: single green gooseberry, veined translucent green skin
+  Cell 8: two gooseberries, same size, different tilt
+Row 5 (grapefruit):
+  Cell 9: pink grapefruit crescent wedge, pink-red flesh with clear segment lines, white pith, orange-pink peel; SOLID flesh NO holes NO transparent gaps inside
+  Cell 10: same grapefruit wedge type, rotated ~35°, closed outline, no internal holes
+Row 6 (longan):
+  Cell 11: peeled longan fruit, translucent pale flesh, dark seed visible
+  Cell 12: two longan fruits, same peeled style, slight angle
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

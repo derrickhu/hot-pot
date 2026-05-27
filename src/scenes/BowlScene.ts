@@ -150,12 +150,27 @@ const FRUIT_ROTATION_SPEED = 0.00058;
 const FRUIT_DRIFT_PULSE_SEC = 2.35;
 const FRUIT_DRIFT_MAX_X = 19;
 const FRUIT_DRIFT_MAX_Y = 13;
+/** 碗内水果初始摆放网格（与 surface fill 同尺度，保证开局就铺满碗面） */
+const BOWL_SPAWN_GRID_COLS = 6;
+const BOWL_SPAWN_GRID_ROWS = 5;
+/** 开局网格/随机点占活动椭圆的比例（接近 1，铺满碗面但不顶穿碗沿） */
+const BOWL_SPAWN_EDGE_RADIUS = 0.93;
+/** 与 applyBowlArtTextures 中 soupToRimScale 一致，用于推算汤外→碗沿环带宽度 */
+const BOWL_SOUP_TO_RIM_SCALE = 0.89;
+/** 贴边时按水果半宽再内缩的比例（勿用 1.0，否则与全局椭圆双重收紧） */
+const FRUIT_BOWL_SPRITE_EDGE_FACTOR = 0.38;
+/** 中心点贴椭圆边时的额外像素留白 */
+const FRUIT_BOWL_RIM_CLEARANCE = 5;
 const FRUIT_SURFACE_BOB_THRESHOLD = 0.78;
 const FRUIT_SUBMERGE_BOB_THRESHOLD = -0.86;
-/** 碗面主展示层容量：优先把普通水果留在上层，超过容量的才自然沉到下层。 */
+/**
+ * 汤面可见层容量：水果多时用 COUNT/MAX 封顶；水果少时用 RATIO，避免「总数 < 42 时全浮在汤上」。
+ */
 const SURFACE_FILL_TARGET_COUNT = 42;
 const SURFACE_FILL_TARGET_RATIO = 0.52;
 const SURFACE_FILL_TARGET_MAX = 62;
+/** 至少保留一颗沉在汤下（有 2 颗及以上可见水果时） */
+const SURFACE_FILL_MIN_SUBMERGED = 1;
 const SURFACE_FILL_GRID_COLS = 6;
 const SURFACE_FILL_GRID_ROWS = 5;
 const HIDDEN_RESERVE_REBALANCE_RATIO = 0.35;
@@ -795,6 +810,9 @@ export class BowlScene implements Scene {
       }
     }
 
+    if (driftPulse) {
+      this.applyBowlFruitSeparation();
+    }
     this.rebalanceSurfaceFruitFill();
     this.submergedFruitLayer.sortChildren();
     this.surfaceFruitLayer.sortChildren();
@@ -1055,7 +1073,6 @@ export class BowlScene implements Scene {
     this.soupDepthVeilLayer.mask = this.bowlContentMask;
     this.surfaceFruitLayer.mask = this.bowlContentMask;
     this.soupDetailLayer.mask = this.bowlContentMask;
-    this.soupEdgeBubbleLayer.mask = this.bowlContentMask;
     this.bowlVfxLayer.mask = this.bowlContentMask;
     this.uiVfxLayer.eventMode = 'none';
 
@@ -1085,7 +1102,6 @@ export class BowlScene implements Scene {
       this.soupDetailLayer,
       this.flyingFruitLayer,
       this.bowlVfxLayer,
-      this.soupEdgeBubbleLayer,
     );
     this.fruitLayer.addChild(this.bowlContentMask);
     this.container.addChild(this.fruitLayer);
@@ -1417,7 +1433,7 @@ export class BowlScene implements Scene {
     /** 碗沿横向占满；汤为碗沿缩放的固定比例，保证多露一圈边 */
     const rimTargetW = Game.logicWidth * 1.08;
     /** 相对碗沿缩放：碗跟着放大，但汤面略收一圈，留出真实碗沿。 */
-    const soupToRimScale = 0.89;
+    const soupToRimScale = BOWL_SOUP_TO_RIM_SCALE;
 
     let rimScale = 0;
     if (rimTex) {
@@ -1633,25 +1649,10 @@ export class BowlScene implements Scene {
     this.soupOverlayLayer.addChild(this.soupShimmerLayer, this.soupRollLayer, this.soupEdgeWave);
 
     this.redrawSoupBubbles(hx, hy, overlay);
-    this.soupOverlayLayer.addChild(this.soupBubbleLayer);
     this.redrawSoupEdgeBubbles(hx, hy, overlay);
+    this.soupOverlayLayer.addChild(this.soupBubbleLayer, this.soupEdgeBubbleLayer);
 
     this.soupRippleLayer.removeChildren();
-    const rippleDefs = [
-      { rx: 0.36, ry: 0.09, y: -0.14, rot: -0.16, alpha: Math.max(0.13, overlay.rippleAlpha * 1.1) },
-      { rx: 0.28, ry: 0.072, y: 0.05, rot: 0.24, alpha: Math.max(0.1, overlay.rippleAlpha * 0.86) },
-      { rx: 0.42, ry: 0.098, y: 0.2, rot: -0.28, alpha: Math.max(0.08, overlay.rippleAlpha * 0.66) },
-      { rx: 0.22, ry: 0.056, y: -0.02, rot: -0.46, alpha: Math.max(0.08, overlay.rippleAlpha * 0.62) },
-    ] as const;
-    for (const def of rippleDefs) {
-      const g = new PIXI.Graphics();
-      g.lineStyle(3, 0xffffff, def.alpha);
-      g.drawEllipse(0, 0, hx * def.rx, hy * def.ry);
-      g.position.set(this.bowlCenter.x, this.bowlCenter.y + hy * def.y);
-      g.rotation = def.rot;
-      g.eventMode = 'none';
-      this.soupRippleLayer.addChild(g);
-    }
     this.soupOverlayLayer.addChild(this.soupRippleLayer);
     this.soupOverlayLayer.addChild(this.soupTapRippleLayer);
     this.redrawSoupSurfaceDetails(hx, hy, overlay);
@@ -1670,102 +1671,19 @@ export class BowlScene implements Scene {
   }
 
   private redrawSoupShimmerLayer(
-    hx: number,
-    hy: number,
-    overlay: ReturnType<BowlScene['getSoupOverlayStyle']>,
+    _hx: number,
+    _hy: number,
+    _overlay: ReturnType<BowlScene['getSoupOverlayStyle']>,
   ): void {
-    const defs = [
-      { x: -0.36, y: -0.22, len: 0.52, rot: -0.34, alpha: 0.2, width: 7, phase: 0.2 },
-      { x: 0.22, y: -0.08, len: 0.42, rot: -0.28, alpha: 0.16, width: 5, phase: 1.4 },
-      { x: -0.12, y: 0.18, len: 0.48, rot: -0.3, alpha: 0.14, width: 5, phase: 2.6 },
-      { x: 0.34, y: 0.24, len: 0.3, rot: -0.22, alpha: 0.12, width: 4, phase: 3.8 },
-    ] as const;
-    for (const def of defs) {
-      const streak = new PIXI.Graphics() as SoupLightStreak;
-      const len = hx * def.len;
-      streak.lineStyle(def.width + 3, 0x4a6d76, def.alpha * 0.1);
-      streak.moveTo(-len, 0);
-      streak.bezierCurveTo(-len * 0.35, -hy * 0.018, len * 0.28, hy * 0.02, len, 0);
-      streak.lineStyle(def.width, overlay.highlightColor, def.alpha);
-      streak.moveTo(-len, 0);
-      streak.bezierCurveTo(-len * 0.35, -hy * 0.018, len * 0.28, hy * 0.02, len, 0);
-      streak.lineStyle(Math.max(1.5, def.width * 0.38), 0xffffff, def.alpha * 0.62);
-      streak.moveTo(-len * 0.42, -hy * 0.012);
-      streak.bezierCurveTo(-len * 0.16, -hy * 0.028, len * 0.12, hy * 0.006, len * 0.42, -hy * 0.008);
-      streak.position.set(this.bowlCenter.x + hx * def.x, this.bowlCenter.y + hy * def.y);
-      streak.rotation = def.rot;
-      streak.alpha = 0.88;
-      streak.blendMode = PIXI.BLEND_MODES.ADD;
-      streak.eventMode = 'none';
-      streak.baseX = streak.x;
-      streak.baseY = streak.y;
-      streak.baseRot = def.rot;
-      streak.baseAlpha = def.alpha;
-      streak.driftX = hx * 0.045;
-      streak.driftY = hy * 0.018;
-      streak.phase = def.phase;
-      streak.spin = 0.012;
-      this.soupShimmerLayer.addChild(streak);
-      this.soupLightStreakItems.push(streak);
-    }
+    // 光泽横条已去掉：原先叠加在汤面的白色曲线观感像脏线
   }
 
   private redrawSoupRollPatches(
-    hx: number,
-    hy: number,
-    overlay: ReturnType<BowlScene['getSoupOverlayStyle']>,
+    _hx: number,
+    _hy: number,
+    _overlay: ReturnType<BowlScene['getSoupOverlayStyle']>,
   ): void {
-    const defs = [
-      { x: -0.24, y: -0.16, rx: 0.28, ry: 0.055, rot: -0.24, alpha: 0.18, tint: 'light' },
-      { x: 0.22, y: -0.08, rx: 0.22, ry: 0.046, rot: 0.32, alpha: 0.12, tint: 'dark' },
-      { x: -0.03, y: 0.13, rx: 0.34, ry: 0.06, rot: -0.08, alpha: 0.16, tint: 'light' },
-      { x: 0.28, y: 0.25, rx: 0.2, ry: 0.04, rot: -0.28, alpha: 0.1, tint: 'dark' },
-      { x: -0.34, y: 0.28, rx: 0.18, ry: 0.036, rot: 0.2, alpha: 0.12, tint: 'light' },
-      { x: 0.02, y: -0.28, rx: 0.2, ry: 0.034, rot: 0.18, alpha: 0.14, tint: 'light' },
-      { x: 0.38, y: 0.02, rx: 0.16, ry: 0.03, rot: -0.18, alpha: 0.1, tint: 'light' },
-    ] as const;
-
-    for (let i = 0; i < defs.length; i += 1) {
-      const def = defs[i]!;
-      const patch = new PIXI.Graphics() as SoupRollPatch;
-      const color = def.tint === 'light' ? overlay.rollLightColor : overlay.rollShadowColor;
-      patch.lineStyle(def.tint === 'light' ? 4 : 3, color, def.alpha);
-      patch.moveTo(-hx * def.rx, 0);
-      patch.bezierCurveTo(
-        -hx * def.rx * 0.36,
-        -hy * def.ry,
-        hx * def.rx * 0.36,
-        hy * def.ry,
-        hx * def.rx,
-        0,
-      );
-      patch.lineStyle(2, 0xffffff, def.alpha * 0.42);
-      patch.moveTo(-hx * def.rx * 0.62, -hy * def.ry * 0.18);
-      patch.bezierCurveTo(
-        -hx * def.rx * 0.2,
-        -hy * def.ry * 0.68,
-        hx * def.rx * 0.24,
-        hy * def.ry * 0.28,
-        hx * def.rx * 0.68,
-        -hy * def.ry * 0.08,
-      );
-      patch.baseX = this.bowlCenter.x + hx * def.x;
-      patch.baseY = this.bowlCenter.y + hy * def.y;
-      patch.baseRot = def.rot;
-      patch.baseScaleX = 1;
-      patch.baseScaleY = 1;
-      patch.baseAlpha = def.alpha;
-      patch.driftX = hx * (0.018 + i * 0.004);
-      patch.driftY = hy * (0.014 + i * 0.003);
-      patch.phase = i * 1.18;
-      patch.spin = i % 2 === 0 ? 0.035 : -0.028;
-      patch.position.set(patch.baseX, patch.baseY);
-      patch.rotation = def.rot;
-      patch.blendMode = def.tint === 'light' ? PIXI.BLEND_MODES.ADD : PIXI.BLEND_MODES.NORMAL;
-      patch.eventMode = 'none';
-      this.soupRollLayer.addChild(patch);
-      this.soupRollItems.push(patch);
-    }
+    // 汤面卷纹线已去掉，与光泽条同理
   }
 
   private drawSoupEdgeWave(hx: number, hy: number, overlay: ReturnType<BowlScene['getSoupOverlayStyle']>): void {
@@ -1944,27 +1862,6 @@ export class BowlScene implements Scene {
   ): void {
     this.soupDetailItems.length = 0;
     const line = overlay.detailColor;
-    const detailDefs = [
-      { x: -0.34, y: -0.24, rx: 0.22, ry: 0.08, rot: -0.28, alpha: 0.08 },
-      { x: 0.28, y: -0.08, rx: 0.18, ry: 0.06, rot: 0.32, alpha: 0.07 },
-      { x: -0.08, y: 0.18, rx: 0.3, ry: 0.09, rot: -0.12, alpha: 0.06 },
-      { x: 0.18, y: 0.28, rx: 0.16, ry: 0.05, rot: 0.18, alpha: 0.055 },
-    ] as const;
-    for (const def of detailDefs) {
-      const g = new PIXI.Graphics();
-      g.lineStyle(3, line, def.alpha);
-      g.drawEllipse(0, 0, hx * def.rx, hy * def.ry);
-      g.position.set(this.bowlCenter.x + hx * def.x, this.bowlCenter.y + hy * def.y);
-      g.rotation = def.rot;
-      g.eventMode = 'none';
-      const item = g as PIXI.Graphics & { flowSpeed?: number; driftPhase?: number; driftX?: number; driftY?: number };
-      item.flowSpeed = def.rot > 0 ? 0.045 : -0.038;
-      item.driftPhase = Math.random() * Math.PI * 2;
-      item.driftX = hx * 0.01;
-      item.driftY = hy * 0.008;
-      this.soupDetailLayer.addChild(g);
-      this.soupDetailItems.push(g);
-    }
 
     const dotCount = this.currentSoupKey === 'milk' ? 14 : 24;
     for (let i = 0; i < dotCount; i += 1) {
@@ -2792,11 +2689,12 @@ export class BowlScene implements Scene {
     this.shuffleIceResurfaceSec = SHUFFLE_ICE_RESURFACE_SEC;
     this.soupDisturbanceSec = Math.max(this.soupDisturbanceSec, 0.7);
     this.soupEdgeWaveBoostSec = Math.max(this.soupEdgeWaveBoostSec, 0.82);
-    for (const fruit of this.fruits) {
-      if (fruit.phase !== 'bowl' || fruit.picked || fruit.hiddenReserve) {
-        continue;
-      }
-      const p = this.randomBowlPoint();
+    const shuffleTargets = this.fruits.filter(
+      (fruit) => fruit.phase === 'bowl' && !fruit.picked && !fruit.hiddenReserve,
+    );
+    const shufflePoints = this.spreadBowlPoints(shuffleTargets.length);
+    shuffleTargets.forEach((fruit, index) => {
+      const p = shufflePoints[index] ?? this.randomBowlPoint();
       fruit.position.set(p.x, p.y);
       fruit.velocityX = this.randomInRange(-14, 14);
       fruit.velocityY = this.randomInRange(-9, 9);
@@ -2807,7 +2705,7 @@ export class BowlScene implements Scene {
       } else if (fruit.parent === this.submergedFruitLayer) {
         this.moveFruitToSoupLayer(fruit, this.surfaceFruitLayer);
       }
-    }
+    });
   }
 
   private bowlTextureKey(fruitId: FruitId): string {
@@ -2978,13 +2876,14 @@ export class BowlScene implements Scene {
     const frozenIndexes = this.pickFrozenFruitIndexes(ids);
     const frostTexture = TextureCache.get(`${ICE_CUBE_ID}__b2`) ?? TextureCache.get(ICE_CUBE_ID);
     const visibleIndexes = this.pickInitialVisibleIndexes(ids);
+    const spawnPoints = this.spreadBowlPoints(ids.length);
 
     ids.forEach((fruitId, index) => {
       const config = FRUIT_MAP[fruitId];
       const key = this.bowlTextureKey(fruitId);
       const texture = TextureCache.get(key) ?? TextureCache.get(fruitId);
       const fruit = new FruitItem(config, texture);
-      const point = this.randomBowlPoint();
+      const point = spawnPoints[index] ?? this.randomBowlPoint();
       fruit.position.set(point.x, point.y);
       fruit.scale.set(this.randomBowlFruitScale(fruit.fruitId));
       fruit.velocityX = this.randomInRange(-10, 10);
@@ -4656,13 +4555,22 @@ export class BowlScene implements Scene {
       return;
     }
 
-    const targetSurfaceCount = Math.min(
-      visibleFruits.length,
-      Math.min(
-        SURFACE_FILL_TARGET_MAX,
-        Math.max(SURFACE_FILL_TARGET_COUNT, Math.ceil(visibleFruits.length * SURFACE_FILL_TARGET_RATIO)),
-      ),
+    const ratioSurface = Math.ceil(visibleFruits.length * SURFACE_FILL_TARGET_RATIO);
+    const denseBowlTarget = Math.min(
+      SURFACE_FILL_TARGET_MAX,
+      Math.max(SURFACE_FILL_TARGET_COUNT, ratioSurface),
     );
+    let targetSurfaceCount =
+      visibleFruits.length > SURFACE_FILL_TARGET_COUNT
+        ? Math.min(visibleFruits.length, denseBowlTarget)
+        : ratioSurface;
+    if (visibleFruits.length >= 2) {
+      targetSurfaceCount = Math.min(
+        targetSurfaceCount,
+        visibleFruits.length - SURFACE_FILL_MIN_SUBMERGED,
+      );
+    }
+    targetSurfaceCount = Math.max(1, Math.min(visibleFruits.length, targetSurfaceCount));
     const { hx, hy } = this.getFruitSoupHalfExtents();
     const buckets: FruitItem[][] = Array.from(
       { length: SURFACE_FILL_GRID_COLS * SURFACE_FILL_GRID_ROWS },
@@ -4934,35 +4842,116 @@ export class BowlScene implements Scene {
     this.flyingFruitLayer.addChild(fruit);
   }
 
+  /** 开局 / 打乱：按网格把水果摊到碗面各处，避免都落在中心 */
+  private spreadBowlPoints(count: number): PIXI.IPointData[] {
+    const { hx, hy } = this.getFruitSoupHalfExtents();
+    const slots: PIXI.IPointData[] = [];
+    for (let row = 0; row < BOWL_SPAWN_GRID_ROWS; row += 1) {
+      for (let col = 0; col < BOWL_SPAWN_GRID_COLS; col += 1) {
+        const nx = (col + 0.5) / BOWL_SPAWN_GRID_COLS;
+        const ny = (row + 0.5) / BOWL_SPAWN_GRID_ROWS;
+        const cx = (nx - 0.5) * 2 * BOWL_SPAWN_EDGE_RADIUS;
+        const cy = (ny - 0.5) * 2 * BOWL_SPAWN_EDGE_RADIUS;
+        if (cx * cx + cy * cy > BOWL_SPAWN_EDGE_RADIUS * BOWL_SPAWN_EDGE_RADIUS) {
+          continue;
+        }
+        const jitterX = (Math.random() - 0.5) * (hx / BOWL_SPAWN_GRID_COLS) * 0.55;
+        const jitterY = (Math.random() - 0.5) * (hy / BOWL_SPAWN_GRID_ROWS) * 0.55;
+        slots.push({
+          x: this.bowlCenter.x + cx * hx + jitterX,
+          y: this.bowlCenter.y + cy * hy + jitterY,
+        });
+      }
+    }
+    const ordered = shuffle(slots);
+    const out: PIXI.IPointData[] = [];
+    for (let i = 0; i < count; i += 1) {
+      out.push(ordered[i % ordered.length] ?? this.randomBowlPoint());
+    }
+    return out;
+  }
+
   private randomBowlPoint(): PIXI.IPointData {
     const { hx, hy } = this.getFruitSoupHalfExtents();
-    const rMax = 0.9;
     const angle = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(Math.random()) * rMax;
+    const r = (0.32 + 0.66 * Math.sqrt(Math.random())) * BOWL_SPAWN_EDGE_RADIUS;
     return {
       x: this.bowlCenter.x + Math.cos(angle) * r * hx,
       y: this.bowlCenter.y + Math.sin(angle) * r * hy,
     };
   }
 
+  /** 漂移脉冲时轻推过近的水果，防止长时间堆成一坨 */
+  private applyBowlFruitSeparation(): void {
+    const active = this.fruits.filter(
+      (fruit) => fruit.phase === 'bowl' && !fruit.picked && !fruit.hiddenReserve,
+    );
+    if (active.length < 2) {
+      return;
+    }
+    const { hx, hy } = this.getFruitSoupHalfExtents();
+    const minDist = Math.max(34, Math.min(hx, hy) * 0.14);
+    const minDistSq = minDist * minDist;
+    for (let i = 0; i < active.length; i += 1) {
+      const a = active[i]!;
+      for (let j = i + 1; j < active.length; j += 1) {
+        const b = active[j]!;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= minDistSq || d2 < 0.25) {
+          continue;
+        }
+        const d = Math.sqrt(d2);
+        const push = (minDist - d) * 0.28;
+        const nx = dx / d;
+        const ny = dy / d;
+        a.x -= nx * push * 0.5;
+        a.y -= ny * push * 0.5;
+        b.x += nx * push * 0.5;
+        b.y += ny * push * 0.5;
+      }
+    }
+    for (const fruit of active) {
+      this.keepFruitInsideBowlEllipse(fruit, hx, hy);
+    }
+  }
+
+  /** 约束用：水果贴图半宽/半高（仅取一部分参与贴边内缩，避免整颗半径叠在全局椭圆上） */
+  private getFruitHalfSizeForBounds(fruit: FruitItem): { halfW: number; halfH: number } {
+    const bounds = fruit.display.getLocalBounds();
+    const sx = Math.abs(fruit.scale.x) || 1;
+    const sy = Math.abs(fruit.scale.y) || 1;
+    const halfW = bounds.width * 0.5 * sx * FRUIT_BOWL_SPRITE_EDGE_FACTOR;
+    const halfH = bounds.height * 0.5 * sy * FRUIT_BOWL_SPRITE_EDGE_FACTOR;
+    return {
+      halfW: Math.max(14, halfW),
+      halfH: Math.max(12, halfH),
+    };
+  }
+
   private keepFruitInsideBowlEllipse(fruit: FruitItem, hx: number, hy: number): void {
+    const { halfW, halfH } = this.getFruitHalfSizeForBounds(fruit);
+    const effHx = Math.max(44, hx - halfW - FRUIT_BOWL_RIM_CLEARANCE);
+    const effHy = Math.max(40, hy - halfH - FRUIT_BOWL_RIM_CLEARANCE);
+
     const dx = fruit.x - this.bowlCenter.x;
     const dy = fruit.y - this.bowlCenter.y;
-    const nx = dx / hx;
-    const ny = dy / hy;
+    const nx = dx / effHx;
+    const ny = dy / effHy;
     const d2 = nx * nx + ny * ny;
     if (d2 <= 1) {
       return;
     }
 
     const d = Math.sqrt(d2);
-    const safe = 0.998 / d;
+    const safe = 0.985 / d;
     fruit.x = this.bowlCenter.x + dx * safe;
     fruit.y = this.bowlCenter.y + dy * safe;
 
     // 沿椭圆法线反射速度，避免下一帧继续冲出碗口。
-    const normalX = dx / (hx * hx);
-    const normalY = dy / (hy * hy);
+    const normalX = dx / (effHx * effHx);
+    const normalY = dy / (effHy * effHy);
     const nl = Math.hypot(normalX, normalY) || 1;
     const ux = normalX / nl;
     const uy = normalY / nl;
@@ -4974,18 +4963,18 @@ export class BowlScene implements Scene {
   }
 
   /**
-   * 水果活动范围：不超出当前汤贴图（soupSprite）显示边缘；无贴图时退回旧椭圆参数。
+   * 水果中心活动椭圆：汤贴图半轴减去「汤外缘到碗沿内侧」环带（与 soupToRimScale 对齐），
+   * 贴边时再按单颗贴图尺寸做少量内缩，避免穿碗沿。
    */
   private getFruitSoupHalfExtents(): { hx: number; hy: number } {
-    if (this.soupSprite.visible && this.soupSprite.width > 16 && this.soupSprite.height > 16) {
-      const padX = 84;
-      const padY = 78;
-      return {
-        hx: Math.max(36, this.soupSprite.width / 2 - padX),
-        hy: Math.max(32, this.soupSprite.height / 2 - padY),
-      };
-    }
-    return { hx: this.bowlRadiusX - 30, hy: this.bowlRadiusY - 24 };
+    const visual = this.getSoupVisualHalfExtents();
+    const rimBandScale = 1 / BOWL_SOUP_TO_RIM_SCALE - 1;
+    const rimBandX = Math.max(12, visual.hx * rimBandScale + 4);
+    const rimBandY = Math.max(10, visual.hy * rimBandScale + 4);
+    return {
+      hx: Math.max(48, visual.hx - rimBandX),
+      hy: Math.max(44, visual.hy - rimBandY),
+    };
   }
 
   /** 汤面遮罩范围：与汤贴图显示尺寸一致，避免靠边水果半截露出。 */

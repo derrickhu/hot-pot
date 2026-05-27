@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 02 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (osmanthus):
+  Cell 1: tiny dried osmanthus flower cluster, golden yellow petals
+  Cell 2: same osmanthus cluster, looser scatter, same scale
+Row 2 (mandarin):
+  Cell 3: small mandarin orange segment, bright orange pulp, white pith edge
+  Cell 4: two mandarin segments, same size, different overlap angle
+Row 3 (dragonfruit):
+  Cell 5: dragonfruit cube dice, white flesh, black seeds, pink skin edge
+  Cell 6: same dragonfruit dice, rotated cube angle
+Row 4 (grape_green):
+  Cell 7: 2-3 green grape berries on short stem, translucent green
+  Cell 8: 4 green grapes small cluster, same style, tilted
+Row 5 (lime):
+  Cell 9: thin lime citrus wheel slice, bright green pulp segments, thin rind ring
+  Cell 10: same lime wheel, rotated ~25°, identical thickness
+Row 6 (bayberry):
+  Cell 11: single bayberry (Chinese yangmei), bumpy red-purple sphere, tiny stem
+  Cell 12: two bayberries, same size, slight angle
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

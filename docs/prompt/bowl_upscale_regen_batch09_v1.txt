@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 09 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (cookie_crumb):
+  Cell 1: cookie crumb chunks, golden brown, irregular small pieces
+  Cell 2: same cookie crumbs, different scatter
+Row 2 (pumpkin_cube):
+  Cell 3: orange pumpkin cube dice, smooth roasted texture
+  Cell 4: same pumpkin cube, rotated angle
+Row 3 (taro_dice):
+  Cell 5: purple taro dice cube, lavender flesh, soft edges
+  Cell 6: same taro dice, rotated isometric
+Row 4 (black_rice):
+  Cell 7: small black glutinous rice grains clump, deep purple-black
+  Cell 8: same black rice clump, different angle
+Row 5 (cantaloupe):
+  Cell 9: cantaloupe orange cube, pale orange flesh, thin green rind edge
+  Cell 10: same cantaloupe cube, rotated
+Row 6 (peach_gum):
+  Cell 11: peach gum resin chunk, amber honey translucent
+  Cell 12: same peach gum, rotated amber chunk
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

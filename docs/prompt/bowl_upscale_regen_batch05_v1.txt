@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 05 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (red_bean):
+  Cell 1: small scoop sweet red bean paste, glossy red-brown
+  Cell 2: same red bean paste dollop, rotated angle
+Row 2 (mini_mochi):
+  Cell 3: small white mini mochi cube, soft powdery surface
+  Cell 4: same mochi cube, rotated, subtle shadow only inside
+Row 3 (grass_jelly):
+  Cell 5: dark brown grass jelly cube, glossy herbal jelly
+  Cell 6: same grass jelly cube, rotated corner view
+Row 4 (passionfruit):
+  Cell 7: passionfruit pulp spoon scoop, yellow seeds in orange jelly
+  Cell 8: same passionfruit pulp, different tilt, no empty shell
+Row 5 (peanut):
+  Cell 9: peanut half, tan shell, two pale nuts visible
+  Cell 10: same peanut half, slight rotation, same scale
+Row 6 (red_date):
+  Cell 11: dried red date (jujube), wrinkled dark red skin
+  Cell 12: same red date, slight rotation, glossy wrinkle
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

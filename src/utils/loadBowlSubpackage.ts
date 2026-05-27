@@ -47,6 +47,10 @@ export function loadGachaAssetsSubpackage(): Promise<void> {
   return loadGameSubpackage('gacha_assets');
 }
 
+export function loadMilkTeaDemoSubpackage(): Promise<void> {
+  return loadGameSubpackage('milk_tea_demo');
+}
+
 export function loadGameSubpackage(name: string): Promise<void> {
   const api = typeof wx !== 'undefined' ? wx : null;
   const sub = api?.loadSubpackage;

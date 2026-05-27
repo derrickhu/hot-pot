@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 06 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (plum):
+  Cell 1: small plum wedge, purple skin edge, yellow-green flesh
+  Cell 2: same plum wedge, rotated angle
+Row 2 (ice_cube):
+  Cell 3: single clear ice cube, blue-white internal refraction, cartoon style
+  Cell 4: same ice cube, rotated 3/4 view
+Row 3 (starfruit):
+  Cell 5: starfruit star slice, yellow-green, five-point star silhouette
+  Cell 6: same starfruit slice, rotated ~30°
+Row 4 (pudding_cube):
+  Cell 7: caramel pudding cube, golden brown, soft glossy top
+  Cell 8: same pudding cube, rotated isometric angle
+Row 5 (foxnut):
+  Cell 9: few white foxnut (gorgon) seeds, small oval grains
+  Cell 10: same foxnut seeds, different pile angle
+Row 6 (young_coconut):
+  Cell 11: young coconut meat strip, white creamy chunk, thin brown skin edge
+  Cell 12: same coconut strip, rotated angle
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

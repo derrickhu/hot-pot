@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 07 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (durian):
+  Cell 1: durian flesh pod, creamy yellow, spiky green shell edge hint
+  Cell 2: same durian pod chunk, different tilt
+Row 2 (chocolate_chip):
+  Cell 3: small chocolate chip morsel, dark brown teardrop
+  Cell 4: 3 chocolate chips cluster, same style
+Row 3 (mint):
+  Cell 5: fresh mint leaf pair, bright green veins
+  Cell 6: same mint leaves, crossed angle
+Row 4 (oat_flake):
+  Cell 7: small oat flakes cluster, beige tan
+  Cell 8: same oat flakes, different scatter
+Row 5 (lotus_seed):
+  Cell 9: lotus seed, pale beige teardrop with small brown tip
+  Cell 10: two lotus seeds, same scale, angle change
+Row 6 (marshmallow):
+  Cell 11: mini marshmallow cylinder, white fluffy, soft highlight
+  Cell 12: same marshmallow, rotated side view
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.

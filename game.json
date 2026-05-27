@@ -44,6 +44,10 @@
     {
       "name": "gacha_assets",
       "root": "subpackages/gacha_assets/"
+    },
+    {
+      "name": "milk_tea_demo",
+      "root": "subpackages/milk_tea_tray_demo/"
     }
   ]
 }

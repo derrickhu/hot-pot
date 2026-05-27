@@ -79,6 +79,10 @@ const ROW_GAP_Y = 22;
 
 /** 冰饮 tab 缩略图分批加载，避免一次性解码过多大图 */
 const DRINK_THUMB_LOAD_BATCH = 6;
+/** 水果图鉴贴图分批加载，减轻全解锁时主线程卡顿 */
+const FRUIT_TEXTURE_LOAD_BATCH = 8;
+/** 滚出视口多少像素仍保留渲染，避免边缘闪烁 */
+const GRID_CULL_PAD = 48;
 
 interface DrinkRecipeThumbMount {
   slot: DrinkRecipeCatalogSlot;
@@ -127,6 +131,8 @@ export class CatalogScene implements Scene {
   private recipePreview: PIXI.Container | null = null;
   /** 取消进行中的冰饮缩略图灌图（切 tab / 重建网格时递增） */
   private drinkThumbHydrateGen = 0;
+  /** 网格格子的内容坐标（用于滚动时裁剪渲染） */
+  private readonly gridCells: Array<{ container: PIXI.Container; y: number; h: number }> = [];
   private active = false;
 
   constructor() {
@@ -153,7 +159,8 @@ export class CatalogScene implements Scene {
     this.container.addChild(this.chromeRoot);
 
     this.gridRoot.position.set(0, this.gridTop);
-    this.gridRoot.eventMode = 'static';
+    // passive：不抢占整块网格命中，让下层 scrollHit 能收到拖动；冰饮格子的 cell 仍可点击
+    this.gridRoot.eventMode = 'passive';
     this.gridRoot.mask = this.gridMask;
     this.container.addChild(this.gridMask);
     this.buildScrollArea();
@@ -415,13 +422,14 @@ export class CatalogScene implements Scene {
       if (!this.loadedTabs.has(tab)) {
         if (tab === 'fruit') {
           await Promise.all([loadBowlCoreSubpackage(), loadCatalogAssetsSubpackage()]);
-          const slots = getCatalogSlots();
-          const loads = slots
-            .filter((slot) => slot.unlocked)
-            .flatMap((slot) =>
-              slot.assetCandidates.map((asset, index) => this.loadContentTexture(this.catalogTextureKey(slot, index), asset)),
-            );
-          await Promise.all(loads);
+          const unlocked = getCatalogSlots().filter((slot) => slot.unlocked);
+          for (let i = 0; i < unlocked.length; i += FRUIT_TEXTURE_LOAD_BATCH) {
+            if (!this.active) {
+              return;
+            }
+            const batch = unlocked.slice(i, i + FRUIT_TEXTURE_LOAD_BATCH);
+            await Promise.all(batch.map((slot) => this.loadCatalogSlotTexture(slot)));
+          }
         } else if (tab === 'badge') {
           await loadBowlBadgesSubpackage();
           await Promise.all(
@@ -451,6 +459,41 @@ export class CatalogScene implements Scene {
       this.loadedContentTextureKeys.add(key);
     }
     return texture;
+  }
+
+  /** 每个图鉴槽只加载第一个成功的候选路径，避免 3～4 倍贴图解码 */
+  private async loadCatalogSlotTexture(slot: CatalogSlot): Promise<PIXI.Texture | null> {
+    for (let i = 0; i < slot.assetCandidates.length; i += 1) {
+      const tex = await this.loadContentTexture(
+        this.catalogTextureKey(slot, i),
+        slot.assetCandidates[i]!,
+      );
+      if (tex) {
+        return tex;
+      }
+    }
+    return null;
+  }
+
+  private resetGridCells(): void {
+    this.gridCells.length = 0;
+  }
+
+  private registerGridCell(container: PIXI.Container, y: number, h: number): void {
+    this.gridCells.push({ container, y, h });
+  }
+
+  private updateGridVisibility(): void {
+    if (this.gridCells.length === 0) {
+      return;
+    }
+    const viewTop = this.scrollY;
+    const viewBottom = this.scrollY + (Game.logicHeight - this.gridTop - 24);
+    const pad = GRID_CULL_PAD;
+    for (const { container, y, h } of this.gridCells) {
+      const cellBottom = y + h;
+      container.visible = cellBottom >= viewTop - pad && y <= viewBottom + pad;
+    }
   }
 
   private buildScrollArea(): void {
@@ -552,6 +595,7 @@ export class CatalogScene implements Scene {
 
   private buildFruitGrid(slots: CatalogSlot[]): void {
     destroyContainerChildren(this.gridRoot);
+    this.resetGridCells();
 
     const W = Game.logicWidth;
     const cellW = (W - GRID_PAD_X * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
@@ -621,8 +665,10 @@ export class CatalogScene implements Scene {
         cell.addChild(lb);
       }
 
+      this.registerGridCell(cell, y, rowH);
       this.gridRoot.addChild(cell);
     });
+    this.updateGridVisibility();
   }
 
   private getBadgeSlots(): BadgeCatalogSlot[] {
@@ -636,6 +682,7 @@ export class CatalogScene implements Scene {
 
   private buildBadgeGrid(slots: BadgeCatalogSlot[]): void {
     destroyContainerChildren(this.gridRoot);
+    this.resetGridCells();
 
     const W = Game.logicWidth;
     const cellW = (W - GRID_PAD_X * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
@@ -688,8 +735,10 @@ export class CatalogScene implements Scene {
       title.position.set(0, cardH + 6 + labelLineH);
       cell.addChild(title);
 
+      this.registerGridCell(cell, y, rowH);
       this.gridRoot.addChild(cell);
     });
+    this.updateGridVisibility();
   }
 
   private getDrinkRecipeSlots(): DrinkRecipeCatalogSlot[] {
@@ -708,6 +757,7 @@ export class CatalogScene implements Scene {
   private buildDrinkRecipeGrid(slots: DrinkRecipeCatalogSlot[]): void {
     this.drinkThumbHydrateGen += 1;
     destroyContainerChildren(this.gridRoot);
+    this.resetGridCells();
 
     if (slots.length === 0) {
       this.maxScrollY = 0;
@@ -774,8 +824,10 @@ export class CatalogScene implements Scene {
       subtitle.position.set(0, iconH + 6 + labelLineH);
       cell.addChild(subtitle);
 
+      this.registerGridCell(cell, y, rowH);
       this.gridRoot.addChild(cell);
     });
+    this.updateGridVisibility();
 
     void this.hydrateDrinkRecipeThumbnails(thumbMounts, this.drinkThumbHydrateGen);
   }
@@ -918,5 +970,6 @@ export class CatalogScene implements Scene {
   private setScrollY(value: number): void {
     this.scrollY = Math.max(0, Math.min(this.maxScrollY, value));
     this.gridRoot.y = this.gridTop - this.scrollY;
+    this.updateGridVisibility();
   }
 }

@@ -1,0 +1,33 @@
+STYLE (match reference mango game asset exactly):
+- 2D hand-painted cartoon fruit ingredient for a casual mobile fruit-bowl game.
+- Thick warm dark maroon-brown outer outline, clean sharp silhouette, NO fuzzy fringe.
+- Saturated juicy colors, top-left highlight, soft internal shading only.
+- Slight top-down 3/4 view, ONE object centered per cell, large and crisp (~70% of cell).
+- Solid pure WHITE #FFFFFF background only. NO drop shadow, NO cast shadow, NO glow outside object.
+- NO text, NO watermark, NO plate, NO bowl, NO hands, NO UI.
+
+GRID: 4 columns x 3 rows, 12 equal cells, generous gutters, objects never touch cell borders.
+Each row has TWO variants of the SAME fruit (left=variant1, right=variant2) — same cut type, only rotation/angle differs.
+
+BATCH 08 — fill cells left-to-right, top-to-bottom:
+
+Row 1 (lily_bulb):
+  Cell 1: lily bulb petal scales, white-yellow, layered
+  Cell 2: same lily bulb pieces, different fan angle
+Row 2 (persimmon):
+  Cell 3: persimmon soft wedge, orange flesh, orange skin rim
+  Cell 4: same persimmon wedge, rotated
+Row 3 (dried_longan):
+  Cell 5: dried longan, golden-brown wrinkled ball
+  Cell 6: two dried longan, same style, slight angle
+Row 4 (pop_boba):
+  Cell 7: translucent pop boba sphere, orange or pink gradient inside
+  Cell 8: same pop boba, highlight shift, slight rotation
+Row 5 (radish_heart):
+  Cell 9: small heart-shaped radish cube, pink-white gradient
+  Cell 10: same radish heart cube, rotated isometric
+Row 6 (basil_seed):
+  Cell 11: basil seeds (frog egg drink pearls), tiny black dots in gel clump
+  Cell 12: same basil seed clump, different blob shape
+
+NO TEXT anywhere. Keep all 12 ingredients consistent line weight and lighting.
