@@ -161,8 +161,16 @@ const BOWL_SOUP_TO_RIM_SCALE = 0.89;
 const FRUIT_BOWL_SPRITE_EDGE_FACTOR = 0.38;
 /** 中心点贴椭圆边时的额外像素留白 */
 const FRUIT_BOWL_RIM_CLEARANCE = 5;
-const FRUIT_SURFACE_BOB_THRESHOLD = 0.78;
-const FRUIT_SUBMERGE_BOB_THRESHOLD = -0.86;
+/** 汤内浮沉：目标深度拉力、浮力/重力、层切换滞回 */
+const FRUIT_SOUP_DEPTH_TARGET_PULL = 1.35;
+const FRUIT_SOUP_DEPTH_BUOYANCY = 0.22;
+const FRUIT_SOUP_DEPTH_GRAVITY = 0.18;
+const FRUIT_SOUP_DEPTH_COLLISION_PUSH = 2.8;
+const FRUIT_SOUP_DEPTH_DAMPING = 4.2;
+const FRUIT_SOUP_DEPTH_MAX_SPEED = 0.42;
+const FRUIT_SOUP_DEPTH_SURFACE_ENTER = 0.58;
+const FRUIT_SOUP_DEPTH_SUBMERGE_ENTER = 0.4;
+const FRUIT_SOUP_DEPTH_COLLISION_DIST = 118;
 /**
  * 汤面可见层容量：水果多时用 COUNT/MAX 封顶；水果少时用 RATIO，避免「总数 < 42 时全浮在汤上」。
  */
@@ -805,15 +813,17 @@ export class BowlScene implements Scene {
         const layerBias = fruit.parent === this.surfaceFruitLayer ? 900 : -900;
         fruit.zIndex = Math.round(fruit.y * 10 + fruit.depthJitter * 1000 + layerBias * swapRatio);
       } else {
-        this.updateFruitSoupDepth(fruit, bob);
-        fruit.zIndex = Math.round(fruit.y * 10 + fruit.depthJitter * 1000);
+        fruit.zIndex = Math.round(
+          fruit.y * 10 + fruit.depthJitter * 1000 + fruit.soupDepth * 120,
+        );
       }
     }
 
+    this.rebalanceSurfaceFruitFill();
+    this.applyFruitSoupDepthPhysics(dt);
     if (driftPulse) {
       this.applyBowlFruitSeparation();
     }
-    this.rebalanceSurfaceFruitFill();
     this.submergedFruitLayer.sortChildren();
     this.surfaceFruitLayer.sortChildren();
     this.flyingFruitLayer.sortChildren();
@@ -2700,9 +2710,18 @@ export class BowlScene implements Scene {
       fruit.velocityY = this.randomInRange(-9, 9);
       if (fruit.fruitId === ICE_CUBE_ID) {
         this.moveFruitToSoupLayer(fruit, this.submergedFruitLayer);
+        fruit.soupDepth = 0.12;
+        fruit.soupDepthVel = -0.08;
+        fruit.targetSoupDepth = 0.12;
       } else if (fruit.parent === this.surfaceFruitLayer) {
+        fruit.targetSoupDepth = 0.16;
+        fruit.soupDepth = 0.14;
+        fruit.soupDepthVel = -0.28;
         this.moveFruitToSoupLayer(fruit, this.submergedFruitLayer);
       } else if (fruit.parent === this.submergedFruitLayer) {
+        fruit.targetSoupDepth = 0.86;
+        fruit.soupDepth = 0.82;
+        fruit.soupDepthVel = 0.32;
         this.moveFruitToSoupLayer(fruit, this.surfaceFruitLayer);
       }
     });
@@ -4480,13 +4499,6 @@ export class BowlScene implements Scene {
     return this.randomInRange(BOWL_FRUIT_SCALE_MIN, BOWL_FRUIT_SCALE_MAX) * multiplier;
   }
 
-  private shouldSubmergeFruit(fruit: FruitItem): boolean {
-    if (fruit.hiddenReserve) {
-      return true;
-    }
-    return Math.sin(Date.now() * FRUIT_BOB_SPEED + fruit.bobSeed) < FRUIT_SURFACE_BOB_THRESHOLD;
-  }
-
   private moveFruitToSoupLayer(fruit: FruitItem, target: PIXI.Container): void {
     if (fruit.parent === target) {
       this.applyFruitSoupVisual(fruit);
@@ -4505,9 +4517,20 @@ export class BowlScene implements Scene {
   private mountFruitInBowlLayer(fruit: FruitItem, rerollDepth = false): void {
     if (rerollDepth) {
       fruit.bobSeed = Math.random() * Math.PI * 2;
+      fruit.soupDepth = 0.22 + Math.random() * 0.56;
+      fruit.soupDepthVel = 0;
     }
-    const target = this.shouldSubmergeFruit(fruit) ? this.submergedFruitLayer : this.surfaceFruitLayer;
-    target.addChild(fruit);
+    if (fruit.hiddenReserve) {
+      fruit.targetSoupDepth = 0.08;
+      fruit.soupDepth = 0.06;
+      this.submergedFruitLayer.addChild(fruit);
+    } else {
+      const layer =
+        fruit.soupDepth >= (FRUIT_SOUP_DEPTH_SURFACE_ENTER + FRUIT_SOUP_DEPTH_SUBMERGE_ENTER) / 2
+          ? this.surfaceFruitLayer
+          : this.submergedFruitLayer;
+      layer.addChild(fruit);
+    }
     this.applyFruitSoupVisual(fruit);
   }
 
@@ -4518,29 +4541,92 @@ export class BowlScene implements Scene {
     this.moveFruitToSoupLayer(fruit, shouldFloat ? this.surfaceFruitLayer : this.submergedFruitLayer);
   }
 
-  private updateFruitSoupDepth(fruit: FruitItem, bob: number): void {
-    const target =
-      fruit.parent === this.surfaceFruitLayer
-        ? bob < FRUIT_SUBMERGE_BOB_THRESHOLD
-          ? this.submergedFruitLayer
-          : this.surfaceFruitLayer
-        : bob > FRUIT_SURFACE_BOB_THRESHOLD
-          ? this.surfaceFruitLayer
-          : this.submergedFruitLayer;
-    if (fruit.parent === target) {
+  private isFruitSoupDepthSimulated(fruit: FruitItem): boolean {
+    return (
+      fruit.phase === 'bowl' &&
+      !fruit.picked &&
+      !fruit.hiddenReserve &&
+      fruit.fruitId !== ICE_CUBE_ID
+    );
+  }
+
+  private getFruitCollisionRadius(fruit: FruitItem): number {
+    const bounds = fruit.display.getLocalBounds();
+    const sx = Math.abs(fruit.scale.x) || 1;
+    return Math.max(28, Math.max(bounds.width, bounds.height) * 0.5 * sx * 0.88);
+  }
+
+  /** 浮沉积分：目标深度 + 浮力/重力 + 叠放挤压，再按深度滞回切换上下层 */
+  private applyFruitSoupDepthPhysics(dt: number): void {
+    const active = this.fruits.filter((fruit) => this.isFruitSoupDepthSimulated(fruit));
+    if (active.length <= 0) {
       return;
     }
-    const parent = fruit.parent;
-    if (!parent) {
-      target.addChild(fruit);
+
+    const step = Math.min(dt, 0.05);
+    const damp = Math.exp(-FRUIT_SOUP_DEPTH_DAMPING * step);
+    const maxDistSq = FRUIT_SOUP_DEPTH_COLLISION_DIST * FRUIT_SOUP_DEPTH_COLLISION_DIST;
+
+    for (const fruit of active) {
+      let force =
+        (fruit.targetSoupDepth - fruit.soupDepth) * FRUIT_SOUP_DEPTH_TARGET_PULL +
+        (1 - fruit.soupDepth) * FRUIT_SOUP_DEPTH_BUOYANCY -
+        fruit.soupDepth * FRUIT_SOUP_DEPTH_GRAVITY;
+      const radius = this.getFruitCollisionRadius(fruit);
+
+      for (const other of active) {
+        if (other === fruit) {
+          continue;
+        }
+        const dx = other.x - fruit.x;
+        const dy = other.y - fruit.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq >= maxDistSq || distSq < 1) {
+          continue;
+        }
+        const dist = Math.sqrt(distSq);
+        const minDist = radius + this.getFruitCollisionRadius(other);
+        if (dist >= minDist) {
+          continue;
+        }
+        const overlap = 1 - dist / minDist;
+        const push = overlap * FRUIT_SOUP_DEPTH_COLLISION_PUSH * step;
+        if (dy > 6) {
+          force += push;
+        } else if (dy < -6) {
+          force -= push * 0.92;
+        }
+      }
+
+      fruit.soupDepthVel += force * step;
+      fruit.soupDepthVel *= damp;
+      fruit.soupDepthVel = Math.max(
+        -FRUIT_SOUP_DEPTH_MAX_SPEED,
+        Math.min(FRUIT_SOUP_DEPTH_MAX_SPEED, fruit.soupDepthVel),
+      );
+      fruit.soupDepth = Math.max(0, Math.min(1, fruit.soupDepth + fruit.soupDepthVel * step));
+      this.syncFruitLayerFromSoupDepth(fruit);
       this.applyFruitSoupVisual(fruit);
+    }
+  }
+
+  private syncFruitLayerFromSoupDepth(fruit: FruitItem): void {
+    if (!this.isFruitSoupDepthSimulated(fruit)) {
       return;
     }
-    const world = parent.toGlobal(new PIXI.Point(fruit.x, fruit.y));
-    parent.removeChild(fruit);
-    fruit.position.copyFrom(target.toLocal(world));
-    target.addChild(fruit);
-    this.applyFruitSoupVisual(fruit);
+    const onSurface = fruit.parent === this.surfaceFruitLayer;
+    let wantSurface: boolean;
+    if (fruit.soupDepth >= FRUIT_SOUP_DEPTH_SURFACE_ENTER) {
+      wantSurface = true;
+    } else if (fruit.soupDepth <= FRUIT_SOUP_DEPTH_SUBMERGE_ENTER) {
+      wantSurface = false;
+    } else {
+      wantSurface = onSurface;
+    }
+    const target = wantSurface ? this.surfaceFruitLayer : this.submergedFruitLayer;
+    if (fruit.parent !== target) {
+      this.moveFruitToSoupLayer(fruit, target);
+    }
   }
 
   private rebalanceSurfaceFruitFill(): void {
@@ -4624,12 +4710,10 @@ export class BowlScene implements Scene {
     }
 
     for (const fruit of visibleFruits) {
-      const targetLayer = selected.has(fruit) ? this.surfaceFruitLayer : this.submergedFruitLayer;
-      if (fruit.parent !== targetLayer) {
-        this.moveFruitToSoupLayer(fruit, targetLayer);
-      } else {
-        this.applyFruitSoupVisual(fruit);
-      }
+      const jitter = (fruit.depthJitter - 0.0005) * 40;
+      fruit.targetSoupDepth = selected.has(fruit)
+        ? Math.min(0.94, 0.84 + jitter)
+        : Math.max(0.06, 0.18 + jitter * 0.35);
     }
   }
 
@@ -4641,6 +4725,24 @@ export class BowlScene implements Scene {
       if (typeof display.tint === 'number') {
         display.tint = this.getSubmergedFruitTint();
       }
+      return;
+    }
+    if (this.isFruitSoupDepthSimulated(fruit)) {
+      const d = fruit.soupDepth;
+      const submergedTint = this.getSubmergedFruitTint();
+      fruit.alpha = SUBMERGED_FRUIT_ALPHA + (1 - SUBMERGED_FRUIT_ALPHA) * d;
+      if (typeof display.tint === 'number') {
+        const tr = (submergedTint >> 16) & 0xff;
+        const tg = (submergedTint >> 8) & 0xff;
+        const tb = submergedTint & 0xff;
+        const rr = Math.round(tr + (255 - tr) * d);
+        const rg = Math.round(tg + (255 - tg) * d);
+        const rb = Math.round(tb + (255 - tb) * d);
+        display.tint = (rr << 16) | (rg << 8) | rb;
+      }
+      fruit.applySoupDepthTransition(d);
+      const sinkOffset = (1 - d) * 5.5;
+      fruit.display.y = Math.sin(Date.now() * FRUIT_BOB_SPEED + fruit.bobSeed) * 4.6 + sinkOffset;
       return;
     }
     if (fruit.parent === this.submergedFruitLayer) {

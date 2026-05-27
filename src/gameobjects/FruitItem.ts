@@ -36,6 +36,11 @@ export class FruitItem extends PIXI.Container {
   baseY = 0;
   /** 叠放用，与 y 解耦的小偏置，避免同 y 时 z 序抖动 */
   depthJitter = Math.random() * 0.001;
+  /** 汤内浮沉深度 0=浸没 1=浮面，由 BowlScene 平滑积分 */
+  soupDepth = 0.28 + Math.random() * 0.44;
+  soupDepthVel = 0;
+  /** 配额/洗牌给出的目标浮沉深度 */
+  targetSoupDepth = 0.5;
   private readonly activeTickers = new Set<() => void>();
 
   constructor(config: FruitConfig, texture?: PIXI.Texture | null) {
@@ -168,6 +173,22 @@ export class FruitItem extends PIXI.Container {
     const sec = Math.max(1, Math.ceil(this.frostRemainingMs / 1000));
     this.frostTimerText.text = String(sec);
     this.frostTimerText.visible = true;
+  }
+
+  /** 按连续深度 0~1 过渡阴影/高光（介于浸没与浮面之间） */
+  applySoupDepthTransition(depth: number): void {
+    const d = Math.max(0, Math.min(1, depth));
+    if (d < 0.38) {
+      this.setSoupDepthVisual('submerged');
+      return;
+    }
+    if (d > 0.62) {
+      this.setSoupDepthVisual('surface');
+      return;
+    }
+    this.setSoupDepthVisual('submerged');
+    this.contactShadow.alpha = 0.08 + d * 0.14;
+    this.contactShadow.scale.set(0.82 + d * 0.12, 0.72 + d * 0.1);
   }
 
   setSoupDepthVisual(mode: 'surface' | 'submerged' | 'hidden' | 'standalone'): void {
