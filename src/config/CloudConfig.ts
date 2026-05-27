@@ -31,6 +31,7 @@ export const TOOL_INVENTORY_KEY = `${GAME_KEY}_tool_inventory_v1`;
 export const FRUIT_SLICE_REWARD_KEY = `${GAME_KEY}_fruit_slice_reward_v1`;
 export const FRUIT_SLICE_TOOL_INVENTORY_KEY = `${GAME_KEY}_fruit_slice_tool_inventory_v1`;
 export const GAME_CLUB_REWARD_KEY = `${GAME_KEY}_game_club_reward_v1`;
+export const LEVEL_MILESTONE_GIFT_STATE_KEY = `${GAME_KEY}_level_milestone_gift_v1`;
 export const LEVEL_PASS_RATE_CACHE_KEY = `${GAME_KEY}_level_pass_rates_v1`;
 /**
  * 玩家自己授权拿到的微信昵称 + 头像 URL；仅用于排行榜显示。
@@ -52,6 +53,7 @@ export const CLOUD_SYNC_ALLOWLIST = [
   FRUIT_SLICE_REWARD_KEY,
   FRUIT_SLICE_TOOL_INVENTORY_KEY,
   GAME_CLUB_REWARD_KEY,
+  LEVEL_MILESTONE_GIFT_STATE_KEY,
 ] as const;
 
 export const CLOUD_SYNC_EXCLUDE_KEYS = [

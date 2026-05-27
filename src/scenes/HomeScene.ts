@@ -7,10 +7,23 @@ import { analytics } from '@/analytics';
 import { BOWL_LEVEL_COUNT } from '@/config/bowlLevels';
 import { MILK_TEA_DEMO_ENTRY_ENABLED } from '@/config/featureFlags';
 import { getDailyLimitedLevelForDate } from '@/config/dailyLimitedLevels';
+import type { LevelMilestoneGiftDef } from '@/config/levelMilestoneGifts';
 import { getBowlLevelIndex, getMaxUnlockedBowlBadgeLevelNumber, markBowlProgressStarted } from '@/game/BowlProgress';
+import {
+  claimLevelMilestoneGift,
+  getActiveHomeLevelMilestoneGift,
+  getLevelMilestoneGiftAdProgress,
+  getLevelMilestoneGiftStatus,
+  recordLevelMilestoneGiftAdView,
+} from '@/game/LevelMilestoneGiftState';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH } from '@/gameobjects/CoinBar';
+import { HomeMilestoneGiftPanel } from '@/gameobjects/HomeMilestoneGiftPanel';
+import { MilestoneGiftRewardOverlay } from '@/gameobjects/MilestoneGiftRewardOverlay';
+import { HOME_MILESTONE_GIFT_REWARDED_AD_UNIT_ID } from '@/config/homeMilestoneGiftAssets';
+import { showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { LoadingOverlay } from '@/gameobjects/LoadingOverlay';
+import { preloadGachaRewardIconTextures } from '@/utils/gachaRewardIcons';
 import { GameClubWelfareOverlay } from '@/gameobjects/GameClubWelfareOverlay';
 import { SettingsPauseOverlay } from '@/gameobjects/SettingsPauseOverlay';
 import { openLeaderboard } from '@/scenes/LeaderboardScene';
@@ -34,6 +47,13 @@ const HOME_DAILY_LIMITED_BTN_TEXTURE = 'assets/images/home_mode_btn_daily_iced_d
 const HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE = 'assets/images/home_mode_btn_fruit_slice_v2.png';
 /** 游戏字标「别捞水果」 */
 const HOME_LOGO_TITLE_TEXTURE = 'assets/images/game_logo_title.png';
+/** 闯关里程碑大礼包（AI 生成 + 抠图） */
+const HOME_LEVEL_MILESTONE_GIFT_TEXTURE = 'assets/images/home_level_milestone_gift_pack_v1.png';
+const HOME_LEVEL_MILESTONE_GIFT_KEY = 'home_level_milestone_gift_pack';
+const LEVEL_MILESTONE_GIFT_DISPLAY_H = 132;
+/** 首页礼包锚点：相对屏幕左上，不压在闯关按钮上 */
+const HOME_MILESTONE_GIFT_SCREEN_X = 62;
+const HOME_MILESTONE_GIFT_SCREEN_Y_OFFSET = 308;
 
 /** 关卡药丸贴图目标逻辑宽度（与历史实现一致） */
 function homePlayEntryTargetWidth(): number {
@@ -95,6 +115,19 @@ export class HomeScene implements Scene {
   private playEntryTitle!: PIXI.Text;
   private playEntrySprite: PIXI.Sprite | null = null;
   private readonly playEntryTag = new PIXI.Container();
+  /** 闯关按钮左上角：通关里程碑大礼包 */
+  private readonly levelMilestoneGiftRoot = new PIXI.Container();
+  private readonly levelMilestoneGiftPulseRoot = new PIXI.Container();
+  private readonly levelMilestoneGiftGlow = new PIXI.Graphics();
+  private levelMilestoneGiftSprite: PIXI.Sprite | null = null;
+  private levelMilestoneGiftHint!: PIXI.Text;
+  private levelMilestoneGiftExclaim!: PIXI.Text;
+  private activeLevelMilestoneGift: LevelMilestoneGiftDef | null = null;
+  private readonly homeMilestoneGiftPanel: HomeMilestoneGiftPanel;
+  private readonly milestoneGiftRewardOverlay: MilestoneGiftRewardOverlay;
+  private giftPulsePhase = 0;
+  private giftPulseTicker: ((delta: number) => void) | null = null;
+  private giftAdBusy = false;
   /** 果切无尽：暖色药丸贴图（字与图标在贴图内；无贴图时程序叠字兜底） */
   private readonly fruitSliceEntryRoot = new PIXI.Container();
   private fruitSliceEntryBg!: PIXI.Graphics;
@@ -139,6 +172,14 @@ export class HomeScene implements Scene {
         this.homeCoinBar.bump();
       },
     });
+    this.homeMilestoneGiftPanel = new HomeMilestoneGiftPanel();
+    this.milestoneGiftRewardOverlay = new MilestoneGiftRewardOverlay({
+      onClose: () => {
+        this.homeCoinBar.refresh();
+        this.homeCoinBar.bump();
+        this.refreshLevelMilestoneGiftEntry();
+      },
+    });
     this.build();
     void this.loadHomeBackdrop(Game.logicWidth, Game.logicHeight);
     void this.loadHomeCatalogIcon();
@@ -148,6 +189,7 @@ export class HomeScene implements Scene {
     this.refreshPlayEntryTitle();
     this.refreshModeEntryTags();
     this.homeCoinBar.refresh();
+    this.refreshLevelMilestoneGiftEntry();
     this.refreshModeEntryTags();
     this.layoutHomeMainColumn();
     this.scheduleHomeTimer(() => this.gameClubWelfareOverlay.layout(), 0);
@@ -155,6 +197,7 @@ export class HomeScene implements Scene {
     // 主页空闲时预热好友榜子域沙箱，把 ~100-500ms 的冷启动藏在 home 阶段，
     // 等玩家点开排行榜并切到好友榜 tab 时少等一截。失败完全静默。
     warmupFriendRankContext();
+    warmupRewardedAd(HOME_MILESTONE_GIFT_REWARDED_AD_UNIT_ID);
   }
 
   private scheduleHomeTimer(fn: () => void, delay: number): void {
@@ -174,6 +217,9 @@ export class HomeScene implements Scene {
 
   onExit(): void {
     this.gameClubWelfareOverlay.close();
+    this.stopLevelMilestoneGiftPulse();
+    this.homeMilestoneGiftPanel.hide();
+    this.milestoneGiftRewardOverlay.hide();
     this.clearAllHomeTimers();
   }
 
@@ -218,10 +264,286 @@ export class HomeScene implements Scene {
     return getMaxUnlockedBowlBadgeLevelNumber() >= BOWL_LEVEL_COUNT;
   }
 
+  private buildLevelMilestoneGiftEntry(): void {
+    this.levelMilestoneGiftRoot.eventMode = 'static';
+    this.levelMilestoneGiftRoot.cursor = 'pointer';
+    this.levelMilestoneGiftRoot.zIndex = 8;
+    this.levelMilestoneGiftRoot.hitArea = new PIXI.Rectangle(-52, -52, 104, 104);
+    this.levelMilestoneGiftRoot.addChild(this.levelMilestoneGiftPulseRoot);
+
+    this.levelMilestoneGiftGlow.beginFill(0xffe566, 0.5);
+    this.levelMilestoneGiftGlow.drawCircle(0, 0, 68);
+    this.levelMilestoneGiftGlow.endFill();
+    this.levelMilestoneGiftPulseRoot.addChild(this.levelMilestoneGiftGlow);
+    this.drawLevelMilestoneGiftFallback();
+
+    this.levelMilestoneGiftExclaim = new PIXI.Text('!', {
+      fontSize: 34,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0xc62828,
+      strokeThickness: 6,
+      lineJoin: 'round',
+    });
+    this.levelMilestoneGiftExclaim.anchor.set(0.5);
+    this.levelMilestoneGiftExclaim.position.set(30, -30);
+    this.levelMilestoneGiftExclaim.resolution = 2;
+    this.levelMilestoneGiftPulseRoot.addChild(this.levelMilestoneGiftExclaim);
+
+    this.levelMilestoneGiftHint = new PIXI.Text('大礼包', {
+      fontSize: 18,
+      fill: 0xfff4c2,
+      fontWeight: '900',
+      stroke: 0x8b1a2a,
+      strokeThickness: 5,
+      lineJoin: 'round',
+    });
+    this.levelMilestoneGiftHint.anchor.set(0.5);
+    this.levelMilestoneGiftHint.position.set(0, 46);
+    this.levelMilestoneGiftHint.resolution = 2;
+    this.levelMilestoneGiftPulseRoot.addChild(this.levelMilestoneGiftHint);
+
+    this.levelMilestoneGiftRoot.on('pointertap', (event) => {
+      event.stopPropagation();
+      void this.onLevelMilestoneGiftTap();
+    });
+    this.applyLevelMilestoneGiftArt();
+    this.refreshLevelMilestoneGiftEntry();
+  }
+
+  /** 贴图未加载时的程序绘制礼盒兜底 */
+  private drawLevelMilestoneGiftFallback(): void {
+    if (this.levelMilestoneGiftSprite) {
+      return;
+    }
+    const box = new PIXI.Graphics();
+    box.name = 'level_milestone_gift_fallback';
+    box.beginFill(0xff3b4f);
+    box.lineStyle(5, 0xfff4c2, 1);
+    box.drawRoundedRect(-40, -34, 80, 68, 16);
+    box.endFill();
+    box.beginFill(0xff6a7f);
+    box.drawRoundedRect(-40, -34, 80, 34, 16);
+    box.endFill();
+    box.lineStyle(6, 0xffd95a, 1);
+    box.moveTo(-40, -2);
+    box.lineTo(40, -2);
+    box.moveTo(0, -34);
+    box.lineTo(0, 34);
+    box.beginFill(0xffd95a);
+    box.drawCircle(0, -2, 14);
+    box.endFill();
+    this.levelMilestoneGiftPulseRoot.addChildAt(box, 1);
+  }
+
+  private applyLevelMilestoneGiftArt(): void {
+    const tex = TextureCache.get(HOME_LEVEL_MILESTONE_GIFT_KEY);
+    if (!tex || tex === PIXI.Texture.EMPTY || tex.width <= 4) {
+      return;
+    }
+    const fallback = this.levelMilestoneGiftPulseRoot.children.find(
+      (child) => child.name === 'level_milestone_gift_fallback',
+    );
+    if (fallback) {
+      this.levelMilestoneGiftPulseRoot.removeChild(fallback);
+      fallback.destroy();
+    }
+    if (!this.levelMilestoneGiftSprite) {
+      this.levelMilestoneGiftSprite = new PIXI.Sprite();
+      this.levelMilestoneGiftSprite.anchor.set(0.5);
+      this.levelMilestoneGiftPulseRoot.addChildAt(this.levelMilestoneGiftSprite, 1);
+    }
+    this.levelMilestoneGiftSprite.texture = tex;
+    this.updateLevelMilestoneGiftLayoutMetrics();
+    this.levelMilestoneGiftHint.visible = false;
+  }
+
+  private updateLevelMilestoneGiftLayoutMetrics(): void {
+    const tex = this.levelMilestoneGiftSprite?.texture;
+    if (!tex || tex === PIXI.Texture.EMPTY || tex.width <= 4) {
+      return;
+    }
+    const scale = LEVEL_MILESTONE_GIFT_DISPLAY_H / tex.height;
+    this.levelMilestoneGiftSprite!.scale.set(scale);
+    const displayW = tex.width * scale;
+    const displayH = tex.height * scale;
+    this.levelMilestoneGiftRoot.hitArea = new PIXI.Rectangle(
+      -displayW / 2 - 10,
+      -displayH / 2 - 10,
+      displayW + 20,
+      displayH + 20,
+    );
+    this.levelMilestoneGiftExclaim.position.set(displayW * 0.34, -displayH * 0.42);
+  }
+
+  private layoutLevelMilestoneGiftEntry(): void {
+    if (!this.levelMilestoneGiftRoot.visible) {
+      return;
+    }
+    this.levelMilestoneGiftRoot.position.set(
+      HOME_MILESTONE_GIFT_SCREEN_X,
+      Math.round(Game.safeTop + HOME_MILESTONE_GIFT_SCREEN_Y_OFFSET),
+    );
+  }
+
+  private refreshLevelMilestoneGiftEntry(): void {
+    const gift = getActiveHomeLevelMilestoneGift();
+    this.activeLevelMilestoneGift = gift;
+    if (!gift) {
+      this.levelMilestoneGiftRoot.visible = false;
+      this.stopLevelMilestoneGiftPulse();
+      return;
+    }
+    this.levelMilestoneGiftRoot.visible = true;
+    const status = getLevelMilestoneGiftStatus(gift);
+    const claimable = status === 'claimable';
+    this.levelMilestoneGiftExclaim.visible = claimable;
+    this.levelMilestoneGiftHint.visible = false;
+    this.levelMilestoneGiftGlow.clear();
+    this.levelMilestoneGiftGlow.beginFill(0xffe566, claimable ? 0.55 : 0.38);
+    this.levelMilestoneGiftGlow.drawCircle(0, 0, claimable ? 72 : 66);
+    this.levelMilestoneGiftGlow.endFill();
+    if (claimable) {
+      this.levelMilestoneGiftGlow.beginFill(0xff6a3d, 0.28);
+      this.levelMilestoneGiftGlow.drawCircle(0, 0, 56);
+      this.levelMilestoneGiftGlow.endFill();
+    }
+    this.updateLevelMilestoneGiftLayoutMetrics();
+    if (claimable) {
+      this.startLevelMilestoneGiftPulse();
+    } else {
+      this.stopLevelMilestoneGiftPulse();
+      this.levelMilestoneGiftPulseRoot.scale.set(1);
+    }
+  }
+
+  private openHomeMilestoneGiftPanel(gift: LevelMilestoneGiftDef): void {
+    const { current, max } = getLevelMilestoneGiftAdProgress(gift);
+    this.homeMilestoneGiftPanel.show(gift, current, {
+      onWatchAd: () => this.watchHomeMilestoneGiftAd(gift),
+      onClaim: () => this.claimHomeMilestoneGift(gift),
+      onClose: () => {
+        this.refreshLevelMilestoneGiftEntry();
+      },
+    });
+    this.homeMilestoneGiftPanel.refreshActionButton(current, max);
+  }
+
+  private refreshHomeMilestoneGiftPanelIfOpen(gift: LevelMilestoneGiftDef): void {
+    if (!this.homeMilestoneGiftPanel.root.visible) {
+      return;
+    }
+    const { current, max } = getLevelMilestoneGiftAdProgress(gift);
+    this.homeMilestoneGiftPanel.refreshActionButton(current, max);
+  }
+
+  private async watchHomeMilestoneGiftAd(gift: LevelMilestoneGiftDef): Promise<void> {
+    if (this.giftAdBusy) {
+      return;
+    }
+    const { current, max } = getLevelMilestoneGiftAdProgress(gift);
+    if (current >= max) {
+      this.refreshHomeMilestoneGiftPanelIfOpen(gift);
+      return;
+    }
+    this.giftAdBusy = true;
+    const result = await showRewardedAd(
+      { scene: 'home_milestone_gift_ad', extra: { gift_id: gift.id, ad_index: current + 1 } },
+      HOME_MILESTONE_GIFT_REWARDED_AD_UNIT_ID,
+    );
+    this.giftAdBusy = false;
+    if (result === 'completed' || result === 'unavailable') {
+      recordLevelMilestoneGiftAdView(gift.id, gift);
+      analytics.track('home_milestone_gift_ad_complete', {
+        gift_id: gift.id,
+        ad_views: getLevelMilestoneGiftAdProgress(gift).current,
+        required_ads: gift.requiredAdViews,
+        ad_result: result,
+      });
+      this.refreshHomeMilestoneGiftPanelIfOpen(gift);
+      this.refreshLevelMilestoneGiftEntry();
+      return;
+    }
+    if (result === 'skipped') {
+      this.showHomeToast('看完广告才能计入进度');
+      return;
+    }
+    this.showHomeToast('广告加载失败，请稍后再试');
+  }
+
+  private claimHomeMilestoneGift(gift: LevelMilestoneGiftDef): void {
+    if (getLevelMilestoneGiftStatus(gift) !== 'claimable') {
+      this.showHomeToast(`请先看完 ${gift.requiredAdViews} 次广告`);
+      this.refreshHomeMilestoneGiftPanelIfOpen(gift);
+      return;
+    }
+    const claimed = claimLevelMilestoneGift(gift);
+    if (!claimed) {
+      this.showHomeToast('暂时无法领取');
+      this.refreshHomeMilestoneGiftPanelIfOpen(gift);
+      return;
+    }
+    analytics.track('level_milestone_gift_claim', {
+      gift_id: gift.id,
+      required_ads: gift.requiredAdViews,
+      coins: gift.coins,
+    });
+    this.homeMilestoneGiftPanel.hide();
+    this.refreshLevelMilestoneGiftEntry();
+    this.milestoneGiftRewardOverlay.show(gift);
+  }
+
+  private startLevelMilestoneGiftPulse(): void {
+    if (this.giftPulseTicker) {
+      return;
+    }
+    this.giftPulsePhase = 0;
+    this.giftPulseTicker = (delta: number): void => {
+      if (!this.levelMilestoneGiftRoot.visible || !this.activeLevelMilestoneGift) {
+        this.stopLevelMilestoneGiftPulse();
+        return;
+      }
+      if (getLevelMilestoneGiftStatus(this.activeLevelMilestoneGift) !== 'claimable') {
+        this.stopLevelMilestoneGiftPulse();
+        return;
+      }
+      this.giftPulsePhase += delta / 60;
+      const pulse = 1 + Math.sin(this.giftPulsePhase * 5.2) * 0.08;
+      this.levelMilestoneGiftPulseRoot.scale.set(pulse);
+      this.levelMilestoneGiftPulseRoot.rotation = Math.sin(this.giftPulsePhase * 3.4) * 0.04;
+    };
+    PIXI.Ticker.shared.add(this.giftPulseTicker);
+  }
+
+  private stopLevelMilestoneGiftPulse(): void {
+    if (!this.giftPulseTicker) {
+      return;
+    }
+    PIXI.Ticker.shared.remove(this.giftPulseTicker);
+    this.giftPulseTicker = null;
+    this.levelMilestoneGiftPulseRoot.scale.set(1);
+    this.levelMilestoneGiftPulseRoot.rotation = 0;
+  }
+
+  private onLevelMilestoneGiftTap(): void {
+    const gift = this.activeLevelMilestoneGift ?? getActiveHomeLevelMilestoneGift();
+    if (!gift) {
+      return;
+    }
+    AudioManager.playButtonSound();
+    this.openHomeMilestoneGiftPanel(gift);
+  }
+
+  private showHomeToast(title: string): void {
+    const api = (globalThis as { wx?: { showToast?: (opts: { title: string; icon?: string }) => void } }).wx;
+    api?.showToast?.({ title, icon: 'none' });
+  }
+
   private async loadHomeBackdrop(width: number, height: number): Promise<void> {
     await Promise.all([
       TextureCache.load('__home_bg', 'assets/images/home_bg_summer.jpg'),
       TextureCache.load('home_play_btn', HOME_PLAY_BTN_TEXTURE),
+      TextureCache.load(HOME_LEVEL_MILESTONE_GIFT_KEY, HOME_LEVEL_MILESTONE_GIFT_TEXTURE),
       TextureCache.load('home_daily_limited_btn', HOME_DAILY_LIMITED_BTN_TEXTURE),
       TextureCache.load('home_fruit_slice_challenge_btn', HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE),
       TextureCache.load('game_logo_title', HOME_LOGO_TITLE_TEXTURE),
@@ -231,6 +553,9 @@ export class HomeScene implements Scene {
       TextureCache.load('home_settings_icon', HOME_SETTINGS_ICON_TEXTURE),
       TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
       GameClubWelfareOverlay.preloadTextures(),
+      preloadGachaRewardIconTextures(),
+      MilestoneGiftRewardOverlay.preload(),
+      HomeMilestoneGiftPanel.preload(),
     ]);
     const tex = TextureCache.get('__home_bg');
     if (!tex) {
@@ -238,6 +563,7 @@ export class HomeScene implements Scene {
       this.applyDailyLimitedEntryArt();
       this.applyFruitSliceEntryArt();
       this.applyHomeLogoTitle();
+      this.applyLevelMilestoneGiftArt();
       this.refreshGeneratedFooterIcons();
       this.homeCoinBar.refreshIcon();
       this.refreshModeEntryTags();
@@ -254,6 +580,8 @@ export class HomeScene implements Scene {
     this.applyDailyLimitedEntryArt();
     this.applyFruitSliceEntryArt();
     this.applyHomeLogoTitle();
+    this.applyLevelMilestoneGiftArt();
+    this.refreshLevelMilestoneGiftEntry();
     this.refreshGeneratedFooterIcons();
     this.homeCoinBar.refreshIcon();
     this.refreshModeEntryTags();
@@ -500,6 +828,7 @@ export class HomeScene implements Scene {
     const gap = 24;
     this.playEntryRoot.position.set(W / 2, playY);
     this.positionModeEntryTag(this.playEntryTag, homePlayEntryTargetWidth(), playHalf, 0);
+    this.layoutLevelMilestoneGiftEntry();
     const dailyY = playY + playHalf + gap + dailyHalf;
     this.dailyLimitedEntryRoot.position.set(W / 2, dailyY);
     this.positionModeEntryTag(this.dailyLimitedEntryTag, homeModeEntryTargetWidth(), dailyHalf, -6);
@@ -655,7 +984,16 @@ export class HomeScene implements Scene {
       AudioManager.playButtonSound();
       void this.enterBowlWithLoading();
     });
+    this.buildLevelMilestoneGiftEntry();
+    this.levelMilestoneGiftRoot.zIndex = 8;
     this.container.addChild(this.playEntryRoot);
+    this.container.addChild(this.levelMilestoneGiftRoot);
+
+    this.homeMilestoneGiftPanel.root.zIndex = 19990;
+    this.container.addChild(this.homeMilestoneGiftPanel.root);
+    this.milestoneGiftRewardOverlay.root.zIndex = 20000;
+    this.container.addChild(this.milestoneGiftRewardOverlay.root);
+    this.container.sortableChildren = true;
 
     this.dailyLimitedEntryRoot.position.set(W / 2, playY + 108);
     this.dailyLimitedEntryRoot.eventMode = 'static';

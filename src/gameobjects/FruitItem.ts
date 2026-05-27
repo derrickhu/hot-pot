@@ -178,11 +178,11 @@ export class FruitItem extends PIXI.Container {
   /** 按连续深度 0~1 过渡阴影/高光（介于浸没与浮面之间） */
   applySoupDepthTransition(depth: number): void {
     const d = Math.max(0, Math.min(1, depth));
-    if (d < 0.38) {
+    if (d < 0.32) {
       this.setSoupDepthVisual('submerged');
       return;
     }
-    if (d > 0.62) {
+    if (d > 0.68) {
       this.setSoupDepthVisual('surface');
       return;
     }
