@@ -13,7 +13,7 @@ import type { LevelMilestoneGiftDef } from '@/config/levelMilestoneGifts';
 import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
 import { createCoinIcon } from '@/gameobjects/CoinBar';
-import { createRewardIconNode, preloadGachaRewardIconTextures } from '@/utils/gachaRewardIcons';
+import { createRewardIconNode } from '@/utils/gachaRewardIcons';
 import { TextureCache } from '@/utils/TextureCache';
 
 export interface HomeMilestoneGiftPanelHandlers {
@@ -49,7 +49,6 @@ export class HomeMilestoneGiftPanel {
 
   static async preload(): Promise<void> {
     await Promise.all([
-      preloadGachaRewardIconTextures(),
       TextureCache.load(HOME_MILESTONE_GIFT_PANEL_TEXTURE_KEY, HOME_MILESTONE_GIFT_PANEL_TEXTURE_PATH),
       TextureCache.load(HOME_MILESTONE_GIFT_BTN_ORANGE_TEXTURE_KEY, HOME_MILESTONE_GIFT_BTN_ORANGE_TEXTURE_PATH),
       TextureCache.load(HOME_MILESTONE_GIFT_BTN_GREEN_TEXTURE_KEY, HOME_MILESTONE_GIFT_BTN_GREEN_TEXTURE_PATH),
@@ -256,7 +255,7 @@ export class HomeMilestoneGiftPanel {
   private mountPanelBackground(screenW: number): PanelMetrics {
     const tex = TextureCache.get(HOME_MILESTONE_GIFT_PANEL_TEXTURE_KEY);
     const targetW = Math.min(560, screenW - 44);
-    const targetH = Math.min(520, Game.logicHeight * 0.58);
+    const targetH = Math.min(580, Game.logicHeight * 0.62);
     if (!tex || tex === PIXI.Texture.EMPTY || tex.width <= 4) {
       const panelBg = new PIXI.Graphics();
       panelBg.beginFill(0xf5e6c8, 0.98);

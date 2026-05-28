@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import type { GachaReward } from '@/config/economy';
+import { loadGachaAssetsSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
 
 const GACHA_IMAGE_DIR = 'subpackages/gacha_assets/assets/images/gacha';
@@ -13,6 +14,7 @@ export const GACHA_RESULT_TITLE_RIBBON_KEY = 'gacha_result_title_ribbon';
 export const GACHA_RESULT_TITLE_RIBBON_PATH = `${GACHA_IMAGE_DIR}/gacha_result_title_ribbon.png`;
 
 export async function preloadGachaRewardIconTextures(): Promise<void> {
+  await loadGachaAssetsSubpackage();
   await Promise.all([
     TextureCache.load(GACHA_BOWL_TOOL_REWARD_ICONS_KEY, GACHA_BOWL_TOOL_REWARD_ICONS_PATH),
     TextureCache.load(GACHA_FRUIT_SLICE_TOOL_ICONS_KEY, GACHA_FRUIT_SLICE_TOOL_ICONS_PATH),
