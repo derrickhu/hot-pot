@@ -4,6 +4,8 @@ import {
   HOME_MILESTONE_GIFT_BTN_GREEN_TEXTURE_PATH,
   HOME_MILESTONE_GIFT_BTN_ORANGE_TEXTURE_KEY,
   HOME_MILESTONE_GIFT_BTN_ORANGE_TEXTURE_PATH,
+  HOME_MILESTONE_GIFT_PANEL_COMPOSITE,
+  HOME_MILESTONE_GIFT_PANEL_DISPLAY,
   HOME_MILESTONE_GIFT_PANEL_LAYOUT,
   HOME_MILESTONE_GIFT_PANEL_NINE_SLICE,
   HOME_MILESTONE_GIFT_PANEL_TEXTURE_KEY,
@@ -26,9 +28,10 @@ interface PanelMetrics {
   panelW: number;
   panelH: number;
   usesArt: boolean;
+  composite: boolean;
 }
 
-/** 首页大礼包：贴图面板 + 程序奖励内容与按钮文案。 */
+/** 首页大礼包：v5 整图含文案道具，程序仅叠广告计数/领取。 */
 export class HomeMilestoneGiftPanel {
   readonly root = new PIXI.Container();
 
@@ -36,7 +39,7 @@ export class HomeMilestoneGiftPanel {
   private readonly contentRoot = new PIXI.Container();
   private readonly actionButtonRoot = new PIXI.Container();
   private actionButtonLabel: PIXI.Text | null = null;
-  private panelMetrics: PanelMetrics = { panelW: 520, panelH: 640, usesArt: false };
+  private panelMetrics: PanelMetrics = { panelW: 520, panelH: 640, usesArt: false, composite: false };
   private gift: LevelMilestoneGiftDef | null = null;
   private handlers: HomeMilestoneGiftPanelHandlers | null = null;
   private currentAdViews = 0;
@@ -76,7 +79,7 @@ export class HomeMilestoneGiftPanel {
     dim.on('pointertap', () => this.close());
     this.root.addChild(dim);
 
-    const panelY = H * 0.44;
+    const panelY = H * 0.46;
     this.panelRoot.position.set(centerX, panelY);
     this.panelRoot.eventMode = 'static';
     this.panelRoot.on('pointertap', (event) => {
@@ -89,42 +92,44 @@ export class HomeMilestoneGiftPanel {
     const halfH = panelH / 2;
     const layout = HOME_MILESTONE_GIFT_PANEL_LAYOUT;
 
-    this.contentRoot.removeChildren();
-    this.panelRoot.addChild(this.contentRoot);
+    if (!this.panelMetrics.composite) {
+      this.contentRoot.removeChildren();
+      this.panelRoot.addChild(this.contentRoot);
 
-    const title = new PIXI.Text(gift.previewTitle, {
-      fontSize: layout.titleFontSize,
-      fill: 0xfff06a,
-      fontWeight: '900',
-      stroke: 0xe83324,
-      strokeThickness: 7,
-      lineJoin: 'round',
-      dropShadow: true,
-      dropShadowBlur: 4,
-      dropShadowDistance: 2,
-      dropShadowColor: 0x6d2a10,
-    });
-    title.anchor.set(0.5);
-    title.position.set(0, -halfH + panelH * layout.titleYRatio);
-    title.resolution = 2;
-    this.contentRoot.addChild(title);
+      const title = new PIXI.Text(gift.previewTitle, {
+        fontSize: layout.titleFontSize,
+        fill: 0xfff06a,
+        fontWeight: '900',
+        stroke: 0xe83324,
+        strokeThickness: 7,
+        lineJoin: 'round',
+        dropShadow: true,
+        dropShadowBlur: 4,
+        dropShadowDistance: 2,
+        dropShadowColor: 0x6d2a10,
+      });
+      title.anchor.set(0.5);
+      title.position.set(0, -halfH + panelH * layout.titleYRatio);
+      title.resolution = 2;
+      this.contentRoot.addChild(title);
 
-    const subtitle = new PIXI.Text(`观看 ${gift.requiredAdViews} 次广告即可免费领取`, {
-      fontSize: layout.subtitleFontSize,
-      fill: 0xff6a3d,
-      fontWeight: '800',
-      stroke: 0x5a3218,
-      strokeThickness: 4,
-      lineJoin: 'round',
-    });
-    subtitle.anchor.set(0.5);
-    subtitle.position.set(0, -halfH + panelH * layout.subtitleYRatio);
-    subtitle.resolution = 2;
-    this.contentRoot.addChild(subtitle);
+      const subtitle = new PIXI.Text(`观看 ${gift.requiredAdViews} 次广告即可免费领取`, {
+        fontSize: layout.subtitleFontSize,
+        fill: 0xff6a3d,
+        fontWeight: '800',
+        stroke: 0x5a3218,
+        strokeThickness: 4,
+        lineJoin: 'round',
+      });
+      subtitle.anchor.set(0.5);
+      subtitle.position.set(0, -halfH + panelH * layout.subtitleYRatio);
+      subtitle.resolution = 2;
+      this.contentRoot.addChild(subtitle);
 
-    const rewardGrid = this.createRewardGrid(gift, W);
-    rewardGrid.position.set(0, -halfH + panelH * layout.rewardsYRatio);
-    this.contentRoot.addChild(rewardGrid);
+      const rewardGrid = this.createRewardGrid(gift, W);
+      rewardGrid.position.set(0, -halfH + panelH * layout.rewardsYRatio);
+      this.contentRoot.addChild(rewardGrid);
+    }
 
     this.actionButtonRoot.position.set(0, -halfH + panelH * layout.actionButtonYRatio);
     this.panelRoot.addChild(this.actionButtonRoot);
@@ -164,43 +169,48 @@ export class HomeMilestoneGiftPanel {
     destroyContainerChildren(this.actionButtonRoot);
     const layout = HOME_MILESTONE_GIFT_PANEL_LAYOUT;
     const btnW = Math.min(layout.actionButtonMaxWidth, panelW * layout.actionButtonWidthRatio);
-    const btnH = 54;
-    const btnTex = TextureCache.get(
-      ready ? HOME_MILESTONE_GIFT_BTN_GREEN_TEXTURE_KEY : HOME_MILESTONE_GIFT_BTN_ORANGE_TEXTURE_KEY,
-    );
-    if (btnTex && btnTex !== PIXI.Texture.EMPTY && btnTex.width > 4) {
-      const sp = new PIXI.Sprite(btnTex);
-      sp.anchor.set(0.5);
-      const scale = btnW / btnTex.width;
-      sp.scale.set(scale);
-      this.actionButtonRoot.addChild(sp);
-      const scaledBtnH = btnTex.height * scale;
-      this.actionButtonRoot.hitArea = new PIXI.Rectangle(
-        -btnW / 2,
-        -scaledBtnH / 2,
-        btnW,
-        scaledBtnH,
+    const btnH = this.panelMetrics.composite ? 68 : 54;
+
+    if (!this.panelMetrics.composite) {
+      const btnTex = TextureCache.get(
+        ready ? HOME_MILESTONE_GIFT_BTN_GREEN_TEXTURE_KEY : HOME_MILESTONE_GIFT_BTN_ORANGE_TEXTURE_KEY,
       );
-    } else {
-      const bg = new PIXI.Graphics();
-      if (ready) {
-        bg.beginFill(0x6ee04a);
-        bg.lineStyle(3, 0xffffff, 1);
-        bg.drawRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2);
-        bg.endFill();
+      if (btnTex && btnTex !== PIXI.Texture.EMPTY && btnTex.width > 4) {
+        const sp = new PIXI.Sprite(btnTex);
+        sp.anchor.set(0.5);
+        const scale = btnW / btnTex.width;
+        sp.scale.set(scale);
+        this.actionButtonRoot.addChild(sp);
+        const scaledBtnH = btnTex.height * scale;
+        this.actionButtonRoot.hitArea = new PIXI.Rectangle(
+          -btnW / 2,
+          -scaledBtnH / 2,
+          btnW,
+          scaledBtnH,
+        );
       } else {
-        bg.beginFill(0xffa726);
-        bg.lineStyle(3, 0xffffff, 1);
-        bg.drawRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2);
-        bg.endFill();
+        const bg = new PIXI.Graphics();
+        if (ready) {
+          bg.beginFill(0x6ee04a);
+          bg.lineStyle(3, 0xffffff, 1);
+          bg.drawRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2);
+          bg.endFill();
+        } else {
+          bg.beginFill(0xffa726);
+          bg.lineStyle(3, 0xffffff, 1);
+          bg.drawRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, btnH / 2);
+          bg.endFill();
+        }
+        this.actionButtonRoot.addChild(bg);
+        this.actionButtonRoot.hitArea = new PIXI.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH);
       }
-      this.actionButtonRoot.addChild(bg);
+    } else {
       this.actionButtonRoot.hitArea = new PIXI.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH);
     }
 
-    const label = ready ? '领取大礼包' : `看广告获取 ${current}/${max}`;
+    const label = formatMilestoneGiftActionLabel(current, max, ready);
     this.actionButtonLabel = new PIXI.Text(label, {
-      fontSize: ready ? layout.actionButtonFontSizeReady : layout.actionButtonFontSize,
+      fontSize: ready ? layout.actionButtonFontSizeReady : layout.actionButtonFontSizePending,
       fill: 0xffffff,
       fontWeight: '900',
       stroke: ready ? 0x2a6d1f : 0x8a4217,
@@ -208,6 +218,7 @@ export class HomeMilestoneGiftPanel {
       lineJoin: 'round',
     });
     this.actionButtonLabel.anchor.set(0.5);
+    this.actionButtonLabel.position.set(0, layout.actionButtonLabelOffsetY);
     this.actionButtonLabel.resolution = 2;
     this.actionButtonRoot.addChild(this.actionButtonLabel);
   }
@@ -216,7 +227,7 @@ export class HomeMilestoneGiftPanel {
     this.gift = null;
     this.handlers = null;
     this.actionButtonLabel = null;
-    this.panelMetrics = { panelW: 520, panelH: 640, usesArt: false };
+    this.panelMetrics = { panelW: 520, panelH: 640, usesArt: false, composite: false };
     this.panelRoot.removeAllListeners();
     this.actionButtonRoot.removeAllListeners();
     this.root.removeAllListeners();
@@ -254,17 +265,43 @@ export class HomeMilestoneGiftPanel {
 
   private mountPanelBackground(screenW: number): PanelMetrics {
     const tex = TextureCache.get(HOME_MILESTONE_GIFT_PANEL_TEXTURE_KEY);
-    const targetW = Math.min(560, screenW - 44);
-    const targetH = Math.min(580, Game.logicHeight * 0.62);
+    const composite = HOME_MILESTONE_GIFT_PANEL_COMPOSITE;
+    const display = HOME_MILESTONE_GIFT_PANEL_DISPLAY;
+    const maxPanelH = Math.min(
+      composite ? display.maxHeight : 580,
+      Game.logicHeight * (composite ? display.heightRatio : 0.62),
+    );
+    const targetW = Math.min(
+      composite ? display.maxWidth : 560,
+      screenW * display.widthRatio,
+      screenW - display.screenPaddingX * 2,
+    );
     if (!tex || tex === PIXI.Texture.EMPTY || tex.width <= 4) {
+      const targetH = maxPanelH;
       const panelBg = new PIXI.Graphics();
       panelBg.beginFill(0xf5e6c8, 0.98);
       panelBg.lineStyle(4, 0x5a3218, 1);
       panelBg.drawRoundedRect(-targetW / 2, -targetH / 2, targetW, targetH, 28);
       panelBg.endFill();
       this.panelRoot.addChild(panelBg);
-      return { panelW: targetW, panelH: targetH, usesArt: false };
+      return { panelW: targetW, panelH: targetH, usesArt: false, composite };
     }
+
+    if (composite) {
+      const scale = Math.min(targetW / tex.width, maxPanelH / tex.height);
+      const panel = new PIXI.Sprite(tex);
+      panel.anchor.set(0.5);
+      panel.scale.set(scale);
+      this.panelRoot.addChild(panel);
+      return {
+        panelW: tex.width * scale,
+        panelH: tex.height * scale,
+        usesArt: true,
+        composite: true,
+      };
+    }
+
+    const targetH = maxPanelH;
     const slice = HOME_MILESTONE_GIFT_PANEL_NINE_SLICE;
     const panel = new PIXI.NineSlicePlane(
       tex,
@@ -282,6 +319,7 @@ export class HomeMilestoneGiftPanel {
       panelW: targetW,
       panelH: targetH,
       usesArt: true,
+      composite: false,
     };
   }
 
@@ -365,6 +403,14 @@ export class HomeMilestoneGiftPanel {
     }
     return row;
   }
+}
+
+function formatMilestoneGiftActionLabel(current: number, max: number, ready: boolean): string {
+  if (ready) {
+    return '领取';
+  }
+  const adCountWord = max === 2 ? '两' : String(max);
+  return `看${adCountWord}个广告获得 ${current}/${max}`;
 }
 
 function destroyContainerChildren(container: PIXI.Container): void {

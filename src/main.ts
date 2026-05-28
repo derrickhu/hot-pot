@@ -76,6 +76,8 @@ async function main(): Promise<void> {
     SceneManager.register(catalogScene);
     SceneManager.register(leaderboardScene);
     SceneManager.register(milkTeaTrayDemoScene);
+    loadingOverlay.setProgress(0.88);
+    await SceneManager.prepare('home');
     loadingOverlay.setProgress(1);
     Game.stage.removeChild(loadingOverlay.container);
     loadingOverlay.destroy();

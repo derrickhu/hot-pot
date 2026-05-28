@@ -157,6 +157,7 @@ export class HomeScene implements Scene {
   private enteringFruitSlice = false;
   private enteringGacha = false;
   private enteringMilkTeaDemo = false;
+  private homePreparePromise: Promise<void> | null = null;
 
   constructor() {
     this.settingsOverlay = new SettingsPauseOverlay(Game.logicWidth, Game.logicHeight, {
@@ -181,8 +182,23 @@ export class HomeScene implements Scene {
       },
     });
     this.build();
-    void this.loadHomeBackdrop(Game.logicWidth, Game.logicHeight);
-    void this.loadHomeCatalogIcon();
+  }
+
+  /** 启动时在 Loading 页内完成，避免先闪程序绘制占位再换贴图。 */
+  async prepare(): Promise<void> {
+    if (!this.homePreparePromise) {
+      this.homePreparePromise = this.loadHomeAssets();
+    }
+    await this.homePreparePromise;
+  }
+
+  private async loadHomeAssets(): Promise<void> {
+    const W = Game.logicWidth;
+    const H = Game.logicHeight;
+    await Promise.all([
+      this.loadHomeBackdrop(W, H),
+      this.loadHomeCatalogIcon(),
+    ]);
   }
 
   onEnter(): void {
@@ -541,6 +557,7 @@ export class HomeScene implements Scene {
   }
 
   private async loadHomeBackdrop(width: number, height: number): Promise<void> {
+    const hasMilestoneGift = getActiveHomeLevelMilestoneGift() !== null;
     await Promise.all([
       TextureCache.load('__home_bg', 'assets/images/home_bg_summer.jpg'),
       TextureCache.load('home_play_btn', HOME_PLAY_BTN_TEXTURE),
@@ -554,9 +571,8 @@ export class HomeScene implements Scene {
       TextureCache.load('home_settings_icon', HOME_SETTINGS_ICON_TEXTURE),
       TextureCache.load(COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH),
       GameClubWelfareOverlay.preloadTextures(),
-      preloadGachaRewardIconTextures(),
-      MilestoneGiftRewardOverlay.preload(),
       HomeMilestoneGiftPanel.preload(),
+      ...(hasMilestoneGift ? [preloadGachaRewardIconTextures()] : []),
     ]);
     const tex = TextureCache.get('__home_bg');
     if (!tex) {

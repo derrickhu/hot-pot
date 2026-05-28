@@ -186,8 +186,8 @@ const SURFACE_FILL_GRID_ROWS = 5;
 const HIDDEN_RESERVE_REBALANCE_RATIO = 0.35;
 const HIDDEN_RESERVE_REBALANCE_MIN_VISIBLE = 36;
 const HIDDEN_RESERVE_REBALANCE_MAX_BATCH = 14;
-const BOWL_FRUIT_SCALE_MIN = 1.62;
-const BOWL_FRUIT_SCALE_MAX = 2.04;
+const BOWL_FRUIT_SCALE_MIN = 1.44;
+const BOWL_FRUIT_SCALE_MAX = 1.82;
 const HIDDEN_RESERVE_ALPHA = 0.16;
 /** 汤面洗色 / 贴图遮罩相对默认值的加成（只盖在汤下层水果之上，水果本身保持不透明） */
 const SOUP_OVERLAY_WASH_ALPHA_BOOST = 0.06;
@@ -405,6 +405,8 @@ function toolButtonDisplayTarget(): number {
 interface OrderBubbleView {
   container: PIXI.Container;
   iconBg: PIXI.Graphics;
+  /** 气泡下方指向订单盘的小三角 */
+  tailBg: PIXI.Graphics;
   /** 订单水果缩略图（assets …/<id>_1.png） */
   iconSprite: PIXI.Sprite;
   /** 无下一单 / 未加载时用 */
@@ -4369,12 +4371,24 @@ export class BowlScene implements Scene {
   }
 
   private paintOrderBubble(view: OrderBubbleView, fruitId: FruitId | null, count: string): void {
+    const fill = this.currentTheme.orderBubble;
+    const stroke = this.currentTheme.orderBubbleStroke;
+
     view.iconBg.clear();
-    view.iconBg.beginFill(this.currentTheme.orderBubble);
-    view.iconBg.lineStyle(4, this.currentTheme.orderBubbleStroke, 1);
+    view.iconBg.beginFill(fill);
+    view.iconBg.lineStyle(4, stroke, 1);
     view.iconBg.drawRoundedRect(0, 0, ORDER_BUBBLE_W, ORDER_BUBBLE_H, 18);
     view.iconBg.endFill();
     view.iconBg.removeChildren();
+
+    view.tailBg.clear();
+    view.tailBg.beginFill(fill);
+    view.tailBg.lineStyle(4, stroke, 1);
+    view.tailBg.moveTo(42, ORDER_BUBBLE_H);
+    view.tailBg.lineTo(58, ORDER_BUBBLE_H + 13);
+    view.tailBg.lineTo(70, ORDER_BUBBLE_H);
+    view.tailBg.closePath();
+    view.tailBg.endFill();
 
     if (fruitId) {
       const tex = TextureCache.get(fruitId);
@@ -4413,20 +4427,9 @@ export class BowlScene implements Scene {
     container.position.set(x, y);
 
     const bubble = new PIXI.Graphics();
-    bubble.beginFill(0xfffdf7);
-    bubble.lineStyle(4, 0x6d4c34, 1);
-    bubble.drawRoundedRect(0, 0, ORDER_BUBBLE_W, ORDER_BUBBLE_H, 18);
-    bubble.endFill();
     container.addChild(bubble);
 
     const tail = new PIXI.Graphics();
-    tail.beginFill(0xfffdf7);
-    tail.lineStyle(4, 0x6d4c34, 1);
-    tail.moveTo(42, ORDER_BUBBLE_H);
-    tail.lineTo(58, ORDER_BUBBLE_H + 13);
-    tail.lineTo(70, ORDER_BUBBLE_H);
-    tail.closePath();
-    tail.endFill();
     container.addChild(tail);
 
     const iconSprite = new PIXI.Sprite(PIXI.Texture.EMPTY);
@@ -4455,6 +4458,7 @@ export class BowlScene implements Scene {
     return {
       container,
       iconBg: bubble,
+      tailBg: tail,
       iconSprite,
       iconPlaceholder,
       countText,

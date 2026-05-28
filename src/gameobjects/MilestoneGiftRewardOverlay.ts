@@ -102,7 +102,7 @@ export class MilestoneGiftRewardOverlay {
       lineJoin: 'round',
     });
     rewardLabel.anchor.set(0.5);
-    rewardLabel.position.set(centerX, centerY + 150);
+    rewardLabel.position.set(centerX, centerY + 162);
     rewardLabel.resolution = 2;
     this.root.addChild(rewardLabel);
 
@@ -122,7 +122,7 @@ export class MilestoneGiftRewardOverlay {
       wordWrapWidth: W - 72,
     });
     subLine.anchor.set(0.5);
-    subLine.position.set(centerX, centerY + 204);
+    subLine.position.set(centerX, centerY + 218);
     subLine.resolution = 2;
     this.root.addChild(subLine);
 
@@ -219,8 +219,8 @@ export class MilestoneGiftRewardOverlay {
 
   private createRewardRow(gift: LevelMilestoneGiftDef, screenW: number): PIXI.Container {
     const root = new PIXI.Container();
-    const iconSize = screenW < 360 ? 58 : 68;
-    const gap = screenW < 360 ? 10 : 14;
+    const iconSize = screenW < 360 ? 70 : 82;
+    const gap = screenW < 360 ? 10 : 12;
     const slots: Array<
       | { kind: 'bowlTool'; tool: 'addDish' | 'remove' | 'shuffle'; count: number }
       | { kind: 'fruitSliceTool'; tool: 'eliminate' | 'shuffle'; count: number }
@@ -238,7 +238,7 @@ export class MilestoneGiftRewardOverlay {
       );
       cell.addChild(icon);
       const countLabel = new PIXI.Text(`x${slot.count}`, {
-        fontSize: 20,
+        fontSize: screenW < 360 ? 22 : 24,
         fill: 0xfff4c2,
         fontWeight: '900',
         stroke: 0x6d2a10,
@@ -246,7 +246,7 @@ export class MilestoneGiftRewardOverlay {
         lineJoin: 'round',
       });
       countLabel.anchor.set(0.5);
-      countLabel.position.set(0, iconSize * 0.56);
+      countLabel.position.set(0, iconSize * 0.54);
       countLabel.resolution = 2;
       cell.addChild(countLabel);
       root.addChild(cell);

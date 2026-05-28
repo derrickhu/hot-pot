@@ -12,13 +12,13 @@ export interface LevelMilestoneGiftDef {
   readonly toolRewards: Extract<GachaReward, { kind: 'bundle' }>['rewards'];
 }
 
-/** 首页新手大礼包：看 2 次广告可领，五种道具各 2 + 100 金币。 */
+/** 首页超值礼包：看 2 次广告可领，五种道具各 2 + 100 金币。 */
 export const HOME_STARTER_GIFT_PACK: LevelMilestoneGiftDef = {
   id: 'home_starter_pack',
   requiredAdViews: 2,
-  previewTitle: '新手大礼包',
+  previewTitle: '超值礼包',
   overlayTitle: '恭喜获得！',
-  overlayLabel: '新手大礼包',
+  overlayLabel: '超值礼包',
   coins: 100,
   toolRewards: [
     { kind: 'bowlTool', tool: 'addDish', count: 2 },
