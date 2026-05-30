@@ -28,6 +28,12 @@ export const FRUIT_SLICE_IDS = [
   'starfruit',
   'durian',
   'dragonfruit',
+  'mangosteen',
+  'avocado',
+  'pomegranate',
+  'papaya',
+  'guava',
+  'fig',
 ] as const satisfies readonly FruitId[];
 
 export type FruitSliceId = (typeof FRUIT_SLICE_IDS)[number];
@@ -60,6 +66,12 @@ export const FRUIT_SLICE_WHOLE_PATH: Record<FruitSliceId, string> = {
   starfruit: `${FRUIT_BOOK_DIR}/fruit_starfruit_whole.png`,
   durian: `${FRUIT_BOOK_DIR}/fruit_durian_whole.png`,
   dragonfruit: `${FRUIT_BOOK_DIR}/fruit_dragonfruit_whole.png`,
+  mangosteen: `${FRUIT_BOOK_DIR}/fruit_mangosteen_whole.png`,
+  avocado: `${FRUIT_BOOK_DIR}/fruit_avocado_whole.png`,
+  pomegranate: `${FRUIT_BOOK_DIR}/fruit_pomegranate_whole.png`,
+  papaya: `${FRUIT_BOOK_DIR}/fruit_papaya_whole.png`,
+  guava: `${FRUIT_BOOK_DIR}/fruit_guava_whole.png`,
+  fig: `${FRUIT_BOOK_DIR}/fruit_fig_whole.png`,
 };
 
 export function fruitSliceWholeTextureKey(id: FruitId): string {

@@ -38,7 +38,13 @@ export const GAME_CLUB_DAILY_POST_COINS = 50;
 export const GACHA_PULL_COST = 20;
 
 export const FRUIT_SLICE_COIN_TIERS: FruitSliceCoinTier[] = [
-  { minScore: 4000, coins: 85, label: '终局高手' },
+  { minScore: 10000, coins: 220, label: '传奇果切' },
+  { minScore: 9000, coins: 195, label: '番香宗师' },
+  { minScore: 8000, coins: 170, label: '木瓜大师' },
+  { minScore: 7000, coins: 145, label: '红晶达人' },
+  { minScore: 6000, coins: 120, label: '绿野高手' },
+  { minScore: 5000, coins: 100, label: '异域宗师' },
+  { minScore: 4000, coins: 85, label: '龙果过关' },
   { minScore: 3500, coins: 70, label: '高分冲刺' },
   { minScore: 3000, coins: 52, label: '熟练挑战' },
   { minScore: 2500, coins: 30, label: '进阶挑战' },
