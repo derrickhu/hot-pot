@@ -17,6 +17,7 @@ const BUFFER_MATCH_SFX_SRC = GACHA_CAPSULE_POP_SFX_SRC;
  * mono / 干声 / 无尾混响。文件不存在时 onError 静默兜底，不影响玩法。
  */
 const BUFFER_PANIC_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/buffer_panic.mp3`;
+const MILK_TEA_TRAY_SWAP_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/milk_tea_tray_swap.mp3`;
 
 interface UserAudioSettings {
   musicEnabled: boolean;
@@ -154,6 +155,10 @@ class AudioManagerClass {
 
   playBufferMatchSound(): void {
     this.playSoundEffect(BUFFER_MATCH_SFX_SRC, 0.55);
+  }
+
+  playMilkTeaTraySwapSound(): void {
+    this.playSoundEffect(MILK_TEA_TRAY_SWAP_SFX_SRC);
   }
 
   playBackgroundMusic(): void {

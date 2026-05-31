@@ -115,7 +115,7 @@ export class GameClubWelfareOverlay extends PIXI.Container {
   private readonly returnRefreshTimers: ReturnType<typeof setTimeout>[] = [];
   private lastStatusErrorToastAt = 0;
   private readonly onWxShow = (): void => {
-    if (!this.visible) {
+    if (!this.canSyncGameClubNativeButton()) {
       return;
     }
     this.scheduleReturnRefreshes();
@@ -144,7 +144,7 @@ export class GameClubWelfareOverlay extends PIXI.Container {
   }
 
   destroy(options?: PIXI.IDestroyOptions | boolean): void {
-    this.hideGameClubNativeButton();
+    this.destroyGameClubNativeButton();
     this.clearReturnRefreshTimers();
     if (typeof wx !== 'undefined' && wx.offShow) {
       wx.offShow(this.onWxShow);
@@ -161,11 +161,12 @@ export class GameClubWelfareOverlay extends PIXI.Container {
   close(): void {
     this.visible = false;
     this.clearReturnRefreshTimers();
-    this.hideGameClubNativeButton();
+    this.destroyGameClubNativeButton();
   }
 
   layout(): void {
-    if (!this.visible) {
+    if (!this.canSyncGameClubNativeButton()) {
+      this.destroyGameClubNativeButton();
       return;
     }
     this.syncGameClubNativeButton();
@@ -223,7 +224,9 @@ export class GameClubWelfareOverlay extends PIXI.Container {
     this.applyArt();
     this.artReady = true;
     this.renderTaskState({ postCount: 0, supported: isGameClubButtonSupported() });
-    this.syncGameClubNativeButton();
+    if (this.canSyncGameClubNativeButton()) {
+      this.syncGameClubNativeButton();
+    }
   }
 
   private applyArt(): void {
@@ -501,6 +504,22 @@ export class GameClubWelfareOverlay extends PIXI.Container {
     this.renderTaskState({ postCount: this.postCount, supported: true });
   }
 
+  /** 福利弹层仍挂在当前场景舞台上时才允许创建/同步 wx 原生按钮。 */
+  private isMountedOnStage(): boolean {
+    let node: PIXI.DisplayObject | null = this;
+    while (node) {
+      if (node === Game.stage) {
+        return true;
+      }
+      node = node.parent;
+    }
+    return false;
+  }
+
+  private canSyncGameClubNativeButton(): boolean {
+    return this.visible && !this.destroyed && this.artReady && this.isMountedOnStage();
+  }
+
   private getEnterClubNativeRectPx(): { left: number; top: number; width: number; height: number } | null {
     const hitArea = this.enterClubRoot.hitArea;
     const bounds = hitArea instanceof PIXI.Rectangle
@@ -531,9 +550,10 @@ export class GameClubWelfareOverlay extends PIXI.Container {
       return;
     }
     try {
+      // text 不能为空、fontSize 不宜 < 12，否则部分基础库不会渲染且可能抛 insertTextView 错误。
       this.gameClubButton = api.createGameClubButton({
         type: 'text',
-        text: '',
+        text: ' ',
         style: {
           left: rect.left,
           top: rect.top,
@@ -545,18 +565,21 @@ export class GameClubWelfareOverlay extends PIXI.Container {
           borderRadius: Math.round(rect.height / 2),
           color: 'rgba(0,0,0,0)',
           textAlign: 'center',
-          fontSize: 1,
+          fontSize: 12,
           lineHeight: rect.height,
         },
       });
       this.gameClubButton.hide?.();
     } catch (error) {
       console.warn('[GameClubWelfareOverlay] createGameClubButton failed', error);
+      this.destroyGameClubNativeButton();
     }
   }
 
-  private hideGameClubNativeButton(): void {
+  private destroyGameClubNativeButton(): void {
     if (!this.gameClubButton) {
+      this.enterClubRoot.eventMode = 'static';
+      this.enterClubRoot.cursor = 'pointer';
       return;
     }
     try {
@@ -564,14 +587,20 @@ export class GameClubWelfareOverlay extends PIXI.Container {
     } catch {
       // ignore
     }
+    try {
+      this.gameClubButton.destroy?.();
+    } catch (error) {
+      console.warn('[GameClubWelfareOverlay] destroy game club button failed', error);
+    }
+    this.gameClubButton = null;
     this.enterClubRoot.eventMode = 'static';
     this.enterClubRoot.cursor = 'pointer';
   }
 
   private syncGameClubNativeButton(forceInteractive = false): void {
     const api = typeof wx !== 'undefined' ? wx : null;
-    if (!this.visible || !api?.createGameClubButton || !this.artReady) {
-      this.hideGameClubNativeButton();
+    if (!this.canSyncGameClubNativeButton() || !api?.createGameClubButton) {
+      this.destroyGameClubNativeButton();
       return;
     }
     this.ensureGameClubNativeButton();
@@ -580,7 +609,7 @@ export class GameClubWelfareOverlay extends PIXI.Container {
     }
     const rect = this.getEnterClubNativeRectPx();
     if (!rect) {
-      this.hideGameClubNativeButton();
+      this.destroyGameClubNativeButton();
       return;
     }
     try {
@@ -600,7 +629,7 @@ export class GameClubWelfareOverlay extends PIXI.Container {
       this.enterClubRoot.cursor = nativeVisible ? 'default' : 'pointer';
     } catch (error) {
       console.warn('[GameClubWelfareOverlay] sync game club button failed', error);
-      this.hideGameClubNativeButton();
+      this.destroyGameClubNativeButton();
     }
   }
 }

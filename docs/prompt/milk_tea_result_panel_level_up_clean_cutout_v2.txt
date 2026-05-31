@@ -1,0 +1,34 @@
+Generate a production-ready shop level-up result modal panel asset for a cute mobile milk tea puzzle game.
+
+Purpose:
+- Semi-finished UI panel used in game.
+- Title and bottom button text may be baked into the image.
+- Middle content area must stay clean and blank because game code will draw level change, coin reward, unlocked drink images, and drink names.
+
+Style:
+- Soft 2D casual mobile game UI.
+- Warm cream card, honey-orange border, rounded corners, soft shadow.
+- Cute milk tea shop celebration style.
+- Celebratory feeling should come from small confetti pieces, stars, sparkles, leaves, and a crowned milk tea cup decoration.
+
+Important cutout requirement:
+- The outside silhouette must be clean and easy to crop/matte.
+- NO large radial sunburst outside the card.
+- NO fuzzy glow extending far outside the card edge.
+- NO semi-transparent light rays outside the card.
+- Keep confetti and sparkles close to the top decoration and mostly inside the card silhouette.
+- Use transparent or plain white background outside the card.
+
+Content:
+- Large Chinese title at top: "店铺升级".
+- One orange rounded button at bottom with Chinese text: "继续营业".
+- Top decoration: crowned happy milk tea cup, small stars, a few confetti pieces, but no big burst behind it.
+- Middle area between title and button should be clean blank cream space.
+- No level pill, no coin row, no new-drink ribbon, no drink-card placeholders, no boxes, no grid, no icons in the middle.
+
+Strict constraints:
+- Do not include any text except "店铺升级" and "继续营业".
+- Do not include any numbers.
+- Do not include readable labels in the middle content area.
+- No app store badges, no watermark, no logo, no QR code.
+- Center the card with enough padding.

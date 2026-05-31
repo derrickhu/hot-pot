@@ -1,0 +1,53 @@
+Create a 3-panel UI prototype sheet for a cute mobile milk tea puzzle game result flow.
+
+Important flow rule:
+- After clearing a round, show exactly ONE success modal.
+- If the shop does NOT level up, show the normal clear panel.
+- If the shop DOES level up, directly show the level-up panel instead of showing the normal clear panel first.
+- No EXP / experience bars / experience points anywhere.
+- Shop progression is based on completed rounds.
+
+Canvas and layout:
+- One wide image with 3 vertical mobile modal mockups side by side.
+- Each panel shows the same blurred milk tea puzzle board background behind a centered rounded result card.
+- Soft 2D casual mobile game UI, warm cream and honey colors, boba tea decorations, polished cute style.
+- This is a visual prototype sheet, not final production art.
+
+Panel 1: Round Clear, No Level Up
+- Main title: "恭喜过关"
+- Primary reward row: gold coin reward, e.g. "金币 +38", with a shiny coin icon.
+- Progress hint row: "再完成 2 局升级" with a small shop checklist / stamp icon.
+- Optional tiny secondary cue: "本局完成 +1".
+- One primary orange button: "继续营业"
+- Layout priority: title > coin reward > next-level round-count hint > button.
+- No EXP text, no progress bar.
+
+Panel 2: Round Clear AND Shop Level Up
+- This panel is shown directly when the round causes a shop level up.
+- Main title: "店铺升级"
+- Show level change clearly: "Lv.3 → Lv.4"
+- Include a prominent gold coin reward row, e.g. "金币 +38", with a coin icon.
+- Show a "新饮品解锁" area with one or two cute milk tea cup icons on small cards.
+- One primary orange button: "继续营业"
+- Mood: celebratory, stronger glow, confetti, sparkle.
+- Layout priority: title > level change > coin reward > unlocked drinks > button.
+- No EXP text, no progress bar.
+
+Panel 3: Fail / Revive
+- Mood: gentle, not punishing.
+- Main title: "空间满了"
+- Short explanation: "棋盘没有空位啦"
+- Show a small board icon with crowded trays.
+- Two buttons:
+  - Secondary button: "重开一局"
+  - Primary green/orange button: "清空复活"
+- Include a small revive description area: "清空棋盘托盘，继续本局"
+- Layout priority: reason > visual hint > two clear choices.
+
+Visual constraints:
+- Keep all cards clean and readable.
+- No dense paragraphs.
+- Large rounded card, cream fill, honey-orange border.
+- Use icon rows, badges, coins, drink cards, and sparkles to make it appealing.
+- Chinese text should be short and large, but exact text quality is not critical for prototype.
+- No app store badges, no watermark, no logo, no QR code.

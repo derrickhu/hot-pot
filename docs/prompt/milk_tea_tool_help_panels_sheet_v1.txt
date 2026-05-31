@@ -1,0 +1,38 @@
+Create a production-ready 3-panel sprite sheet for a cute mobile milk tea puzzle game tool help overlay.
+
+Canvas and layout:
+- One horizontal sprite sheet, 3 equal columns x 1 row.
+- Each column contains one centered clipboard-style help panel.
+- No buttons in any panel. The game will display a separate "免费获取" button under the panel.
+- Keep enough padding around each panel.
+- Transparent or plain white background outside the panels.
+
+Overall style:
+- Match the existing hot-pot / bowl game tool help panels: clipboard card, warm cream paper, honey-brown border, small metal clip at the top, soft shadow.
+- Cute polished 2D mobile game UI.
+- Milk tea shop theme, warm orange and cream colors.
+- Text should be clear, large, Chinese, and high contrast.
+
+Panel 1: remove tray tool
+- Title: "移除托盘"
+- Illustration: a small milk tea tray / board cell with an eraser or minus sign, showing one tray being removed.
+- Main description: "选择一个托盘"
+- Emphasized orange line: "直接清空格子"
+
+Panel 2: reshuffle tool
+- Title: "重发托盘"
+- Illustration: three milk tea trays with circular arrows, showing new trays being dealt.
+- Main description: "重新发放底部托盘"
+- Emphasized orange line: "棋盘保持不变"
+
+Panel 3: clear column tool
+- Title: "清空一列"
+- Illustration: a 4x4 mini board with one vertical column highlighted and a broom sparkle effect.
+- Main description: "选择棋盘一列"
+- Emphasized orange line: "清空该列托盘"
+
+Strict constraints:
+- Do NOT include any bottom button.
+- Do NOT include "免费获取", "看广告", play icons, ad icons, or button backgrounds.
+- Do NOT include watermark, logo, QR code, app store badge, random extra text, or random numbers.
+- Keep all text inside the panel; do not let it touch edges.

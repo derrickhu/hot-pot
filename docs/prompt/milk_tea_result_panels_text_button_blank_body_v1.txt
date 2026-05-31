@@ -1,0 +1,32 @@
+Generate two production-ready result modal panel assets for a cute mobile milk tea puzzle game.
+
+Overall style:
+- Soft 2D casual mobile game UI, warm cream and honey colors.
+- Rounded cream cards, honey-orange borders, boba tea decorations, sparkles, soft shadows.
+- Match the previous milk tea result modal prototype style.
+- These are semi-finished UI panels: title text and button text may be baked into the image, but the middle content area must be completely blank for game code to draw all details.
+
+Asset A: normal clear panel
+- Single centered rounded result card, portrait 3:4.
+- Include large Chinese title text at top: "恭喜过关".
+- Include one orange rounded button at bottom with Chinese text: "继续营业".
+- Decorate top with a cute happy milk tea cup, small stars, leaves, soft boba decorations.
+- The middle content area between title and button must be a clean blank cream area.
+- No reward rows, no placeholders, no boxes, no icons, no grid, no coin icon, no checklist icon, no small badge, no line separators in the middle.
+- The middle must be visually empty so Pixi can draw coin reward and "再完成 N 局升级" later.
+
+Asset B: shop level-up panel
+- Single centered rounded result card, portrait 3:4.
+- Include large Chinese title text at top: "店铺升级".
+- Include one orange rounded button at bottom with Chinese text: "继续营业".
+- More celebratory than Asset A: crowned milk tea cup at top, golden glow, confetti, sparkles.
+- The middle content area between title and button must be a clean blank cream area.
+- No level pill, no coin row, no "new drink" ribbon, no drink-card placeholders, no grid, no boxes, no icons in the middle.
+- The middle must be visually empty so Pixi can draw level change, coin reward, and unlocked drinks later.
+
+Strict constraints:
+- Do not include any text except the title and button text described above.
+- Do not include any numbers.
+- Do not include readable labels in the middle content area.
+- No app store badges, no watermark, no logo, no QR code.
+- Keep each card centered with enough transparent or plain padding.

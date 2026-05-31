@@ -1,0 +1,42 @@
+Generate production-ready result modal panel assets for a cute mobile milk tea puzzle game.
+
+Overall style:
+- Soft 2D casual mobile game UI, warm cream and honey colors.
+- Rounded cream cards, honey-orange borders, boba tea decorations, sparkles, soft shadows.
+- Match the style of the provided prototype image.
+- Use clean empty spaces so game code can draw Pixi text and icons on top.
+
+Asset A: normal clear empty panel
+- Single centered rounded result card on transparent or plain neutral background.
+- Big blank title area near top, decorated with small stars and a cute milk tea cup at the very top.
+- Two blank rounded content rows in the middle:
+  1. coin reward row placeholder with a decorative coin icon area on the left, but no numbers or text.
+  2. next-level hint row placeholder with a small shop/checklist icon area on the left, but no text.
+- A small blank pill badge area can appear above the button for "current round +1", but no text.
+- Bottom has one blank orange rounded button with no text.
+- NO TEXT, no labels, no numbers, no letters, no readable glyphs anywhere.
+
+Asset B: level-up empty panel
+- Single centered rounded result card on transparent or plain neutral background.
+- More celebratory than Asset A: golden glow, confetti, sparkles, cute crowned milk tea cup at top.
+- Big blank title area near top.
+- Blank level-change pill area below title, no text.
+- Blank coin reward row with coin icon area, no text or numbers.
+- Blank "new drink unlocked" section with two empty drink-card placeholders, no drink names and no text.
+- Bottom has one blank orange rounded button with no text.
+- NO TEXT, no labels, no numbers, no letters, no readable glyphs anywhere.
+
+Asset C: fail / revive complete panel
+- Single centered rounded result card in the same style.
+- This one MAY include Chinese text directly.
+- Title: "空间满了"
+- Subtitle: "棋盘没有空位啦"
+- Middle shows a cute mini board packed with milk tea cups/trays.
+- Two buttons: "重开一局" and "清空复活".
+- Bottom hint: "清空棋盘托盘，继续本局"
+- Gentle, not punishing; use sweat drop / worried milk tea cup decoration.
+
+Canvas:
+- Prefer separate 3:4 portrait panel images if generating individually.
+- Keep each card centered with enough transparent or plain padding.
+- No app store badges, no watermark, no logo, no QR code.

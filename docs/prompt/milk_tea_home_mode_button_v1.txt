@@ -1,0 +1,24 @@
+Create one game UI button asset for a mobile casual puzzle game home screen.
+
+Use the three reference images as exact style references: same horizontal rounded pill button shape, same glossy highlight, thick dark outline, cream inner border, soft drop shadow, cute hand-drawn fruit-game illustration style, transparent background outside the button, and the same right-side circular arrow button.
+
+Canvas and layout:
+- Wide horizontal rounded rectangle button, matching the reference button proportions.
+- Transparent background outside the button.
+- Left 32%: a cute fruit tea shop / milk tea gameplay icon: a clear plastic fruit tea cup with straw, boba pearls, sliced lemon/orange, strawberry, ice cubes, small receipt/order bag or mini shop awning detail. It should clearly imply "make fruit tea orders in a shop".
+- Center 45%: bold Chinese title text, EXACTLY three characters: 果茶店
+- Under title: smaller Chinese subtitle, EXACTLY eight characters: 接单调饮 经营升级
+- Right 18%: circular arrow icon matching the existing buttons, white arrow inside a warm orange/tea-brown circle.
+
+Color and mood:
+- Main button color: warm caramel milk-tea orange / peach tea gradient, different from the existing green, blue, and orange buttons but still in the same family.
+- Title text: white or cream fill with dark tea-brown outline and subtle inner shadow, thick playful strokes, clearly readable at mobile size.
+- Subtitle: darker tea-brown text with light cream outline, clearly readable.
+- Add tiny fruit pieces, ice sparkles, tapioca pearls, and soft highlights, but keep the center text clean.
+
+Strict constraints:
+- Generate ONLY this button asset, no full phone mockup, no background scene.
+- The button must have a transparent background outside the rounded rectangle.
+- Chinese text must be complete, correct, and readable: 果茶店 and 接单调饮 经营升级.
+- No English letters, no numbers, no watermark, no logo, no QR code.
+- Do not crop the button edges.

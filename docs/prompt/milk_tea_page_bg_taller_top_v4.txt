@@ -1,0 +1,26 @@
+Regenerate a vertical mobile game background for a cute milk tea shop puzzle scene.
+
+Use the original page_bg.jpg as the main style reference, especially the bottom wooden table structure.
+
+Canvas:
+- Strict vertical 9:16 mobile background, final target 576 x 1024.
+- No UI buttons, no text, no numbers, no logo, no watermark.
+- Single clean background layer.
+
+Style:
+- Soft 2D cartoon, cozy milk tea shop, warm cream and honey colors.
+- Sunny window and softly blurred shop mascot in the top background.
+- Gentle painterly texture, matching the original image.
+
+Required composition:
+- Top shop/window/counter background must be taller than the original and feel less cramped.
+- The upper counter/table edge should sit around 36%-39% of the image height, lower than the original.
+- The middle cream play area should be clean but not too tall.
+- The bottom wooden tabletop should start around 76%-78% of the image height, so the bottom area is not too short.
+- The bottom must look like the original: a bright wooden tabletop strip, a thin highlight edge, a soft shadow line, and a darker brown front wooden panel underneath.
+- Do NOT create a flat wooden floor. It must clearly be a counter/table with dark underside shadow.
+
+Layout safety:
+- Central board area remains plain cream with subtle texture only.
+- Keep decorations on edges and top, not in the central board area.
+- No black phone notch, no screenshot UI, no red guide boxes.

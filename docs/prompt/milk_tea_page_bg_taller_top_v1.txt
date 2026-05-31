@@ -1,0 +1,24 @@
+Regenerate the mobile game background for a cute milk tea shop puzzle scene, using the reference image as the style guide.
+
+Canvas:
+- Vertical 9:16 mobile background, target final size 576 x 1024.
+- No UI buttons, no text, no numbers, no logo, no watermark.
+- Single clean background layer for a puzzle game.
+
+Art style:
+- Soft 2D cartoon illustration, warm pastel cream and honey tones.
+- Cozy milk tea shop interior with a sunny window, soft blur depth, small plants, jars, fruit tea decorations, and a cute shop mascot in the far background.
+- Keep the same gentle painterly style and color palette as the reference image.
+
+Composition changes compared with the reference:
+- The upper shop / window / counter background area must be taller and less cramped.
+- Move the upper counter / table edge lower by about 90-130 pixels in the final 576x1024 layout.
+- The top decorative area should occupy roughly the top 30-34% of the image.
+- The middle empty cream play area should be shorter than the reference, while still clean and uncluttered for board UI.
+- Keep a warm wooden table at the bottom for trays/tools, similar to the reference, but do not let it dominate.
+
+Layout safety:
+- Leave the central board area mostly plain cream with very subtle texture only.
+- Avoid strong details in the center where game cells will appear.
+- Keep edges softly decorated but not busy.
+- No black phone notch, no red guide boxes, no screenshot UI.

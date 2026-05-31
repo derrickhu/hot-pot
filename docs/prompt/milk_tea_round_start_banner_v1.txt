@@ -1,0 +1,23 @@
+Create one horizontal game UI banner asset for a cozy fruit tea shop mobile game, isolated on a plain light background for easy cutout.
+
+Text must be Chinese only, exactly four characters:
+开始营业
+
+Style:
+- Cute polished 2D mobile game UI, warm cozy fruit tea shop mood.
+- Big golden-yellow Chinese characters with red-orange outline and dark brown outer stroke.
+- Soft cream / honey-gold ribbon or scroll banner behind the text.
+- Small milk tea cup and tiny boba pearl sparkle decorations on left and right edges of the ribbon.
+- Festive but calm "shop opening" feeling, not failure and not level-up celebration.
+- High contrast, thick readable Chinese strokes, slightly bouncy baseline.
+
+Composition:
+- Wide horizontal title banner centered in frame.
+- Keep all text fully inside safe margins, do not crop characters.
+- No full game scene, no grid, no characters, no panel frame around the whole screen.
+
+Strict constraints:
+- Generate ONLY these four Chinese characters exactly: 开始营业
+- No English letters, no numbers, no watermark, no logo, no QR code.
+- No extra Chinese text.
+- Transparent-ready asset outside the ribbon.

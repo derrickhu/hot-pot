@@ -1,0 +1,45 @@
+Create a 3-panel UI prototype sheet for a cute mobile milk tea puzzle game result flow.
+
+Canvas and layout:
+- One wide image with 3 vertical mobile modal mockups side by side.
+- Each panel shows the same blurred milk tea puzzle board background behind a centered rounded result card.
+- Soft 2D casual mobile game UI, warm cream and honey colors, boba tea decorations, polished cute style.
+- This is a visual prototype sheet, not final production art.
+
+Panel 1: Round Clear Result
+- Mood: happy but simple.
+- Main title: "恭喜过关"
+- Main reward row: shop EXP gained, highlight with a small star / badge icon.
+- Secondary progress hint: "还差 xx 经验升级" OR "马上升级"
+- Coin reward row with gold coin icon.
+- One primary orange button: "继续营业"
+- Layout priority: title > rewards > next-level hint > button.
+
+Panel 2: Shop Level Up
+- This page appears after closing Panel 1 when the shop leveled up.
+- Mood: more celebratory, stronger glow, confetti, sparkle.
+- Main title: "店铺升级"
+- Show level change clearly: "Lv.3 → Lv.4"
+- Show a "new unlocked drink" area with one or two cute milk tea cup icons on small cards.
+- Optional text area: "新饮品解锁"
+- One primary button: "太棒了"
+- Layout priority: title > level change > unlocked drinks > button.
+
+Panel 3: Fail / Revive
+- Mood: gentle, not punishing.
+- Main title: "空间满了"
+- Short explanation: board is full and no empty cell remains.
+- Show a small board icon with crowded trays.
+- Two buttons:
+  - Secondary button: "重开一局"
+  - Primary green/orange button: "清空复活"
+- Include a small revive description area: "清空棋盘托盘，继续本局"
+- Layout priority: reason > visual hint > two clear choices.
+
+Visual constraints:
+- Keep all cards clean and readable.
+- No dense paragraphs.
+- Large rounded card, cream fill, honey-orange border.
+- Use icon rows, badges, coins, drink cards, and sparkles to make it appealing.
+- Chinese text should be short and large, but exact text quality is not critical for prototype.
+- No app store badges, no watermark, no logo, no QR code.

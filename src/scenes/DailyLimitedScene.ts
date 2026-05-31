@@ -33,6 +33,7 @@ import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 type DailyToolKind = 'shuffle' | 'undo' | 'lift';
 type CardZone = 'stack' | 'lift';
 type DailyLimitedEndReason = 'complete' | 'buffer_full' | 'back_home' | 'gm_complete';
+type DailyShuffleSource = 'tool' | 'revive';
 
 interface CardState {
   id: string;
@@ -281,6 +282,8 @@ export class DailyLimitedScene implements Scene {
   private extraBufferSlotUnlocked = false;
   private unlockBufferAdBusy = false;
   private toolRewardedAdBusy = false;
+  private failReviveAdBusy = false;
+  private failedBufferCardId: string | null = null;
   private nextLiftCardId = 1;
   private bufferMatchTimer: ReturnType<typeof window.setTimeout> | null = null;
   private roundStartTs = 0;
@@ -655,6 +658,8 @@ export class DailyLimitedScene implements Scene {
     this.extraBufferSlotUnlocked = false;
     this.unlockBufferAdBusy = false;
     this.toolRewardedAdBusy = false;
+    this.failReviveAdBusy = false;
+    this.failedBufferCardId = null;
     this.roundStartTs = Date.now();
     this.cardClicksThisRound = 0;
     this.targetHitsThisRound = 0;
@@ -807,6 +812,12 @@ export class DailyLimitedScene implements Scene {
   }
 
   private clearBufferRenderCache(): void {
+    if (this.bufferStaticView && !this.bufferStaticView.destroyed) {
+      this.bufferStaticView.destroy({ children: true });
+    }
+    if (this.bufferDynamicLayer && !this.bufferDynamicLayer.destroyed) {
+      this.bufferDynamicLayer.destroy({ children: true });
+    }
     this.bufferStaticView = null;
     this.bufferStaticSignature = '';
     this.bufferDynamicLayer = null;
@@ -1500,6 +1511,7 @@ export class DailyLimitedScene implements Scene {
     }
 
     if (this.buffer.length >= this.activeBufferSize()) {
+      this.failedBufferCardId = cardId;
       this.finishRound(false, 'buffer_full');
       return;
     }
@@ -2344,7 +2356,7 @@ export class DailyLimitedScene implements Scene {
     return root;
   }
 
-  private shuffleRemainingCards(): void {
+  private shuffleRemainingCards(source: DailyShuffleSource = 'tool'): void {
     const remaining = this.cards.filter((card) => !card.removed);
     if (remaining.length < 2) {
       return;
@@ -2357,7 +2369,9 @@ export class DailyLimitedScene implements Scene {
       card.fruitId = fruitIds[index];
     });
     this.compactRemainingStackCards();
-    this.toolCounts.shuffle -= 1;
+    if (source === 'tool') {
+      this.toolCounts.shuffle -= 1;
+    }
     AudioManager.playOrderCompleteSound();
     destroyContainerChildren(this.cardLayer);
     this.clearStackRenderCache();
@@ -2422,6 +2436,109 @@ export class DailyLimitedScene implements Scene {
     AudioManager.playOrderCompleteSound();
     this.renderAll();
     this.evaluateBufferPanic();
+  }
+
+  private reviveMoveAllBufferCardsUp(): number {
+    if (this.buffer.length <= 0) {
+      return 0;
+    }
+    const lifted = this.buffer.splice(0, this.buffer.length);
+    const emptySlots = this.findFlatEmptySlots();
+    const stackDepthByColumn = new Array(CARD_COLS).fill(-1);
+    for (const card of this.cards) {
+      if (card.zone === 'stack' && !card.removed) {
+        stackDepthByColumn[card.columnIndex] = Math.max(stackDepthByColumn[card.columnIndex] ?? -1, card.depthIndex);
+      }
+    }
+    lifted.forEach((fruitId, index) => {
+      const flatSlot = emptySlots[index];
+      if (flatSlot) {
+        this.cards.push({
+          id: `lift_${this.nextLiftCardId}`,
+          fruitId,
+          columnIndex: flatSlot.columnIndex,
+          depthIndex: flatSlot.depthIndex,
+          zone: 'lift',
+          removed: false,
+        });
+      } else {
+        const columnIndex = index % CARD_COLS;
+        const depthIndex = (stackDepthByColumn[columnIndex] ?? -1) + 1;
+        stackDepthByColumn[columnIndex] = depthIndex;
+        this.cards.push({
+          id: `lift_${this.nextLiftCardId}`,
+          fruitId,
+          columnIndex,
+          depthIndex,
+          zone: 'stack',
+          removed: false,
+        });
+      }
+      this.nextLiftCardId += 1;
+    });
+    return lifted.length;
+  }
+
+  private restoreFailedBufferCardForRevive(): void {
+    const failedCardId = this.failedBufferCardId;
+    if (!failedCardId) {
+      return;
+    }
+    const card = this.cards.find((item) => item.id === failedCardId);
+    if (card?.removed) {
+      card.removed = false;
+    }
+    const lastHistory = this.history[this.history.length - 1];
+    if (lastHistory?.cardId === failedCardId) {
+      this.history.pop();
+    }
+    this.failedBufferCardId = null;
+  }
+
+  private async reviveFromFailByAd(): Promise<void> {
+    if (!this.roundEnded || this.failReviveAdBusy) {
+      return;
+    }
+    this.failReviveAdBusy = true;
+    try {
+      const result = await showRewardedAd({
+        scene: 'daily_limited_fail_revive',
+        levelId: this.level.themeId,
+        extra: {
+          level_id: this.level.dayOfMonth,
+          collected_count: this.collected,
+          target_count: this.targetCount(),
+          buffer_size: this.buffer.length,
+        },
+      }, DAILY_LIMITED_REWARDED_AD_UNIT_ID);
+      if (result !== 'completed' && result !== 'unavailable') {
+        this.toast(result === 'skipped' ? '看完广告才能复活' : '广告加载失败，请稍后再试');
+        return;
+      }
+
+      this.restoreFailedBufferCardForRevive();
+      const liftedCount = this.reviveMoveAllBufferCardsUp();
+      this.roundEnded = false;
+      this.exitBufferPanic();
+      destroyContainerChildren(this.overlayLayer);
+      this.bufferIncomingHidden.clear();
+      this.clearBufferRenderCache();
+      this.shuffleRemainingCards('revive');
+      this.renderAll();
+      this.evaluateBufferPanic();
+      analytics.track('daily_limited_fail_revive', {
+        mode: 'daily_limited',
+        level_id: this.level.dayOfMonth,
+        theme_id: this.level.themeId,
+        result,
+        lifted_count: liftedCount,
+        collected_count: this.collected,
+        target_count: this.targetCount(),
+      });
+      this.toast(liftedCount > 0 ? '复活成功，暂存盘已上移洗牌' : '复活成功，已重新洗牌');
+    } finally {
+      this.failReviveAdBusy = false;
+    }
   }
 
   private getToolUnavailableReason(kind: DailyToolKind): string | null {
@@ -2782,22 +2899,55 @@ export class DailyLimitedScene implements Scene {
     title.position.set(W / 2, panelY + 72);
     this.overlayLayer.addChild(title);
 
-    const body = new PIXI.Text(
-      '底部格子已经放满了\n继续收集目标水果片再试一次吧',
-      {
-        fontSize: 28,
-        fill: 0xffffff,
-        fontWeight: '800',
-        stroke: 0x5a3218,
-        strokeThickness: 4,
-        align: 'center',
-        lineHeight: 46,
-      },
-    );
-    body.anchor.set(0.5);
-    body.resolution = 2;
-    body.position.set(W / 2, panelY + 190);
-    this.overlayLayer.addChild(body);
+    const remainingTargets = Math.max(0, this.targetCount() - this.collected);
+    const progressLine = new PIXI.Container();
+    const progressPrefix = new PIXI.Text('还差 ', {
+      fontSize: 28,
+      fill: 0xffffff,
+      fontWeight: '800',
+      stroke: 0x5a3218,
+      strokeThickness: 4,
+    });
+    const progressCount = new PIXI.Text(String(remainingTargets), {
+      fontSize: 36,
+      fill: 0xfff05a,
+      fontWeight: '900',
+      stroke: 0x8f2f14,
+      strokeThickness: 6,
+    });
+    const progressSuffix = new PIXI.Text(' 个目标水果就完成！', {
+      fontSize: 28,
+      fill: 0xffffff,
+      fontWeight: '800',
+      stroke: 0x5a3218,
+      strokeThickness: 4,
+    });
+    progressPrefix.anchor.set(0, 0.5);
+    progressCount.anchor.set(0, 0.5);
+    progressSuffix.anchor.set(0, 0.5);
+    progressPrefix.resolution = 2;
+    progressCount.resolution = 2;
+    progressSuffix.resolution = 2;
+    progressPrefix.position.set(0, 0);
+    progressCount.position.set(progressPrefix.width, 0);
+    progressSuffix.position.set(progressPrefix.width + progressCount.width, 0);
+    progressLine.addChild(progressPrefix, progressCount, progressSuffix);
+    const progressBounds = progressLine.getLocalBounds();
+    progressLine.pivot.set(progressBounds.x + progressBounds.width / 2, progressBounds.y + progressBounds.height / 2);
+    progressLine.position.set(W / 2, panelY + 172);
+    this.overlayLayer.addChild(progressLine);
+
+    const reviveDesc = new PIXI.Text('复活可上移暂存盘，并立即洗牌', {
+      fontSize: 34,
+      fill: 0xfff0a8,
+      fontWeight: '900',
+      stroke: 0x7a2d18,
+      strokeThickness: 6,
+    });
+    reviveDesc.anchor.set(0.5);
+    reviveDesc.resolution = 2;
+    reviveDesc.position.set(W / 2, panelY + 228);
+    this.overlayLayer.addChild(reviveDesc);
 
     const retry = this.createPillButton('再来一局', 190, 68, 0x79d64b, 0x2f7a26);
     retry.position.set(W / 2 - 112, panelY + panelH - 76);
@@ -2807,13 +2957,13 @@ export class DailyLimitedScene implements Scene {
     });
     this.overlayLayer.addChild(retry);
 
-    const home = this.createPillButton('回首页', 170, 68, 0xffc65a, 0xa86720);
-    home.position.set(W / 2 + 128, panelY + panelH - 76);
-    home.on('pointertap', () => {
+    const revive = this.createPillButton('看广告复活', 210, 68, 0xffc65a, 0xa86720);
+    revive.position.set(W / 2 + 128, panelY + panelH - 76);
+    revive.on('pointertap', () => {
       AudioManager.playButtonSound();
-      SceneManager.switchTo('home');
+      void this.reviveFromFailByAd();
     });
-    this.overlayLayer.addChild(home);
+    this.overlayLayer.addChild(revive);
   }
 
   private createCommonModalPanel(width: number, height: number): PIXI.Container {

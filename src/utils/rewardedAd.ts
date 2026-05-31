@@ -3,6 +3,7 @@ import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
 export const GAMEPLAY_REWARDED_AD_UNIT_ID = 'adunit-baadf000b7626d29';
 export const FRUIT_SLICE_REWARDED_AD_UNIT_ID = 'adunit-1e675e21c04200f3';
+export const MILK_TEA_SHOP_REWARDED_AD_UNIT_ID = 'adunit-8a5eb3fed1b1007c';
 
 export type RewardedAdResult = 'completed' | 'skipped' | 'unavailable' | 'error';
 

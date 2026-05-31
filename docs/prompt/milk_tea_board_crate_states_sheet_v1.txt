@@ -1,0 +1,22 @@
+Generate a transparent PNG sprite sheet for a cute casual mobile puzzle game UI.
+
+Canvas: 512x256, exactly two equal cells in one row, each cell 256x256.
+NO background, transparent outside the wooden crates. NO text, no labels, no numbers, no watermark.
+
+Style reference: soft warm 2D cartoon, rounded shapes, glossy highlight, same warm brown wood and cream tape as the existing milk tea tray demo board crate.
+
+Cell 1, left half: FULLY SEALED wooden board blocker.
+- A rounded rectangular wooden crate tile, front-facing slightly top-down.
+- Warm orange-brown horizontal planks.
+- Small darker rivets in corners.
+- Two thick pale beige wooden tape strips forming a clear X across the tile.
+- Looks completely blocked and sturdy.
+
+Cell 2, right half: HALF SEALED wooden board blocker.
+- Same exact crate size, perspective, colors, line weight, shadow, and lighting as cell 1.
+- No X seal and no tape strips at all.
+- Only the rounded wooden plank crate tile remains, with visible warm wooden planks, corner rivets, and frame.
+- It should clearly read as a weaker half-sealed board: still a blocker, but no cross tape.
+- Do not add icons, locks, coins, arrows, or text.
+
+Both crates must be centered in their cells with consistent scale, transparent padding around them, and no cell borders.

@@ -1,0 +1,18 @@
+Milk tea shop game UI status frame, single transparent PNG asset.
+
+Design a cute compact horizontal title plaque for a mobile casual game top HUD. This frame only holds one line of dynamic text: shop level title on the left and a small exp fraction on the right. There is NO progress bar, NO bar slot, NO empty track, NO inner groove for a bar.
+
+Visual style:
+- Warm cream and honey-gold rounded pill-shaped plaque
+- Soft brown outline, subtle inner highlight
+- Tiny milk tea cup decoration on the left edge, tiny boba pearls / sparkle on the right edge
+- Cute polished 2D mobile game UI, matching a cozy fruit tea shop scene
+- The center must stay clean and flat for dynamic text overlay only
+- Shorter height than a bar-style HUD; one-line title badge only
+- Transparent background outside the frame
+
+Strict constraints:
+- NO TEXT, no labels, no numbers, no logo, no watermark
+- Do not include any progress bar, progress track, or bar-shaped slot
+- Single asset centered in the image, with enough transparent padding
+- Avoid hard 3D render; use soft 2D game art

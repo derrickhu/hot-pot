@@ -1,0 +1,39 @@
+Create a clean 2x2 sprite sheet for a cute casual mobile milk tea puzzle game UI.
+
+Style reference: soft 2D cartoon, warm pastel colors, rounded shapes, gentle highlights, simple readable silhouettes, matching a cozy milk tea shop puzzle game. Game-board asset style, not realistic, not 3D render.
+
+Canvas and layout:
+- Square image, 2 columns x 2 rows, four equal cells.
+- Large empty padding around each object.
+- Each object centered in its cell.
+- Plain white background.
+- NO TEXT, no labels, no numbers, no captions, no writing anywhere in the image.
+
+Top-left cell: a green completed-order check mark.
+- Bright friendly green check icon.
+- Thick rounded stroke.
+- Small glossy highlight.
+- Looks like a satisfying order-complete tick placed over a drink icon.
+- No circle border, just the check mark with a tiny soft shadow.
+
+Top-right cell: a milk tea order delivery bag for the top counter.
+- Cute kraft paper takeout bag / order bag.
+- Warm brown paper, rounded boxy shape, small folded top handle.
+- One or two tiny white receipt slips attached to the side.
+- Designed to sit on the shop counter and represent the full order package.
+- No logos, no text, no numbers.
+
+Bottom-left cell: a locked crate occupying a board grid cell.
+- Cute wooden/cardboard crate, top-down-ish game icon.
+- Warm orange-brown panels, darker edge outline.
+- Subtle X-shaped tape / plank mark on the front, but no text.
+- Fits inside a rounded board grid cell.
+- Looks like it can be unlocked after adjacent order completion.
+
+Bottom-right cell: a clickable unlock empty-slot button for a board cell.
+- Rounded rectangular button, soft grey base with white rim.
+- Center has a small green ticket / money icon OR small play-camera icon, but no text.
+- It should look like a tappable unlock button placed inside an empty board grid cell.
+- No labels, no numbers.
+
+Keep all four assets consistent in line weight, lighting, scale, and cutout-friendly shape. Avoid complex background, avoid decorative clutter, avoid fake letters.

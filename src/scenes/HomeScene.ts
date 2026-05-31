@@ -17,6 +17,7 @@ import {
   recordLevelMilestoneGiftAdView,
 } from '@/game/LevelMilestoneGiftState';
 import { getFruitSliceBestScore } from '@/game/FruitSliceProgress';
+import { readMilkTeaShopProgress } from '@/game/MilkTeaShopProgress';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH } from '@/gameobjects/CoinBar';
 import { HomeMilestoneGiftPanel } from '@/gameobjects/HomeMilestoneGiftPanel';
 import { MilestoneGiftRewardOverlay } from '@/gameobjects/MilestoneGiftRewardOverlay';
@@ -45,6 +46,7 @@ const HOME_WELFARE_ICON_TEXTURE = 'assets/images/home_footer_welfare_btn_v1.png'
 const HOME_PLAY_BTN_TEXTURE = 'assets/images/home_mode_btn_level_bowl_v2.png';
 const HOME_DAILY_LIMITED_BTN_TEXTURE = 'assets/images/home_mode_btn_daily_iced_drink_v2.png';
 const HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE = 'assets/images/home_mode_btn_fruit_slice_v2.png';
+const HOME_MILK_TEA_SHOP_BTN_TEXTURE = 'assets/images/home_mode_btn_milk_tea_shop_v1.png';
 /** 游戏字标「别捞水果」 */
 const HOME_LOGO_TITLE_TEXTURE = 'assets/images/game_logo_title.png';
 /** 闯关里程碑大礼包（AI 生成 + 抠图） */
@@ -61,8 +63,13 @@ function homePlayEntryTargetWidth(): number {
 }
 
 function homeModeEntryTargetWidth(): number {
-  return Math.min(600, Game.logicWidth * 0.8);
+  return Math.min(540, Game.logicWidth * 0.72);
 }
+
+/** 四个玩法入口之间的垂直间距 */
+const HOME_MODE_ENTRY_GAP = 16;
+/** 最后一个玩法按钮与底部导航栏之间的留白 */
+const HOME_FOOTER_GAP_ABOVE = 14;
 
 function homeFruitSliceEntryTargetWidth(): number {
   return homeModeEntryTargetWidth();
@@ -140,10 +147,13 @@ export class HomeScene implements Scene {
   private dailyLimitedEntryTitle!: PIXI.Text;
   private dailyLimitedEntrySprite: PIXI.Sprite | null = null;
   private readonly dailyLimitedEntryTag = new PIXI.Container();
-  /** 奶茶店托盘 Demo：首版开发测试入口 */
+  /** 果茶店托盘 Demo：首版开发测试入口 */
   private readonly milkTeaDemoEntryRoot = new PIXI.Container();
   private milkTeaDemoEntryBg!: PIXI.Graphics;
   private milkTeaDemoEntryTitle!: PIXI.Text;
+  private milkTeaDemoEntrySubTitle!: PIXI.Text;
+  private milkTeaDemoEntrySprite: PIXI.Sprite | null = null;
+  private readonly milkTeaDemoEntryTag = new PIXI.Container();
   /** 顶栏与主按钮之间的 Logo 区（有贴图再显示） */
   private readonly homeLogoRoot = new PIXI.Container();
   private readonly homeLogoSprite = new PIXI.Sprite();
@@ -203,6 +213,7 @@ export class HomeScene implements Scene {
 
   onEnter(): void {
     this.refreshPlayEntryTitle();
+    this.refreshMilkTeaEntryTitle();
     this.refreshModeEntryTags();
     this.homeCoinBar.refresh();
     this.refreshLevelMilestoneGiftEntry();
@@ -219,6 +230,10 @@ export class HomeScene implements Scene {
   private scheduleHomeTimer(fn: () => void, delay: number): void {
     const id = setTimeout(() => {
       this.pendingHomeTimers.delete(id);
+      // 离开首页后容器已从舞台摘下，避免异步 layout 继续碰 wx 原生按钮。
+      if (!this.container.parent) {
+        return;
+      }
       fn();
     }, delay);
     this.pendingHomeTimers.add(id);
@@ -241,6 +256,24 @@ export class HomeScene implements Scene {
 
   private refreshPlayEntryTitle(): void {
     this.playEntryTitle.text = this.isAllBowlLevelsCleared() ? '已通关' : `第${getBowlLevelIndex() + 1}关`;
+  }
+
+  private refreshMilkTeaEntryTitle(): void {
+    if (!MILK_TEA_DEMO_ENTRY_ENABLED || !this.milkTeaDemoEntryTitle || !this.milkTeaDemoEntrySubTitle) {
+      return;
+    }
+    const progress = readMilkTeaShopProgress();
+    this.milkTeaDemoEntryTitle.text = '果茶店';
+    this.milkTeaDemoEntrySubTitle.text = `Lv.${progress.shopLevel} 已通关 ${progress.totalClears} 局`;
+    this.updateModeEntryTag(
+      this.milkTeaDemoEntryTag,
+      [
+        { text: `Lv.${progress.shopLevel}`, color: 0x8a4217 },
+        { text: ` · 已通关 ${progress.totalClears} 局`, color: 0xb8661d },
+      ],
+      0xfff5df,
+      0xc8782f,
+    );
   }
 
   private refreshModeEntryTags(): void {
@@ -436,6 +469,12 @@ export class HomeScene implements Scene {
 
   private openHomeMilestoneGiftPanel(gift: LevelMilestoneGiftDef): void {
     const { current, max } = getLevelMilestoneGiftAdProgress(gift);
+    analytics.track('home_milestone_gift_open', {
+      gift_id: gift.id,
+      ad_views: current,
+      required_ads: max,
+      status: getLevelMilestoneGiftStatus(gift),
+    });
     this.homeMilestoneGiftPanel.show(gift, current, {
       onWatchAd: () => this.watchHomeMilestoneGiftAd(gift),
       onClaim: () => this.claimHomeMilestoneGift(gift),
@@ -556,6 +595,13 @@ export class HomeScene implements Scene {
     api?.showToast?.({ title, icon: 'none' });
   }
 
+  private trackHomeFeatureOpen(feature: string): void {
+    analytics.track('home_feature_open', {
+      feature,
+      source: 'home_footer',
+    });
+  }
+
   private async loadHomeBackdrop(width: number, height: number): Promise<void> {
     const hasMilestoneGift = getActiveHomeLevelMilestoneGift() !== null;
     await Promise.all([
@@ -564,6 +610,7 @@ export class HomeScene implements Scene {
       TextureCache.load(HOME_LEVEL_MILESTONE_GIFT_KEY, HOME_LEVEL_MILESTONE_GIFT_TEXTURE),
       TextureCache.load('home_daily_limited_btn', HOME_DAILY_LIMITED_BTN_TEXTURE),
       TextureCache.load('home_fruit_slice_challenge_btn', HOME_FRUIT_SLICE_CHALLENGE_BTN_TEXTURE),
+      TextureCache.load('home_milk_tea_shop_btn', HOME_MILK_TEA_SHOP_BTN_TEXTURE),
       TextureCache.load('game_logo_title', HOME_LOGO_TITLE_TEXTURE),
       TextureCache.load('home_leaderboard_icon', HOME_LEADERBOARD_ICON_TEXTURE),
       TextureCache.load('home_gacha_icon', HOME_GACHA_ICON_TEXTURE),
@@ -579,6 +626,7 @@ export class HomeScene implements Scene {
       this.applyPlayEntryArt();
       this.applyDailyLimitedEntryArt();
       this.applyFruitSliceEntryArt();
+      this.applyMilkTeaDemoEntryArt();
       this.applyHomeLogoTitle();
       this.applyLevelMilestoneGiftArt();
       this.refreshGeneratedFooterIcons();
@@ -596,6 +644,7 @@ export class HomeScene implements Scene {
     this.applyPlayEntryArt();
     this.applyDailyLimitedEntryArt();
     this.applyFruitSliceEntryArt();
+    this.applyMilkTeaDemoEntryArt();
     this.applyHomeLogoTitle();
     this.applyLevelMilestoneGiftArt();
     this.refreshLevelMilestoneGiftEntry();
@@ -780,6 +829,44 @@ export class HomeScene implements Scene {
     );
   }
 
+  /** 果茶店：优先使用已烘焙文字贴图，等级进度作为独立角标叠加。 */
+  private applyMilkTeaDemoEntryArt(): void {
+    if (!MILK_TEA_DEMO_ENTRY_ENABLED) {
+      return;
+    }
+    const tex = TextureCache.get('home_milk_tea_shop_btn');
+    if (!tex) {
+      this.milkTeaDemoEntryTitle.visible = true;
+      this.milkTeaDemoEntrySubTitle.visible = true;
+      this.milkTeaDemoEntryRoot.hitArea = new PIXI.Rectangle(-220, -52, 440, 104);
+      return;
+    }
+    this.milkTeaDemoEntryTitle.visible = false;
+    this.milkTeaDemoEntrySubTitle.visible = false;
+    if (this.milkTeaDemoEntryBg.parent) {
+      this.milkTeaDemoEntryRoot.removeChild(this.milkTeaDemoEntryBg);
+    }
+    if (!this.milkTeaDemoEntrySprite) {
+      this.milkTeaDemoEntrySprite = new PIXI.Sprite();
+      this.milkTeaDemoEntrySprite.anchor.set(0.5);
+      this.milkTeaDemoEntryRoot.addChildAt(this.milkTeaDemoEntrySprite, 0);
+    }
+    this.milkTeaDemoEntrySprite.texture = tex;
+    const targetW = homeModeEntryTargetWidth();
+    const s = targetW / tex.width;
+    this.milkTeaDemoEntrySprite.scale.set(s);
+    const halfH = (tex.height * s) / 2;
+    const hitPadX = 20;
+    const hitPadY = 14;
+    this.milkTeaDemoEntryRoot.hitArea = new PIXI.Rectangle(
+      -targetW / 2 - hitPadX,
+      -halfH - hitPadY,
+      targetW + hitPadX * 2,
+      halfH * 2 + hitPadY * 2,
+    );
+    this.positionModeEntryTag(this.milkTeaDemoEntryTag, targetW, halfH, -6);
+  }
+
   private positionModeEntryTag(tag: PIXI.Container, targetW: number, halfH: number, xInset: number): void {
     const bounds = tag.getLocalBounds();
     const tagHalfW = bounds.width > 0 ? bounds.width / 2 : 72;
@@ -840,9 +927,24 @@ export class HomeScene implements Scene {
       dailyHalf = 44;
     }
 
-    const demoHalf = MILK_TEA_DEMO_ENTRY_ENABLED ? 38 : 0;
+    let demoHalf = 52;
+    if (
+      MILK_TEA_DEMO_ENTRY_ENABLED
+      && this.milkTeaDemoEntrySprite?.texture
+      && this.milkTeaDemoEntrySprite.texture !== PIXI.Texture.EMPTY
+      && this.milkTeaDemoEntrySprite.texture.width > 2
+    ) {
+      const tw = this.milkTeaDemoEntrySprite.texture.width;
+      const targetW = homeModeEntryTargetWidth();
+      const s = targetW / tw;
+      demoHalf = (this.milkTeaDemoEntrySprite.texture.height * s) / 2;
+    } else if (MILK_TEA_DEMO_ENTRY_ENABLED && this.milkTeaDemoEntryBg.parent) {
+      demoHalf = 52;
+    } else if (!MILK_TEA_DEMO_ENTRY_ENABLED) {
+      demoHalf = 0;
+    }
 
-    const gap = 24;
+    const gap = HOME_MODE_ENTRY_GAP;
     this.playEntryRoot.position.set(W / 2, playY);
     this.positionModeEntryTag(this.playEntryTag, homePlayEntryTargetWidth(), playHalf, 0);
     this.layoutLevelMilestoneGiftEntry();
@@ -854,14 +956,15 @@ export class HomeScene implements Scene {
     this.positionModeEntryTag(this.fruitSliceEntryTag, homeFruitSliceEntryTargetWidth(), fruitHalf, -4);
     let footerAnchorY = fruitY + fruitHalf;
     if (MILK_TEA_DEMO_ENTRY_ENABLED) {
-      const demoY = fruitY + fruitHalf + 18 + demoHalf;
+      const demoY = fruitY + fruitHalf + gap + demoHalf;
       this.milkTeaDemoEntryRoot.position.set(W / 2, demoY);
+      this.positionModeEntryTag(this.milkTeaDemoEntryTag, homeModeEntryTargetWidth(), demoHalf, -6);
       footerAnchorY = demoY + demoHalf;
     }
 
     /** 底部入口：参考原型图，五个图标放在同一个奶油色圆角底栏内。 */
     const footerBarW = Math.min(650, W - 56);
-    const footerBarCenterY = Math.round(footerAnchorY + 28 + HOME_FOOTER_BAR_H / 2);
+    const footerBarCenterY = Math.round(footerAnchorY + HOME_FOOTER_GAP_ABOVE + HOME_FOOTER_BAR_H / 2);
     const footerCellGap = footerBarW / 5;
     const footerLeft = W / 2 - footerBarW / 2;
     const footerY = footerBarCenterY;
@@ -1081,39 +1184,44 @@ export class HomeScene implements Scene {
       this.milkTeaDemoEntryRoot.position.set(W / 2, playY + 230);
       this.milkTeaDemoEntryRoot.eventMode = 'static';
       this.milkTeaDemoEntryRoot.cursor = 'pointer';
-      this.milkTeaDemoEntryRoot.hitArea = new PIXI.Rectangle(-220, -38, 440, 76);
+      this.milkTeaDemoEntryRoot.hitArea = new PIXI.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH);
       this.milkTeaDemoEntryBg = new PIXI.Graphics();
       this.milkTeaDemoEntryBg.beginFill(0xffe0a6, 0.98);
       this.milkTeaDemoEntryBg.lineStyle(4, 0xc8782f, 1);
-      this.milkTeaDemoEntryBg.drawRoundedRect(-220, -38, 440, 76, 28);
+      this.milkTeaDemoEntryBg.drawRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 30);
       this.milkTeaDemoEntryBg.endFill();
       this.milkTeaDemoEntryRoot.addChild(this.milkTeaDemoEntryBg);
-      this.milkTeaDemoEntryTitle = new PIXI.Text('奶茶店 Demo', {
-        fontSize: 32,
+      this.milkTeaDemoEntryTitle = new PIXI.Text('果茶店', {
+        fontSize: 38,
         fill: 0x8a4217,
         fontWeight: '900',
         stroke: 0xfff6dc,
-        strokeThickness: 5,
+        strokeThickness: 6,
         lineJoin: 'round',
       });
       this.milkTeaDemoEntryTitle.anchor.set(0.5);
       this.milkTeaDemoEntryTitle.resolution = 2;
-      this.milkTeaDemoEntryTitle.position.set(0, -8);
+      this.milkTeaDemoEntryTitle.position.set(0, -12);
       this.milkTeaDemoEntryRoot.addChild(this.milkTeaDemoEntryTitle);
-      const milkTeaDemoSub = new PIXI.Text('托盘合并测试', {
-        fontSize: 18,
+      this.milkTeaDemoEntrySubTitle = new PIXI.Text('接单调饮 经营升级', {
+        fontSize: 22,
         fill: 0x9b5a28,
         fontWeight: '900',
+        stroke: 0xfff6dc,
+        strokeThickness: 3,
+        lineJoin: 'round',
       });
-      milkTeaDemoSub.anchor.set(0.5);
-      milkTeaDemoSub.resolution = 2;
-      milkTeaDemoSub.position.set(0, 21);
-      this.milkTeaDemoEntryRoot.addChild(milkTeaDemoSub);
+      this.milkTeaDemoEntrySubTitle.anchor.set(0.5);
+      this.milkTeaDemoEntrySubTitle.resolution = 2;
+      this.milkTeaDemoEntrySubTitle.position.set(0, 26);
+      this.milkTeaDemoEntryRoot.addChild(this.milkTeaDemoEntrySubTitle);
+      this.milkTeaDemoEntryRoot.addChild(this.milkTeaDemoEntryTag);
       this.milkTeaDemoEntryRoot.on('pointertap', () => {
         AudioManager.playButtonSound();
         void this.enterMilkTeaDemoWithLoading();
       });
       this.container.addChild(this.milkTeaDemoEntryRoot);
+      this.refreshMilkTeaEntryTitle();
     } else {
       this.milkTeaDemoEntryRoot.eventMode = 'none';
       this.milkTeaDemoEntryRoot.visible = false;
@@ -1146,6 +1254,7 @@ export class HomeScene implements Scene {
     );
     bookSlot.on('pointertap', () => {
       AudioManager.playButtonSound();
+      this.trackHomeFeatureOpen('catalog');
       SceneManager.switchTo('catalog');
     });
 
@@ -1170,6 +1279,7 @@ export class HomeScene implements Scene {
     );
     this.gachaEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
+      this.trackHomeFeatureOpen('gacha');
       void this.enterGachaWithLoading();
     });
     this.container.addChild(this.gachaEntryRoot);
@@ -1192,6 +1302,7 @@ export class HomeScene implements Scene {
     );
     this.welfareEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
+      this.trackHomeFeatureOpen('welfare');
       this.gameClubWelfareOverlay.open();
     });
     this.container.addChild(this.welfareEntryRoot);
@@ -1215,6 +1326,7 @@ export class HomeScene implements Scene {
     /** 只在玩家主动点排行榜时触发隐私授权；首页不预创建微信授权按钮。 */
     this.leaderboardEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
+      this.trackHomeFeatureOpen('leaderboard');
       this.gameClubWelfareOverlay.close();
       openLeaderboard(RANK_BOARD_BOWL);
     });
@@ -1238,6 +1350,7 @@ export class HomeScene implements Scene {
     );
     this.settingsEntryRoot.on('pointertap', () => {
       AudioManager.playButtonSound();
+      this.trackHomeFeatureOpen('settings');
       this.gameClubWelfareOverlay.close();
       this.settingsOverlay.visible = true;
     });
@@ -1368,8 +1481,9 @@ export class HomeScene implements Scene {
       await SceneManager.prepare('milkTeaTrayDemo');
       loadingOverlay.setProgress(1);
       analytics.track('gameplay_mode_enter', {
-        mode: 'milk_tea_tray_demo',
+        mode: 'milk_tea_shop',
         source: 'home',
+        shop_level: readMilkTeaShopProgress().shopLevel,
       });
       SceneManager.switchTo('milkTeaTrayDemo');
     } catch (error) {
