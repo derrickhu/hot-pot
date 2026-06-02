@@ -1,0 +1,37 @@
+Create a polished UI prototype for a cute WeChat mini game milk tea shop level header and a small info popover.
+
+Canvas: landscape 16:9, focused close-up of the top HUD area only, not a full phone screenshot.
+
+Style:
+- Soft 2D casual mobile game UI, warm cream and honey orange palette.
+- Rounded shapes, subtle gradients, hand-painted cute edges.
+- Match a fruit tea / milk tea shop theme: small tapioca cup, orange berries, leaves, tiny sparkle decorations.
+- Clean, simple, not busy.
+
+Header design:
+- A compact shop sign panel, about 300x70 relative size.
+- Cream parchment base, thin golden-orange border, subtle inner highlight.
+- Left side: small milk tea cup icon.
+- Center: bold Chinese title text exactly: 果茶店
+- Right side: small rounded level badge text exactly: Lv.4
+- Under title, tiny secondary text exactly: 通关 +36
+
+Popover design:
+- A small floating tooltip below the header, width slightly wider than the header, height around 110.
+- Cream background, single thin orange outline, small triangle pointer pointing to the header.
+- No heavy shadow, no thick frame, no extra icons except one small coin icon.
+- Text should be minimal and readable:
+  1) Main line exactly: 再通关 2 次升级
+  2) Bottom line exactly: 本级奖励 +36
+- Include a very slim progress bar with text exactly: 8/10
+- Use good spacing and hierarchy; leave breathing room.
+
+Composition:
+- Show both header-only state and opened popover state as one clean design mockup, with the popover attached below the header.
+- Background should be softly blurred warm shop scene, very low contrast, so UI is the focus.
+
+Constraints:
+- No English text except "Lv.4".
+- No QR code, no watermark, no app store badges.
+- Do not add extra explanatory labels.
+- The design must be simple enough to implement with programmatic PIXI drawing.

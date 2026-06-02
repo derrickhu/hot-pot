@@ -4,6 +4,7 @@ import { PersistService } from '@/core/PersistService';
 const DEFAULT_BGM_SRC = 'assets/audio/melon_spoon_loop.mp3';
 const SUBPACKAGE_AUDIO_ROOT = 'subpackages/bowl_game/assets/audio';
 const FRUIT_SLICE_BGM_SRC = `${SUBPACKAGE_AUDIO_ROOT}/fruit_slice_bgm.mp3`;
+const MILK_TEA_SHOP_BGM_SRC = `${SUBPACKAGE_AUDIO_ROOT}/milk_tea_shop_bgm.mp3`;
 const SCOOP_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/scoop_2.mp3`;
 const ORDER_COMPLETE_SFX_SRC = `${SUBPACKAGE_AUDIO_ROOT}/order_complete.mp3`;
 const BUTTON_SFX_SRC = 'assets/audio/button_common.mp3';
@@ -126,7 +127,7 @@ class AudioManagerClass {
   }
 
   playOrderCompleteSound(): void {
-    this.playSoundEffect(ORDER_COMPLETE_SFX_SRC);
+    this.playSoundEffect(ORDER_COMPLETE_SFX_SRC, undefined, 1);
   }
 
   playButtonSound(): void {
@@ -194,7 +195,11 @@ class AudioManagerClass {
     this.switchBackgroundMusic(FRUIT_SLICE_BGM_SRC);
   }
 
-  private playSoundEffect(src: string, maxDurationSec?: number): void {
+  useMilkTeaShopBackgroundMusic(): void {
+    this.switchBackgroundMusic(MILK_TEA_SHOP_BGM_SRC);
+  }
+
+  private playSoundEffect(src: string, maxDurationSec?: number, volume = 0.86): void {
     if (!this.soundEnabled) {
       return;
     }
@@ -202,20 +207,21 @@ class AudioManagerClass {
     const api = typeof wx !== 'undefined' ? wx : null;
     const create = api?.createInnerAudioContext;
     if (create) {
-      this.playWxSfx(create.bind(api), src, maxDurationSec);
+      this.playWxSfx(create.bind(api), src, maxDurationSec, volume);
       return;
     }
 
     if (typeof Audio === 'undefined') {
       return;
     }
-    this.playWebSfx(src, maxDurationSec);
+    this.playWebSfx(src, maxDurationSec, volume);
   }
 
   private playWxSfx(
     create: () => WxInnerAudioContext,
     src: string,
     maxDurationSec?: number,
+    volume = 0.86,
   ): void {
     let entry = this.sfxPool.get(src);
     if (!entry) {
@@ -249,6 +255,7 @@ class AudioManagerClass {
     }
     try {
       // 重置到起点再 play() 即可复播；比 destroy/重建快几十倍。
+      entry.ctx.volume = Math.max(0, Math.min(1, volume));
       entry.ctx.seek?.(0);
       entry.ctx.play();
       entry.busy = true;
@@ -270,15 +277,15 @@ class AudioManagerClass {
     }
   }
 
-  private playWebSfx(src: string, maxDurationSec?: number): void {
+  private playWebSfx(src: string, maxDurationSec?: number, volume = 0.86): void {
     let sfx = this.webSfxPool.get(src);
     if (!sfx) {
       sfx = new Audio(src);
-      sfx.volume = 0.86;
       sfx.preload = 'auto';
       this.webSfxPool.set(src, sfx);
     }
     try {
+      sfx.volume = Math.max(0, Math.min(1, volume));
       sfx.currentTime = 0;
       void sfx.play();
     } catch {

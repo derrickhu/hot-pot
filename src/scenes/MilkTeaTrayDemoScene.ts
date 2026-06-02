@@ -3,7 +3,7 @@ import { DAILY_LIMITED_LEVELS } from '@/config/dailyLimitedLevels';
 import {
   MILK_TEA_DEMO_PRELOAD_PATHS,
   MILK_TEA_DEMO_TEXTURE_KEYS,
-  milkTeaDemoDrinkTextureKey,
+  milkTeaShopDrinkTextureKey,
 } from '@/config/milkTeaTrayAssets';
 import { getMilkTeaShopLevelDef, type MilkTeaShopLevelDef } from '@/config/milkTeaShopLevels';
 import { AudioManager } from '@/core/AudioManager';
@@ -24,6 +24,8 @@ import {
 import { loadBowlSubpackage, loadMilkTeaDemoSubpackage } from '@/utils/loadBowlSubpackage';
 import { MILK_TEA_SHOP_REWARDED_AD_UNIT_ID, showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { TextureCache } from '@/utils/TextureCache';
+import { shareGame } from '@/utils/wechatShare';
+import { gameTopBarY, GAME_TOP_BAR_BACK_X, GAME_TOP_BAR_COIN_X } from '@/utils/gameTopBarLayout';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
 type DrinkId = string;
@@ -125,6 +127,7 @@ interface DeliveryAnimation {
   elapsed: number;
   readonly duration: number;
   readonly slideOnly?: boolean;
+  readonly onUpdate?: (t: number, x: number, y: number) => void;
   readonly onComplete?: () => void;
 }
 
@@ -177,6 +180,10 @@ const ORDER_BAG_W = 124;
 const ORDER_BAG_H = 108;
 const ORDER_BAG_X = 112;
 const ORDER_BAG_Y = -118;
+const ORDER_BAG_EXIT_X = -120;
+const SHOP_STATUS_FRAME_TARGET_W = 292;
+const SHOP_STATUS_FRAME_TARGET_H = 56;
+const SHOP_INFO_PANEL_TARGET_W = 340;
 
 function getOrderCupStep(orderCount: number): number {
   if (orderCount >= 6) {
@@ -292,6 +299,7 @@ export class MilkTeaTrayDemoScene implements Scene {
   private roundStartBannerOpen = false;
   private roundStartBannerNode: PIXI.Container | null = null;
   private roundStartBannerTicker: (() => void) | null = null;
+  private shopInfoPopupRoot: PIXI.Container | null = null;
   private failOverlayOpen = false;
   private deliveryAnimations: DeliveryAnimation[] = [];
   private flyAnimations: FlyAnimation[] = [];
@@ -360,10 +368,17 @@ export class MilkTeaTrayDemoScene implements Scene {
   }
 
   onEnter(): void {
+    AudioManager.useMilkTeaShopBackgroundMusic();
     warmupRewardedAd(MILK_TEA_SHOP_REWARDED_AD_UNIT_ID);
     this.applyPageBackground();
     this.coinBar.refresh();
     this.startRound();
+  }
+
+  onExit(): void {
+    this.dismissRoundStartBanner();
+    this.hideShopInfoPopup();
+    AudioManager.useDefaultBackgroundMusic();
   }
 
   update(dt: number): void {
@@ -407,7 +422,7 @@ export class MilkTeaTrayDemoScene implements Scene {
       this.pauseOverlay.visible = true;
     });
     this.container.addChild(this.backButtonSprite);
-    this.coinBar.position.set(110, top + 28);
+    this.coinBar.position.set(GAME_TOP_BAR_COIN_X, gameTopBarY(top));
     this.container.addChild(this.coinBar);
     this.shopStatusRoot.position.set(W / 2 + 20, top + 40);
     this.shopStatusRoot.zIndex = 4;
@@ -481,19 +496,20 @@ export class MilkTeaTrayDemoScene implements Scene {
   private layoutBackButton(): void {
     const tex = this.backButtonSprite.texture;
     if (!tex || tex === PIXI.Texture.EMPTY) {
-      this.backButtonSprite.position.set(58, Game.safeTop + 28);
+      this.backButtonSprite.position.set(GAME_TOP_BAR_BACK_X, gameTopBarY());
       this.backButtonSprite.hitArea = new PIXI.Circle(0, 0, 38);
       return;
     }
     const target = 54;
     const scale = target / Math.max(1, Math.max(tex.width, tex.height));
     this.backButtonSprite.scale.set(scale);
-    this.backButtonSprite.position.set(58, Game.safeTop + 28);
+    this.backButtonSprite.position.set(GAME_TOP_BAR_BACK_X, gameTopBarY());
     this.backButtonSprite.hitArea = new PIXI.Circle(0, 0, 38 / Math.max(0.01, scale));
   }
 
   private startRound(): void {
     this.dismissRoundStartBanner();
+    this.hideShopInfoPopup();
     const todayIndex = Math.max(0, new Date().getDate() - 1);
     const progress = readMilkTeaShopProgress();
     const levelDef = getMilkTeaShopLevelDef(progress.shopLevel);
@@ -506,7 +522,7 @@ export class MilkTeaTrayDemoScene implements Scene {
     this.orderBagEntering = false;
     this.failOverlayOpen = false;
     this.selectedTrayIndex = 0;
-    this.activeDrinks = this.pickRoundDrinks(levelDef, this.currentRound.drinkTypeCount, todayIndex);
+    this.activeDrinks = this.pickRoundDrinks(levelDef, this.currentRound.drinkTypeCount);
 
     this.board = [];
     for (let row = 0; row < BOARD_ROWS; row += 1) {
@@ -578,15 +594,31 @@ export class MilkTeaTrayDemoScene implements Scene {
     return min + (this.nextRandom() % (max - min + 1));
   }
 
-  private pickRoundDrinks(levelDef: MilkTeaShopLevelDef, drinkTypeCount: number, offset: number): DrinkDef[] {
+  private pickRoundDrinks(levelDef: MilkTeaShopLevelDef, drinkTypeCount: number): DrinkDef[] {
     const unlockedCount = Math.min(levelDef.unlockedDrinkCount, this.drinkDefs.length);
-    const pool = this.drinkDefs.slice(0, unlockedCount);
-    const rotated = pool.slice(offset % Math.max(1, pool.length)).concat(pool.slice(0, offset % Math.max(1, pool.length)));
-    for (let i = rotated.length - 1; i > 0; i -= 1) {
+    const targetCount = Math.min(Math.max(1, drinkTypeCount), unlockedCount);
+    const previousUnlockedCount = levelDef.level <= 1
+      ? unlockedCount
+      : Math.min(getMilkTeaShopLevelDef(levelDef.level - 1).unlockedDrinkCount, unlockedCount);
+    const previousPool = this.drinkDefs.slice(0, previousUnlockedCount);
+    const currentLevelUnlocks = levelDef.level <= 1
+      ? []
+      : this.drinkDefs.slice(previousUnlockedCount, unlockedCount);
+    const guaranteed = this.shuffleDrinkDefs(currentLevelUnlocks).slice(0, targetCount);
+    const guaranteedIds = new Set(guaranteed.map((drink) => drink.id));
+    const fillPool = (levelDef.level <= 1 ? this.drinkDefs.slice(0, unlockedCount) : previousPool)
+      .filter((drink) => !guaranteedIds.has(drink.id));
+    const fillers = this.shuffleDrinkDefs(fillPool).slice(0, Math.max(0, targetCount - guaranteed.length));
+    return this.shuffleDrinkDefs([...guaranteed, ...fillers]);
+  }
+
+  private shuffleDrinkDefs(drinks: readonly DrinkDef[]): DrinkDef[] {
+    const result = [...drinks];
+    for (let i = result.length - 1; i > 0; i -= 1) {
       const j = this.nextRandom() % (i + 1);
-      [rotated[i], rotated[j]] = [rotated[j]!, rotated[i]!];
+      [result[i], result[j]] = [result[j]!, result[i]!];
     }
-    return rotated.slice(0, Math.min(drinkTypeCount, rotated.length));
+    return result;
   }
 
   private createNextTray(): Tray {
@@ -705,8 +737,8 @@ export class MilkTeaTrayDemoScene implements Scene {
   private renderShopStatus(): void {
     destroyContainerChildren(this.shopStatusRoot);
     const progress = readMilkTeaShopProgress();
-    const rootW = 292;
-    const rootH = 56;
+    const rootW = SHOP_STATUS_FRAME_TARGET_W;
+    const rootH = SHOP_STATUS_FRAME_TARGET_H;
     const frameTex = TextureCache.get(MILK_TEA_DEMO_TEXTURE_KEYS.shopStatusFrame);
     if (frameTex) {
       const frame = new PIXI.Sprite(frameTex);
@@ -722,6 +754,15 @@ export class MilkTeaTrayDemoScene implements Scene {
       this.shopStatusRoot.addChild(bg);
     }
 
+    this.shopStatusRoot.eventMode = 'static';
+    this.shopStatusRoot.cursor = 'pointer';
+    this.shopStatusRoot.hitArea = new PIXI.RoundedRectangle(-rootW / 2, -rootH / 2, rootW, rootH, 20);
+    this.shopStatusRoot.removeAllListeners('pointertap');
+    this.shopStatusRoot.on('pointertap', () => {
+      AudioManager.playButtonSound();
+      this.showShopInfoPopup();
+    });
+
     const label = new PIXI.Text(`果茶店 Lv.${progress.shopLevel}`, {
       fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
       fontSize: 21,
@@ -734,6 +775,143 @@ export class MilkTeaTrayDemoScene implements Scene {
     label.resolution = 2;
     label.position.set(0, 0);
     this.shopStatusRoot.addChild(label);
+  }
+
+  private showShopInfoPopup(): void {
+    this.hideShopInfoPopup();
+
+    const progress = readMilkTeaShopProgress();
+    const levelDef = getMilkTeaShopLevelDef(progress.shopLevel);
+    const clearsToNext = Math.max(0, levelDef.clearsToNext);
+    const done = Math.min(progress.clearsInLevel, Math.max(0, clearsToNext - 1));
+    const remaining = Math.max(0, clearsToNext - progress.clearsInLevel);
+    const isMaxLevel = clearsToNext <= 0;
+
+    const root = new PIXI.Container();
+    root.eventMode = 'static';
+    root.hitArea = new PIXI.Rectangle(0, 0, Game.logicWidth, Game.logicHeight);
+    root.on('pointertap', () => this.hideShopInfoPopup());
+
+    const panelTex = TextureCache.get(MILK_TEA_DEMO_TEXTURE_KEYS.shopLevelInfoPanel);
+    const cardW = SHOP_INFO_PANEL_TARGET_W;
+    let cardH = 196;
+    const card = new PIXI.Container();
+    card.eventMode = 'static';
+    if (panelTex) {
+      const bg = new PIXI.Sprite(panelTex);
+      bg.anchor.set(0.5);
+      const scale = cardW / panelTex.width;
+      bg.scale.set(scale);
+      cardH = panelTex.height * scale;
+      card.addChild(bg);
+      card.hitArea = new PIXI.Rectangle(-cardW / 2, -cardH / 2, cardW, cardH);
+    } else {
+      card.hitArea = new PIXI.Rectangle(-cardW / 2, -cardH / 2, cardW, cardH);
+      const bg = new PIXI.Graphics();
+      bg.beginFill(0xfff7df, 0.98);
+      bg.lineStyle(3, 0xe4a34a, 1);
+      bg.drawRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 24);
+      bg.endFill();
+      card.addChild(bg);
+    }
+    card.on('pointertap', (event) => event.stopPropagation());
+    card.position.set(
+      Math.min(Game.logicWidth - cardW / 2 - 24, Math.max(cardW / 2 + 24, this.shopStatusRoot.x)),
+      this.shopStatusRoot.y + 116,
+    );
+    root.addChild(card);
+
+    const upgradeText = new PIXI.Text(
+      isMaxLevel ? '当前已满级' : `再通关 ${remaining} 次升级`,
+      {
+        fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+        fontSize: 22,
+        fill: 0x8f4b1e,
+        fontWeight: '900',
+        stroke: 0xfff1c9,
+        strokeThickness: 3,
+        lineJoin: 'round',
+      },
+    );
+    upgradeText.anchor.set(0.5);
+    upgradeText.resolution = 2;
+    upgradeText.position.set(0, -cardH * 0.24);
+    card.addChild(upgradeText);
+
+    this.mountShopInfoProgress(card, done, clearsToNext, isMaxLevel, cardH);
+    this.mountShopInfoReward(card, levelDef.roundCoins, cardH);
+
+    this.overlayRoot.addChild(root);
+    this.shopInfoPopupRoot = root;
+  }
+
+  private mountShopInfoProgress(
+    card: PIXI.Container,
+    done: number,
+    total: number,
+    isMaxLevel: boolean,
+    cardH: number,
+  ): void {
+    const barW = cardH * 1.18;
+    const barH = 16;
+    const progress = isMaxLevel || total <= 0 ? 1 : Math.min(1, Math.max(0, done / total));
+    const bar = new PIXI.Graphics();
+    bar.beginFill(0x8f5a2a, 0.14);
+    bar.drawRoundedRect(-barW / 2, -barH / 2, barW, barH, barH / 2);
+    bar.endFill();
+    bar.beginFill(0xffcf5a, 1);
+    bar.drawRoundedRect(-barW / 2, -barH / 2, barW * progress, barH, barH / 2);
+    bar.endFill();
+    bar.lineStyle(2, 0xffffff, 0.72);
+    bar.drawRoundedRect(-barW / 2, -barH / 2, barW, barH, barH / 2);
+    bar.position.set(0, -cardH * 0.02);
+    card.addChild(bar);
+
+    const label = new PIXI.Text(isMaxLevel ? '满级' : `${done}/${total}`, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 13,
+      fill: 0x7b3612,
+      fontWeight: '900',
+    });
+    label.anchor.set(0.5);
+    label.resolution = 2;
+    label.position.set(0, -cardH * 0.02);
+    card.addChild(label);
+  }
+
+  private mountShopInfoReward(card: PIXI.Container, coins: number, cardH: number): void {
+    const row = new PIXI.Container();
+    row.position.set(0, cardH * 0.22);
+    card.addChild(row);
+
+    const coin = createCoinIcon(16);
+    coin.position.set(-52, 0);
+    row.addChild(coin);
+
+    const reward = new PIXI.Text(`本级奖励  +${coins}`, {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 18,
+      fill: 0x7b4b23,
+      fontWeight: '900',
+      stroke: 0xffffff,
+      strokeThickness: 3,
+      lineJoin: 'round',
+    });
+    reward.anchor.set(0, 0.5);
+    reward.resolution = 2;
+    reward.position.set(-28, 0);
+    row.addChild(reward);
+  }
+
+  private hideShopInfoPopup(): void {
+    if (!this.shopInfoPopupRoot) {
+      return;
+    }
+    if (this.shopInfoPopupRoot.parent) {
+      this.shopInfoPopupRoot.parent.removeChild(this.shopInfoPopupRoot);
+    }
+    this.shopInfoPopupRoot.destroy({ children: true });
+    this.shopInfoPopupRoot = null;
   }
 
   private renderRoundProgress(): void {
@@ -2513,28 +2691,38 @@ export class MilkTeaTrayDemoScene implements Scene {
   }
 
   private playOrderBagBatchCompleteFeedback(isFinalBag: boolean): void {
-    Haptics.light();
-    if (!isFinalBag) {
-      AudioManager.playOrderCompleteSound();
+    if (isFinalBag) {
+      Haptics.medium();
+    } else {
+      Haptics.light();
     }
+    AudioManager.playOrderCompleteSound();
   }
 
   private spawnOrderBagExitEffect(onComplete?: () => void): void {
     const { x: fromX, y: fromY } = this.getOrderBagWorldPos();
     this.orderBagExiting = true;
     this.renderOrders();
+    this.spawnOrderBagCompleteBurst(fromX, fromY);
     const bag = this.createOrderBagVisual(ORDER_BAG_W, ORDER_BAG_H);
     bag.position.set(fromX, fromY);
     this.overlayRoot.addChild(bag);
+    let nextTrailAt = 0.08;
     this.deliveryAnimations.push({
       node: bag,
       fromX,
       fromY,
-      toX: -120,
+      toX: ORDER_BAG_EXIT_X,
       toY: fromY,
       elapsed: 0,
-      duration: 0.38,
+      duration: 0.46,
       slideOnly: true,
+      onUpdate: (t, x, y) => {
+        if (t >= nextTrailAt) {
+          this.spawnOrderBagTrailSpark(x + 18, y - 10 + Math.sin(t * Math.PI * 5) * 18);
+          nextTrailAt += 0.11;
+        }
+      },
       onComplete: () => {
         this.orderBagExiting = false;
         onComplete?.();
@@ -2612,19 +2800,24 @@ export class MilkTeaTrayDemoScene implements Scene {
     const outDur = 0.42;
 
     this.roundStartBannerTicker = (): void => {
+      const banner = this.roundStartBannerNode;
+      if (!banner || banner.destroyed) {
+        this.clearRoundStartBannerTicker();
+        return;
+      }
       t += Game.ticker.deltaMS / 1000;
       if (phase === 'in') {
         const p = Math.min(t / inDur, 1);
         const e = 1 - (1 - p) ** 3;
-        root.alpha = Math.min(1, p * 1.15);
-        root.x = startX + (targetX - startX) * e;
+        banner.alpha = Math.min(1, p * 1.15);
+        banner.x = startX + (targetX - startX) * e;
         const bounce = 1 + 0.04 * Math.sin(p * Math.PI);
         const s = (finalScale * 0.72 + (finalScale - finalScale * 0.72) * e) * (p < 1 ? bounce : 1);
-        root.scale.set(s, s);
+        banner.scale.set(s, s);
         if (p >= 1) {
-          root.alpha = 1;
-          root.x = targetX;
-          root.scale.set(finalScale, finalScale);
+          banner.alpha = 1;
+          banner.x = targetX;
+          banner.scale.set(finalScale, finalScale);
           phase = 'hold';
           t = 0;
         }
@@ -2639,9 +2832,10 @@ export class MilkTeaTrayDemoScene implements Scene {
       }
       const p = Math.min(t / outDur, 1);
       const e = p * p;
-      root.x = targetX + (-240 - targetX) * e;
-      root.alpha = 1 - Math.max(0, p - 0.55) / 0.45;
+      banner.x = targetX + (-240 - targetX) * e;
+      banner.alpha = 1 - Math.max(0, p - 0.55) / 0.45;
       if (p >= 1) {
+        this.clearRoundStartBannerTicker();
         this.dismissRoundStartBanner();
         this.renderTools();
         this.renderPendingTrays();
@@ -3439,6 +3633,89 @@ export class MilkTeaTrayDemoScene implements Scene {
     g.closePath();
   }
 
+  private spawnOrderBagCompleteBurst(x: number, y: number): void {
+    this.spawnPulseRing(x, y, 0.48, 1.55, 0.9);
+    this.spawnPulseRing(x, y, 0.64, 1.95, 0.62);
+
+    const glow = new PIXI.Graphics();
+    glow.beginFill(0xfff0a0, 0.35);
+    glow.drawCircle(0, 0, 72);
+    glow.endFill();
+    glow.position.set(x, y);
+    this.overlayRoot.addChild(glow);
+    this.pulseEffects.push({
+      node: glow,
+      elapsed: 0,
+      duration: 0.42,
+      baseScale: 0.42,
+      maxScale: 1.35,
+      alphaStart: 0.85,
+    });
+
+    for (let i = 0; i < 10; i += 1) {
+      const angle = (Math.PI * 2 * i) / 10 - Math.PI / 2;
+      const radius = i % 2 === 0 ? 76 : 56;
+      const star = new PIXI.Graphics();
+      star.beginFill(i % 2 === 0 ? 0xfff5a8 : 0xffffff, 0.96);
+      this.drawSparkStar(star, 0, 0, 4, i % 2 === 0 ? 13 : 9, i % 2 === 0 ? 5 : 4);
+      star.endFill();
+      star.position.set(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+      star.rotation = angle;
+      this.overlayRoot.addChild(star);
+      this.pulseEffects.push({
+        node: star,
+        elapsed: 0,
+        duration: 0.42 + (i % 3) * 0.05,
+        baseScale: 0.32,
+        maxScale: 1.18,
+        alphaStart: 0.95,
+      });
+    }
+
+    const label = new PIXI.Text('订单完成!', {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 30,
+      fill: 0xfff36b,
+      fontWeight: '900',
+      stroke: 0x7c3818,
+      strokeThickness: 6,
+      dropShadow: true,
+      dropShadowBlur: 3,
+      dropShadowDistance: 2,
+      dropShadowColor: 0x6b3218,
+    });
+    label.anchor.set(0.5);
+    label.resolution = 2;
+    label.position.set(x, y - ORDER_BAG_H * 0.78);
+    this.overlayRoot.addChild(label);
+    this.pulseEffects.push({
+      node: label,
+      elapsed: 0,
+      duration: 0.62,
+      baseScale: 0.72,
+      maxScale: 1.12,
+      alphaStart: 1,
+    });
+  }
+
+  private spawnOrderBagTrailSpark(x: number, y: number): void {
+    const spark = new PIXI.Graphics();
+    spark.beginFill(0xfff4a8, 0.95);
+    this.drawSparkStar(spark, 0, 0, 4, 9, 4);
+    spark.endFill();
+    spark.position.set(x, y);
+    spark.rotation = -0.25;
+    this.overlayRoot.addChild(spark);
+    this.pulseEffects.push({
+      node: spark,
+      elapsed: 0,
+      duration: 0.28,
+      baseScale: 0.28,
+      maxScale: 0.9,
+      alphaStart: 0.9,
+    });
+  }
+
   private spawnPulseRing(
     x: number,
     y: number,
@@ -3623,6 +3900,7 @@ export class MilkTeaTrayDemoScene implements Scene {
         anim.fromX + (anim.toX - anim.fromX) * eased,
         anim.fromY + (anim.toY - anim.fromY) * eased - arc,
       );
+      anim.onUpdate?.(t, anim.node.x, anim.node.y);
       if (!anim.slideOnly) {
         const spin = 1 + 0.22 * Math.sin(t * Math.PI);
         anim.node.scale.set(spin * (1 - t * 0.35));
@@ -3642,6 +3920,7 @@ export class MilkTeaTrayDemoScene implements Scene {
   }
 
   private clearOverlayAnimations(): void {
+    this.dismissRoundStartBanner();
     for (const anim of this.deliveryAnimations) {
       if (anim.node.parent) {
         anim.node.parent.removeChild(anim.node);
@@ -3664,6 +3943,7 @@ export class MilkTeaTrayDemoScene implements Scene {
     }
     this.pulseEffects = [];
     destroyContainerChildren(this.overlayRoot);
+    this.shopInfoPopupRoot = null;
   }
 
   private setMessage(message: string): void {
@@ -3744,7 +4024,7 @@ export class MilkTeaTrayDemoScene implements Scene {
     maxWidth?: number,
     anchorY = 0.5,
   ): PIXI.Container {
-    const tex = TextureCache.get(milkTeaDemoDrinkTextureKey(drinkId));
+    const tex = TextureCache.get(milkTeaShopDrinkTextureKey(drinkId));
     if (tex && tex.height > 2) {
       const sprite = new PIXI.Sprite(tex);
       sprite.anchor.set(0.5, anchorY);

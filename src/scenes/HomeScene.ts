@@ -31,6 +31,7 @@ import { openLeaderboard } from '@/scenes/LeaderboardScene';
 import { RANK_BOARD_BOWL } from '@/services/RankService';
 import { warmupFriendRankContext } from '@/utils/friendRanking';
 import { TextureCache } from '@/utils/TextureCache';
+import { gameTopBarY, GAME_TOP_BAR_COIN_X } from '@/utils/gameTopBarLayout';
 
 /** 首页图鉴入口：独立图标，不带按钮底框 */
 const HOME_CATALOG_ICON_TEXTURE = 'assets/images/home_footer_catalog_btn_v2.png';
@@ -1054,7 +1055,7 @@ export class HomeScene implements Scene {
     this.gradFill.endFill();
     this.container.addChild(this.bgFill, this.gradFill);
 
-    this.homeCoinBar.position.set(110, top + 28);
+    this.homeCoinBar.position.set(GAME_TOP_BAR_COIN_X, gameTopBarY(top));
     this.container.addChild(this.homeCoinBar);
 
     /** 无顶栏木条：背景全屏 */

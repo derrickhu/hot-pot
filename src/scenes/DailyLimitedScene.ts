@@ -28,6 +28,7 @@ import {
 import { showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { TextureCache } from '@/utils/TextureCache';
 import { shareGame } from '@/utils/wechatShare';
+import { gameTopBarY, GAME_TOP_BAR_BACK_X, GAME_TOP_BAR_COIN_X } from '@/utils/gameTopBarLayout';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
 type DailyToolKind = 'shuffle' | 'undo' | 'lift';
@@ -238,6 +239,7 @@ export class DailyLimitedScene implements Scene {
     wordWrap: true,
     wordWrapWidth: Game.logicWidth - 80,
   });
+  private readonly dailyRewardHintRoot = new PIXI.Container();
   private readonly toolViews = new Map<DailyToolKind, ToolButtonView>();
   private readonly cards: CardState[] = [];
   private readonly buffer: FruitId[] = [];
@@ -417,6 +419,7 @@ export class DailyLimitedScene implements Scene {
     destroyContainerChildren(this.overlayLayer);
     this.titleText.text = todayLevel.themeName;
     this.hintText.text = todayLevel.positioningText;
+    this.renderDailyRewardHint();
 
     if (this.loaded) {
       await this.loadThemeAssets(todayLevel);
@@ -457,6 +460,7 @@ export class DailyLimitedScene implements Scene {
     this.renderMainBoardFrame();
     this.applyBackButtonTexture();
     this.coinBar.refreshIcon();
+    this.renderDailyRewardHint();
     this.mountToolButtons();
   }
 
@@ -476,6 +480,7 @@ export class DailyLimitedScene implements Scene {
     await this.loadThemeAssets(level);
     this.titleText.text = level.themeName;
     this.hintText.text = level.positioningText;
+    this.renderDailyRewardHint();
     this.applyBackground();
     this.renderMainBoardFrame();
     destroyContainerChildren(this.overlayLayer);
@@ -536,13 +541,13 @@ export class DailyLimitedScene implements Scene {
     });
     this.container.addChild(this.backButtonSprite);
 
-    this.coinBar.position.set(110, top + 28);
+    this.coinBar.position.set(GAME_TOP_BAR_COIN_X, gameTopBarY(top));
     this.container.addChild(this.coinBar);
     this.coinBar.refresh();
 
     if (isWxDevtoolsSimulator()) {
       const gmClear = this.createPillButton('GM测试', 132, 48, 0xff7f50, 0x9d3b20);
-      gmClear.position.set(W - 94, top + 104);
+      gmClear.position.set(W - 94, top + 118);
       gmClear.on('pointertap', () => {
         AudioManager.playButtonSound();
         this.showGmPanel();
@@ -553,14 +558,18 @@ export class DailyLimitedScene implements Scene {
     this.titleText.text = this.level.themeName;
     this.titleText.anchor.set(0.5);
     this.titleText.resolution = 2;
-    this.titleText.position.set(W / 2, top + 72);
+    this.titleText.position.set(W / 2, top + 88);
     this.container.addChild(this.titleText);
 
     this.hintText.text = this.level.positioningText;
     this.hintText.anchor.set(0.5);
     this.hintText.resolution = 2;
-    this.hintText.position.set(W / 2, top + 122);
+    this.hintText.position.set(W / 2, top + 138);
     this.container.addChild(this.hintText);
+
+    this.dailyRewardHintRoot.position.set(W / 2, top + 176);
+    this.container.addChild(this.dailyRewardHintRoot);
+    this.renderDailyRewardHint();
 
     const boardTop = this.boardTop();
     const boardH = this.boardHeight();
@@ -612,7 +621,7 @@ export class DailyLimitedScene implements Scene {
     const target = 54;
     const scale = target / Math.max(1, Math.max(tex.width, tex.height));
     this.backButtonSprite.scale.set(scale);
-    this.backButtonSprite.position.set(58, Game.safeTop + 28);
+    this.backButtonSprite.position.set(GAME_TOP_BAR_BACK_X, gameTopBarY());
     this.backButtonSprite.hitArea = new PIXI.Circle(0, 0, 38 / Math.max(0.01, scale));
   }
 
@@ -1712,6 +1721,7 @@ export class DailyLimitedScene implements Scene {
         addCoins(rewardCoins);
         this.coinBar.refresh();
         this.coinBar.bump();
+        this.renderDailyRewardHint();
       }
       AudioManager.playBadgeUnlockSound();
     } else {
@@ -1769,6 +1779,58 @@ export class DailyLimitedScene implements Scene {
     state.claimedRecipeDateByTheme[this.level.themeId] = today;
     this.writeDailyRewardState(state);
     return true;
+  }
+
+  private isDailyFirstClearRewardAvailable(): boolean {
+    const state = this.readDailyRewardState();
+    return state.claimedRecipeDateByTheme[this.level.themeId] !== getLocalDayKey();
+  }
+
+  private renderDailyRewardHint(): void {
+    destroyContainerChildren(this.dailyRewardHintRoot);
+
+    const firstClearAvailable = this.isDailyFirstClearRewardAvailable();
+    const label = firstClearAvailable ? '当日首通奖励' : '通过奖励';
+    const coins = firstClearAvailable ? DAILY_LIMITED_CLEAR_REWARD_COINS : DAILY_LIMITED_REPEAT_CLEAR_REWARD_COINS;
+    const fontStyle = {
+      fontSize: 22,
+      fill: 0x6b3a12,
+      fontWeight: '900',
+      stroke: 0xfff6d7,
+      strokeThickness: 4,
+      lineJoin: 'round',
+    };
+
+    const labelText = new PIXI.Text(label, fontStyle);
+    const amountText = new PIXI.Text(String(coins), fontStyle);
+    labelText.anchor.set(0, 0.5);
+    amountText.anchor.set(0, 0.5);
+    labelText.resolution = 2;
+    amountText.resolution = 2;
+
+    const icon = createCoinIcon(13);
+    const textGap = 6;
+    const iconGap = 4;
+    const iconSize = 26;
+    const contentW = labelText.width + textGap + amountText.width + iconGap + iconSize;
+    const bgW = Math.ceil(contentW + 22);
+    const bgH = 30;
+
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0xfff3ca, 0.88);
+    bg.lineStyle(2, 0xffffff, 0.82);
+    bg.drawRoundedRect(-bgW / 2, -bgH / 2, bgW, bgH, bgH / 2);
+    bg.endFill();
+    bg.beginFill(0xffffff, 0.24);
+    bg.drawRoundedRect(-bgW / 2 + 8, -bgH / 2 + 4, bgW - 16, 8, 4);
+    bg.endFill();
+    this.dailyRewardHintRoot.addChild(bg);
+
+    const startX = -contentW / 2;
+    labelText.position.set(startX, 0);
+    amountText.position.set(startX + labelText.width + textGap, 0);
+    icon.position.set(amountText.x + amountText.width + iconGap + iconSize / 2, 0);
+    this.dailyRewardHintRoot.addChild(labelText, amountText, icon);
   }
 
   private completeRoundByGm(): void {
@@ -3312,7 +3374,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private boardTop(): number {
-    return Game.safeTop + 150;
+    return Game.safeTop + 204;
   }
 
   private boardHeight(): number {

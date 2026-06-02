@@ -1,0 +1,36 @@
+Reference the attached prototype header plaque layout exactly, but output ONLY the isolated top header banner asset on transparent background.
+
+Asset: milk tea shop title header plaque for mobile game HUD.
+
+Match prototype style:
+- Warm cream parchment horizontal plaque, scalloped corner notches, thin golden-orange double border.
+- Left: cute milk tea cup with boba pearls and orange fruit slices, tiny sparkles.
+- Right edge: small green leaves and orange berry decorations, tiny sparkles.
+- Overall width about 300px, height about 78px relative scale (taller than a one-line badge to fit two text rows).
+
+Layout zones (IMPORTANT — reserve empty space for programmatic overlay):
+
+1) LEFT decoration zone (~22% width): milk tea cup illustration only.
+
+2) CENTER-LEFT title zone (~38% width):
+   - Render ONLY the Chinese shop name exactly: 果茶店
+   - Bold rounded dark brown game font, cream stroke, placed in upper half of center area.
+
+3) RIGHT level badge SLOT (~18% width, upper-right of plaque interior):
+   - Draw an EMPTY rounded pill / capsule placeholder shape only.
+   - Soft cream fill, thin orange-brown outline, same style as prototype Lv badge but COMPLETELY BLANK inside.
+   - Wide enough for later text like "Lv.12" (about 60x28 relative).
+   - NO text, NO numbers, NO "Lv".
+
+4) LOWER reward text SLOT (below 果茶店, center-left area, ~40% width):
+   - Leave a clean flat empty cream area for one short line of dynamic text like "通关 +36".
+   - NO text, NO numbers, NO coin icon, NO inner box frame, NO groove, NO slot border.
+   - Just visually balanced empty space under the title, same vertical position as prototype secondary line.
+
+Strict constraints:
+- ONLY baked text: 果茶店 (three Chinese characters).
+- NO Lv text, NO reward text, NO numbers, NO English except none at all.
+- NO progress bar, NO inner panels, NO thick frames around the empty slots.
+- Transparent background outside plaque.
+- Single centered asset with generous transparent padding.
+- Not a phone screenshot, not the popover card below, header banner ONLY.

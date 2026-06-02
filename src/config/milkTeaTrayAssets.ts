@@ -13,6 +13,7 @@ export const MILK_TEA_DEMO_TEXTURE_KEYS = {
   orderCheck: 'milk_tea_demo_order_check',
   orderBag: 'milk_tea_demo_order_bag',
   shopStatusFrame: 'milk_tea_demo_shop_status_frame',
+  shopLevelInfoPanel: 'milk_tea_demo_shop_level_info_panel',
   resultPanelClear: 'milk_tea_demo_result_panel_clear',
   resultPanelLevelUp: 'milk_tea_demo_result_panel_level_up',
   resultPanelFail: 'milk_tea_demo_result_panel_fail',
@@ -33,6 +34,35 @@ export function milkTeaDemoDrinkImagePath(themeId: string): string {
   return `${MILK_TEA_DEMO_IMAGES_ROOT}/drinks/${themeId}.png`;
 }
 
+/**
+ * 果茶店局内杯身贴图覆盖（仅 milkTeaTrayDemo 使用，不影响每日限定）。
+ * key = 饮品 themeId；value = 实际加载的 drinks/{themeId}.png。
+ *
+ * | 饮品（显示名不变） | 原图相近点 | 改用贴图 |
+ * |---|---|---|
+ * | 蓝莓气泡茶 | 与蓝莓桑葚/葡萄系紫蓝杯相近 | papaya_milk |
+ * | 蓝莓桑葚茶 | 紫浆果杯与多肉葡萄相近 | pomegranate_ice_tea |
+ * | 芒果香蕉冰饮 | 黄杯与芒果绿茶/菠萝系重复 | cantaloupe_oat_latte |
+ * | 芒果绿茶 | 黄块杯与菠萝/香蕉系重复 | snow_pear_lily_tea |
+ * | 菠萝椰子茶 | 黄杯+白块与菠萝冰相近 | cucumber_pear_juice |
+ * | 荔枝玫瑰茶 | 粉杯与多肉桃桃相近 | lychee_dragonfruit_drink |
+ * | 柠檬蜂蜜红茶 | 黄柠杯与百香果爆柠檬相近 | apple_ginger_tea |
+ */
+export const MILK_TEA_SHOP_DRINK_TEXTURE_OVERRIDES: Readonly<Record<string, string>> = {
+  blueberry_soda_tea: 'papaya_milk',
+  blueberry_mulberry_tea: 'pomegranate_ice_tea',
+  mango_banana_smoothie: 'cantaloupe_oat_latte',
+  mango_green_tea: 'snow_pear_lily_tea',
+  pineapple_coconut_tea: 'cucumber_pear_juice',
+  lychee_rose_tea: 'lychee_dragonfruit_drink',
+  lemon_honey_black_tea: 'apple_ginger_tea',
+};
+
+export function milkTeaShopDrinkTextureKey(themeId: string): string {
+  const resolved = MILK_TEA_SHOP_DRINK_TEXTURE_OVERRIDES[themeId] ?? themeId;
+  return milkTeaDemoDrinkTextureKey(resolved);
+}
+
 export const MILK_TEA_DEMO_PRELOAD_PATHS: ReadonlyArray<{ key: string; path: string }> = [
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.pageBg, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/page_bg.jpg` },
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.emptyTray, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/empty_tray.png` },
@@ -43,6 +73,7 @@ export const MILK_TEA_DEMO_PRELOAD_PATHS: ReadonlyArray<{ key: string; path: str
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.orderCheck, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/ui/order_check.png` },
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.orderBag, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/ui/order_bag.png` },
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.shopStatusFrame, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/ui/shop_status_frame.png` },
+  { key: MILK_TEA_DEMO_TEXTURE_KEYS.shopLevelInfoPanel, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/ui/shop_level_info_panel.png` },
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.resultPanelClear, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/ui/result_panel_clear.png` },
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.resultPanelLevelUp, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/ui/result_panel_level_up.png` },
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.resultPanelFail, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/ui/result_panel_fail.png` },

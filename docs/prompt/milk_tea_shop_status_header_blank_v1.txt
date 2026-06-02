@@ -1,0 +1,24 @@
+Single game UI asset PNG for a WeChat mini game milk tea shop top header plaque.
+
+Asset type: horizontal decorative title banner / shop sign panel only.
+
+Visual style:
+- Soft cute 2D mobile game UI, warm cream parchment and honey-gold orange palette.
+- Rounded horizontal plaque with elegant scalloped corner notches, thin golden-orange double border.
+- Left edge: small cute milk tea cup with boba pearls and orange fruit slices, tiny sparkles.
+- Right edge: small green leaves and orange berry decorations, tiny sparkles.
+- Center area must stay clean and flat for dynamic UI overlay later.
+
+Text (ONLY this, exactly three Chinese characters):
+- 果茶店
+- Bold rounded Chinese title font, dark warm brown fill, soft cream stroke, slightly bouncy cute game typography.
+- Center the three characters prominently in the plaque.
+
+Strict constraints:
+- EXACTLY these three characters only: 果茶店
+- NO other Chinese text, NO English, NO numbers, NO "Lv", NO reward text, NO progress text.
+- NO inner boxes, NO inner frames, NO grooves, NO slots, NO badge shapes, NO secondary text areas, NO progress bar track.
+- NO watermark, NO logo, NO QR code.
+- Transparent background outside the plaque.
+- Single centered asset with generous transparent padding around it.
+- Not a full phone screenshot; just the isolated UI plaque on transparent background.

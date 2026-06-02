@@ -1,0 +1,19 @@
+Single game UI asset PNG for a WeChat mini game milk tea shop level info popover panel.
+
+Asset type: small floating tooltip card with a tiny upward triangle pointer at top center, meant to hang below a header button.
+
+Visual style:
+- Soft cute 2D mobile game UI, warm cream and honey-gold orange palette.
+- Rounded rectangle card, width slightly wider than a header banner, height around 110px relative scale.
+- Thin golden-orange border, subtle cream inner highlight.
+- Small triangle tab/pointer on top edge pointing upward.
+- Tiny decorative green leaves in bottom corners and a few small orange sparkles near corners only.
+- The entire interior must be one clean empty flat cream surface for programmatic text overlay.
+
+Strict constraints:
+- NO TEXT of any kind. Absolutely no Chinese, no English, no numbers.
+- NO progress bar, NO progress track, NO coin icon, NO divider line, NO dotted line, NO inner boxes, NO grooves, NO slots, NO labels, NO placeholder text.
+- NO watermark, NO logo, NO QR code.
+- Transparent background outside the card.
+- Single centered asset with generous transparent padding around it.
+- Not a full phone screenshot; just the isolated empty popover panel on transparent background.

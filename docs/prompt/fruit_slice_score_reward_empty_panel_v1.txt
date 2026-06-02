@@ -1,0 +1,28 @@
+Generate a single horizontal UI panel asset for a cute 2D mobile fruit slicing game.
+
+Reference style:
+- Match the current fruit slicing game UI style.
+- Use the provided references: the old green score pills and the proposed wooden/golden panel style.
+- The new asset should replace the old green score strip, so it must stay compact and low-height.
+
+Asset requirements:
+- One long horizontal header panel, about 6.5:1 to 7.5:1 aspect ratio.
+- Height should feel close to the original green score pills, not a tall banner.
+- Clean game UI asset only, centered on a transparent or plain light background.
+- Cute polished 2D style, warm wood frame with cream inner cards, green leaf accents, small citrus/fruit decoration.
+- Three connected sections:
+  1. left section label: 当前分数
+  2. center section label: 预计奖励
+  3. right section label: 最高分
+- Center "预计奖励" section should be slightly more eye-catching with warm yellow/gold fill, but still compact.
+- Leave clear empty space under each label for runtime numbers to be placed by the game later.
+- Do NOT include any score numbers.
+- Do NOT include any coin icons.
+- Do NOT include any extra text besides exactly these three labels: 当前分数, 预计奖励, 最高分.
+- No English letters, no watermark, no QR code, no logo, no app store badge.
+
+Layout details:
+- Labels should be near the top of each section, readable but not too large.
+- Empty numeric areas should be obvious and clean, with no placeholder digits.
+- The whole panel should be horizontally balanced and suitable for overlaying dynamic text later.
+- Keep edges rounded and soft, consistent with casual fruit game art.

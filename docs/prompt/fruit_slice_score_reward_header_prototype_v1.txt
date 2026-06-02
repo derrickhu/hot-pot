@@ -1,0 +1,30 @@
+Create a polished mobile game UI mockup prototype for the existing "fruit slice" mini game header area.
+
+Use the provided screenshot as the layout reference: portrait phone screen, blue sky background, cute fruit-slicing game, rounded top safe area, existing coin bar on the upper left, WeChat capsule on the upper right, title "果切无尽" centered near the top.
+
+Main design task:
+Redesign the score header strip under the title. Replace the current plain white score strip with a coordinated cute game UI panel that clearly shows:
+1. Current score: label "当前分数" and a large changing number, example "1280".
+2. Expected coin reward: label "预计奖励" and a large number with a gold coin icon, example "12".
+3. Highest score: label "最高分" and a number, example "1883".
+
+Visual style:
+- Cute casual 2D mobile game style, matching the existing fruit game.
+- Warm wooden signboard frame or soft cream rounded card with green/yellow fruit accents.
+- Use small gold coin icon next to the reward number.
+- Make "预计奖励" the most eye-catching middle item, with a golden glow, coin icon, or slightly larger pill.
+- Current score and highest score should be readable but slightly secondary.
+- Keep the top safe area clean; do not overlap the title, coin bar, or WeChat capsule.
+- Header should be compact, about 70-90 px tall in a 750x1334 game screen, leaving enough room for fruit gameplay below.
+- Use Chinese UI text exactly: 当前分数, 预计奖励, 最高分.
+- No English text, no watermarks, no QR codes, no app store badges.
+
+Composition:
+- Portrait 9:16 UI mockup.
+- Top area from top to bottom:
+  - existing game title "果切无尽"
+  - redesigned reward score panel directly below, centered and spanning most screen width
+  - fruit gameplay area begins below with falling fruit icons
+- The redesigned panel should feel integrated, not like a developer/debug overlay.
+
+Output should be a single coherent UI prototype image, not a sprite sheet.

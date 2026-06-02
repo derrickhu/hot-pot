@@ -13,6 +13,7 @@ import {
   createCoinIcon,
 } from '@/gameobjects/CoinBar';
 import { TextureCache } from '@/utils/TextureCache';
+import { gameTopBarY, GAME_TOP_BAR_BACK_X, GAME_TOP_BAR_COIN_X } from '@/utils/gameTopBarLayout';
 import {
   loadBowlSubpackage,
   loadGachaAssetsSubpackage,
@@ -284,7 +285,7 @@ export class GachaScene implements Scene {
     this.container.addChild(this.bgRoot);
 
     /** 返回按钮：贴图 + 矢量兜底两套都先挂上，applyBackButtonTexture 决定哪个可见 */
-    this.layoutBackButton(58, top + 28, 96, 54);
+    this.layoutBackButton(GAME_TOP_BAR_BACK_X, gameTopBarY(top), 96, 54);
     this.container.addChild(this.backButtonRoot);
 
     /** 标题：贴图 + 矢量兜底 */
@@ -311,9 +312,9 @@ export class GachaScene implements Scene {
     this.titleSprite.visible = false;
     this.container.addChild(this.titleSprite);
 
-    this.coinBar.position.set(110, top + 28);
+    this.coinBar.position.set(GAME_TOP_BAR_COIN_X, gameTopBarY(top));
     this.container.addChild(this.coinBar);
-    this.mountGmCoinButton(250, top + 28);
+    this.mountGmCoinButton(250, gameTopBarY(top));
 
     /** 扭蛋机三层：machineBackSprite -> domeBallsLayer(罩内彩球) -> 可选 overlay */
     const machineCenterY = H * 0.42;
