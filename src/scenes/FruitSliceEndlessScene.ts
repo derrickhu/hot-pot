@@ -50,7 +50,6 @@ import { TextureCache } from '@/utils/TextureCache';
 import { FRUIT_SLICE_REWARDED_AD_UNIT_ID, showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { isFruitSliceTutorialDone, markFruitSliceTutorialDone } from '@/utils/tutorialState';
 import { shareGame } from '@/utils/wechatShare';
-import { gameTopBarY, GAME_TOP_BAR_BACK_X, GAME_TOP_BAR_COIN_X } from '@/utils/gameTopBarLayout';
 import { sampleEdgeAt, sampleTextureTopEdge, type TextureTopEdge } from '@/utils/textureTopEdge';
 
 type FruitPhysicsState = 'fixed' | 'falling' | 'settled' | 'enteringPipe' | 'pipe';
@@ -122,7 +121,7 @@ const UI_PANEL_FREE_BTN_TEXTURE = `${BOWL_IMAGES_ROOT}/ui_panel_free_btn.png`;
 const FRUIT_SLICE_TOOL_ROUND_LIMIT = 2;
 const FRUIT_SLICE_UI_ASSETS = {
   bg: `${FRUIT_SLICE_UI_DIR}/bg.jpg`,
-  scorePanel: `${FRUIT_SLICE_UI_DIR}/score_reward_panel_v1.png`,
+  scorePanel: `${FRUIT_SLICE_UI_DIR}/score_panel.png`,
   toolButtons: `${FRUIT_SLICE_UI_DIR}/tool_buttons.png`,
   slantedBoardLeft: `${FRUIT_SLICE_UI_DIR}/slanted_board_left.png`,
   slantedBoardRight: `${FRUIT_SLICE_UI_DIR}/slanted_board_right.png`,
@@ -213,6 +212,7 @@ export class FruitSliceEndlessScene implements Scene {
   private readonly bgSprite = new PIXI.Sprite();
   private readonly boardLeftSprite = new PIXI.Sprite();
   private readonly boardRightSprite = new PIXI.Sprite();
+  private readonly titleLogoSprite = new PIXI.Sprite();
   private readonly backButtonSprite = new PIXI.Sprite();
   private readonly pipeKnifeSprite = new PIXI.Sprite();
   private readonly pipeWoodBlockSprite = new PIXI.Sprite();
@@ -230,10 +230,7 @@ export class FruitSliceEndlessScene implements Scene {
   private readonly toolShuffleSprite = new PIXI.Sprite();
   private readonly fruitToolInventoryBadges: PIXI.Container[] = [];
   private readonly fruitToolInventoryBadgeTexts: PIXI.Text[] = [];
-  private readonly scoreRewardPanelRoot = new PIXI.Container();
-  private readonly scoreRewardPanelSprite = new PIXI.Sprite();
-  private readonly rewardValueRoot = new PIXI.Container();
-  private rewardCoinIcon: PIXI.Container | null = null;
+  private readonly scorePanelSprites: PIXI.Sprite[] = [];
   private readonly coinBar = new CoinBar();
   private readonly fruits: FruitSliceNode[] = [];
   private readonly pipeStack: PipeEntry[] = [];
@@ -242,7 +239,6 @@ export class FruitSliceEndlessScene implements Scene {
   private displayedScore = 0;
   private scoreLabelPulseT = 0;
   private scoreLabelPulseDur = 0;
-  private rewardLabel!: PIXI.Text;
   private bestLabel!: PIXI.Text;
   private stageLabel!: PIXI.Text;
   private endOverlay: PIXI.Container | null = null;
@@ -486,8 +482,9 @@ export class FruitSliceEndlessScene implements Scene {
     }
     const scorePanel = TextureCache.get('fruit_slice_ui_score_panel');
     if (scorePanel) {
-      this.scoreRewardPanelSprite.texture = scorePanel;
-      this.layoutScoreRewardPanel();
+      for (const sprite of this.scorePanelSprites) {
+        sprite.texture = scorePanel;
+      }
     }
     const knife = TextureCache.get('fruit_slice_ui_horizontal_knife');
     if (knife) {
@@ -497,6 +494,11 @@ export class FruitSliceEndlessScene implements Scene {
     if (woodBlock) {
       this.pipeWoodBlockSprite.texture = woodBlock;
       this.pipeWoodBlockSprite2.texture = woodBlock;
+    }
+    const titleLogo = TextureCache.get('fruit_slice_ui_title_logo');
+    if (titleLogo) {
+      this.titleLogoSprite.texture = titleLogo;
+      this.layoutTitleLogo();
     }
     const backButton = TextureCache.get('fruit_slice_ui_back_button');
     if (backButton) {
@@ -512,20 +514,7 @@ export class FruitSliceEndlessScene implements Scene {
     this.applyToolHelpFreeButtonTexture();
     this.coinBar.refreshIcon();
     this.coinBar.refresh();
-    this.refreshRewardCoinIcon();
-    this.layoutScoreRewardPanel();
     this.refreshSlantedBoardLayout();
-  }
-
-  private refreshRewardCoinIcon(): void {
-    if (this.rewardCoinIcon) {
-      this.rewardValueRoot.removeChild(this.rewardCoinIcon);
-      this.rewardCoinIcon.destroy({ children: true });
-      this.rewardCoinIcon = null;
-    }
-    this.rewardCoinIcon = createCoinIcon(14);
-    this.rewardValueRoot.addChild(this.rewardCoinIcon);
-    this.layoutRewardValueRow();
   }
 
   private mountUiBackground(W: number, H: number): void {
@@ -1117,7 +1106,7 @@ export class FruitSliceEndlessScene implements Scene {
     this.redrawGridWarningLine();
     this.container.addChild(this.gridWarningLine);
     this.drawHud(W, H, top, headerH, cliffTop, cliffBottom);
-    this.coinBar.position.set(GAME_TOP_BAR_COIN_X, gameTopBarY(top));
+    this.coinBar.position.set(110, top + 28);
     this.container.addChild(this.coinBar);
     this.coinBar.refresh();
     this.mountToolButtons();
@@ -1129,7 +1118,13 @@ export class FruitSliceEndlessScene implements Scene {
   }
 
   private drawHud(W: number, _H: number, top: number, headerH: number, cliffTop: number, _cliffBottom: number): void {
-    this.mountScoreRewardPanel(W / 2, top + 100);
+    const leftPill = this.createInfoPill(W * 0.28, top + 100, '分数');
+    this.scoreLabel = leftPill.value;
+    this.container.addChild(leftPill.root);
+
+    const rightPill = this.createInfoPill(W * 0.72, top + 100, '最高');
+    this.bestLabel = rightPill.value;
+    this.container.addChild(rightPill.root);
 
     this.backButtonSprite.anchor.set(0.5);
     this.backButtonSprite.eventMode = 'static';
@@ -1148,8 +1143,12 @@ export class FruitSliceEndlessScene implements Scene {
     });
     this.container.addChild(this.backButtonSprite);
 
+    this.titleLogoSprite.anchor.set(0.5);
+    this.layoutTitleLogo();
+    this.container.addChild(this.titleLogoSprite);
+
     this.stageLabel = new PIXI.Text('', {
-      fontSize: 26,
+      fontSize: 21,
       fill: 0xfff2ba,
       fontWeight: '900',
       dropShadow: true,
@@ -1157,23 +1156,23 @@ export class FruitSliceEndlessScene implements Scene {
       dropShadowBlur: 2,
       dropShadowDistance: 1,
       stroke: 0x315a6d,
-      strokeThickness: 4,
+      strokeThickness: 3,
       lineJoin: 'round',
     });
     this.stageLabel.anchor.set(0.5);
-    this.stageLabel.position.set(W / 2, gameTopBarY(top));
+    this.stageLabel.position.set(W / 2, top + 66);
     this.container.addChild(this.stageLabel);
   }
 
-  private createTitleLogoSprite(targetW = 200): PIXI.Sprite | null {
-    const tex = TextureCache.get('fruit_slice_ui_title_logo');
-    if (!tex) {
-      return null;
+  private layoutTitleLogo(): void {
+    const tex = this.titleLogoSprite.texture;
+    if (!tex || tex === PIXI.Texture.EMPTY) {
+      return;
     }
-    const logo = new PIXI.Sprite(tex);
-    logo.anchor.set(0.5);
-    logo.scale.set(targetW / Math.max(1, tex.width));
-    return logo;
+    const targetW = 170;
+    const scale = targetW / Math.max(1, tex.width);
+    this.titleLogoSprite.scale.set(scale);
+    this.titleLogoSprite.position.set(Game.logicWidth / 2, Game.safeTop + 28);
   }
 
   private layoutBackButton(): void {
@@ -1184,7 +1183,7 @@ export class FruitSliceEndlessScene implements Scene {
     const target = 54;
     const scale = target / Math.max(1, Math.max(tex.width, tex.height));
     this.backButtonSprite.scale.set(scale);
-    this.backButtonSprite.position.set(GAME_TOP_BAR_BACK_X, gameTopBarY());
+    this.backButtonSprite.position.set(58, Game.safeTop + 28);
     // hitArea 使用精灵本地坐标；按钮被缩放后要反向放大命中半径。
     this.backButtonSprite.hitArea = new PIXI.Circle(0, 0, 38 / Math.max(0.01, scale));
   }
@@ -1739,93 +1738,38 @@ export class FruitSliceEndlessScene implements Scene {
     });
   }
 
-  private mountScoreRewardPanel(x: number, y: number): void {
-    this.scoreRewardPanelRoot.position.set(x, y);
-    this.scoreRewardPanelSprite.anchor.set(0.5);
-    this.scoreRewardPanelRoot.addChild(this.scoreRewardPanelSprite);
-
-    const sideValueStyle = {
-      fontSize: 34,
-      fill: 0xff4018,
+  private createInfoPill(x: number, y: number, label: string): { root: PIXI.Container; value: PIXI.Text } {
+    const root = new PIXI.Container();
+    root.position.set(x, y);
+    const bg = new PIXI.Sprite();
+    bg.anchor.set(0.5);
+    bg.width = 220;
+    bg.height = 62;
+    this.scorePanelSprites.push(bg);
+    root.addChild(bg);
+    const title = new PIXI.Text(label, {
+      fontSize: 22,
+      fill: 0xffffff,
       fontWeight: '900',
-      stroke: 0xffffff,
-      strokeThickness: 5,
+      stroke: 0x2c6a28,
+      strokeThickness: 4,
       lineJoin: 'round',
-      dropShadow: true,
-      dropShadowColor: 0x8a2200,
-      dropShadowBlur: 1,
-      dropShadowDistance: 2,
-    } as const;
-    const rewardValueStyle = {
-      fontSize: 36,
-      fill: 0xff9a00,
+    });
+    title.anchor.set(0.5);
+    title.position.set(-56, -1);
+    root.addChild(title);
+    const value = new PIXI.Text('0', {
+      fontSize: 24,
+      fill: 0xfffef0,
       fontWeight: '900',
-      stroke: 0xffffff,
-      strokeThickness: 5,
+      stroke: 0x31551d,
+      strokeThickness: 3,
       lineJoin: 'round',
-      dropShadow: true,
-      dropShadowColor: 0x8a4a00,
-      dropShadowBlur: 1,
-      dropShadowDistance: 2,
-    } as const;
-    const bestValueStyle = {
-      fontSize: 34,
-      fill: 0x0088ff,
-      fontWeight: '900',
-      stroke: 0xffffff,
-      strokeThickness: 5,
-      lineJoin: 'round',
-      dropShadow: true,
-      dropShadowColor: 0x004a8a,
-      dropShadowBlur: 1,
-      dropShadowDistance: 2,
-    } as const;
-
-    this.scoreLabel = new PIXI.Text('0', sideValueStyle);
-    this.scoreLabel.anchor.set(0.5);
-    this.scoreLabel.resolution = 2;
-
-    this.rewardLabel = new PIXI.Text('0', rewardValueStyle);
-    this.rewardLabel.anchor.set(0.5);
-    this.rewardLabel.resolution = 2;
-    this.refreshRewardCoinIcon();
-    this.rewardValueRoot.addChild(this.rewardLabel);
-
-    this.bestLabel = new PIXI.Text('0', bestValueStyle);
-    this.bestLabel.anchor.set(0.5);
-    this.bestLabel.resolution = 2;
-
-    this.scoreRewardPanelRoot.addChild(this.scoreLabel, this.rewardValueRoot, this.bestLabel);
-    this.container.addChild(this.scoreRewardPanelRoot);
-    this.layoutScoreRewardPanel();
-  }
-
-  private layoutScoreRewardPanel(): void {
-    const tex = this.scoreRewardPanelSprite.texture;
-    if (!tex || tex === PIXI.Texture.EMPTY) {
-      return;
-    }
-    const targetW = Game.logicWidth - 170;
-    const scale = targetW / tex.width;
-    this.scoreRewardPanelSprite.scale.set(scale);
-    const panelHalfW = (tex.width * scale) / 2;
-    const valueY = 10;
-    this.scoreLabel.position.set(-panelHalfW * 0.62, valueY);
-    this.rewardValueRoot.position.set(0, valueY + 2);
-    this.bestLabel.position.set(panelHalfW * 0.62, valueY);
-    this.layoutRewardValueRow();
-  }
-
-  private layoutRewardValueRow(): void {
-    if (!this.rewardCoinIcon) {
-      return;
-    }
-    const gap = 4;
-    const iconW = 28;
-    const textW = this.rewardLabel.width;
-    const totalW = textW + gap + iconW;
-    this.rewardLabel.position.set(-totalW / 2 + textW / 2, 0);
-    this.rewardCoinIcon.position.set(totalW / 2 - iconW / 2, 0);
+    });
+    value.anchor.set(0.5);
+    value.position.set(54, -1);
+    root.addChild(value);
+    return { root, value };
   }
 
   private getBestResumeCheckpoint(): number | null {
@@ -1868,19 +1812,6 @@ export class FruitSliceEndlessScene implements Scene {
     dim.endFill();
     root.addChild(dim);
 
-    const panelCenterY = H / 2;
-    const modeLogo = this.createTitleLogoSprite(278);
-    if (modeLogo) {
-      const scorePanelBottom = Game.safeTop + 100 + 44;
-      const panelTopY = panelCenterY - H * 0.22;
-      const gap = panelTopY - scorePanelBottom;
-      const logoHalfH = Math.abs(modeLogo.height * modeLogo.scale.y) / 2;
-      const idealY = scorePanelBottom + Math.max(32, gap * 0.78);
-      const logoY = Math.min(idealY, panelTopY - logoHalfH - 10);
-      modeLogo.position.set(W / 2, logoY);
-      root.addChild(modeLogo);
-    }
-
     const panelTex = TextureCache.get('fruit_slice_ui_generic_panel');
     if (panelTex) {
       const panel = new PIXI.Sprite(panelTex);
@@ -1889,7 +1820,7 @@ export class FruitSliceEndlessScene implements Scene {
       const targetH = H * 0.44;
       const s = Math.min(targetW / panelTex.width, targetH / panelTex.height);
       panel.scale.set(s);
-      panel.position.set(W / 2, panelCenterY);
+      panel.position.set(W / 2, H / 2);
       root.addChild(panel);
     } else {
       const panel = new PIXI.Graphics();
@@ -1897,7 +1828,7 @@ export class FruitSliceEndlessScene implements Scene {
       panel.lineStyle(5, 0x8d5a2b, 1);
       panel.drawRoundedRect(-224, -180, 448, 360, 30);
       panel.endFill();
-      panel.position.set(W / 2, panelCenterY);
+      panel.position.set(W / 2, H / 2);
       root.addChild(panel);
     }
 
@@ -1910,7 +1841,7 @@ export class FruitSliceEndlessScene implements Scene {
       lineJoin: 'round',
     });
     title.anchor.set(0.5);
-    title.position.set(W / 2, H / 2 - 214);
+    title.position.set(W / 2, H / 2 - 209);
     root.addChild(title);
 
     const checkpointStageLabel = this.getFruitSliceStageLabelForScore(checkpoint);
@@ -3935,9 +3866,6 @@ export class FruitSliceEndlessScene implements Scene {
 
   private updateHud(): void {
     this.scoreLabel.text = String(this.displayedScore);
-    const rewardTier = fruitSliceCoinsForScore(this.displayedScore);
-    this.rewardLabel.text = String(rewardTier?.coins ?? 0);
-    this.layoutRewardValueRow();
     this.bestLabel.text = String(Math.max(this.bestScore, this.displayedScore));
     const stage = FRUIT_SLICE_STAGES[this.currentStageIndex] ?? FRUIT_SLICE_STAGES[0]!;
     this.stageLabel.text = stage.label;

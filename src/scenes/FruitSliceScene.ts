@@ -7,7 +7,6 @@ import { FRUIT_CONFIGS, type FruitConfig, type FruitId } from '@/config/fruits';
 import { fruitSliceWholeTextureKey, FRUIT_SLICE_IDS, FRUIT_SLICE_WHOLE_PATH } from '@/config/fruitSliceWhole';
 import { loadCatalogAssetsSubpackage } from '@/utils/loadBowlSubpackage';
 import { TextureCache } from '@/utils/TextureCache';
-import { gameTopBarY, GAME_TOP_BAR_BACK_X } from '@/utils/gameTopBarLayout';
 
 type FruitSliceNode = PIXI.Container & { fruitId: FruitId };
 const FRUIT_SLICE_ID_SET = new Set<FruitId>(FRUIT_SLICE_IDS);
@@ -138,7 +137,7 @@ export class FruitSliceScene implements Scene {
     this.container.addChild(headerBar);
 
     const backBtn = new PIXI.Container();
-    backBtn.position.set(GAME_TOP_BAR_BACK_X, gameTopBarY(top));
+    backBtn.position.set(44, top + 28);
     backBtn.eventMode = 'static';
     backBtn.cursor = 'pointer';
     const backBg = new PIXI.Graphics();
