@@ -143,13 +143,17 @@ export function shareGameForReward(options: SharePayloadOptions = {}): Promise<S
     return Promise.resolve('unavailable');
   }
 
+  const query = options.query ?? SHARE_REWARD_QUERY;
   const payload = buildSharePayload({
     title: options.title ?? '我刚解锁新徽章，送你一碗水果捞！',
     imageUrl: options.imageUrl,
-    query: SHARE_REWARD_QUERY,
+    query,
   });
-  trackShareAppMessage(payload, 'badge_unlock_reward', {
-    reward_type: 'remove',
+  const entryPoint = query.includes('milk_tea_shop_clear')
+    ? 'milk_tea_shop_clear_reward'
+    : 'badge_unlock_reward';
+  trackShareAppMessage(payload, entryPoint, {
+    reward_type: query.includes('milk_tea_shop_clear') ? 'coins' : 'remove',
     daily_claimed: false,
   });
 

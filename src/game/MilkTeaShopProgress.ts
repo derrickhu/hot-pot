@@ -1,6 +1,9 @@
 import { MILK_TEA_SHOP_PROGRESS_KEY } from '@/config/CloudConfig';
 import { getMilkTeaShopLevelDef, MILK_TEA_SHOP_MAX_LEVEL } from '@/config/milkTeaShopLevels';
+import { addCoins } from '@/game/Wallet';
 import { PersistService } from '@/core/PersistService';
+
+export const MILK_TEA_SHOP_DAILY_SHARE_REWARD_COINS = 10;
 
 export interface MilkTeaShopProgressState {
   shopLevel: number;
@@ -8,6 +11,7 @@ export interface MilkTeaShopProgressState {
   totalClears: number;
   dailyClears: number;
   lastPlayDate: string;
+  lastShareRewardDate: string;
 }
 
 const DEFAULT_STATE: MilkTeaShopProgressState = {
@@ -16,6 +20,7 @@ const DEFAULT_STATE: MilkTeaShopProgressState = {
   totalClears: 0,
   dailyClears: 0,
   lastPlayDate: '',
+  lastShareRewardDate: '',
 };
 
 export interface MilkTeaShopClearApplyResult {
@@ -55,6 +60,7 @@ export function applyMilkTeaShopClear(): MilkTeaShopClearApplyResult {
     totalClears: current.totalClears + 1,
     dailyClears: current.dailyClears + 1,
     lastPlayDate: today,
+    lastShareRewardDate: current.lastShareRewardDate,
   };
   writeMilkTeaShopProgress(next);
   return {
@@ -66,6 +72,25 @@ export function applyMilkTeaShopClear(): MilkTeaShopClearApplyResult {
 
 export function resetMilkTeaShopProgress(): void {
   writeMilkTeaShopProgress(DEFAULT_STATE);
+}
+
+export function canClaimMilkTeaShopDailyShareReward(): boolean {
+  return readMilkTeaShopProgress().lastShareRewardDate !== todayKey();
+}
+
+/** 分享奖励：每日一次 +10 金币；已领取则返回 null。 */
+export function claimMilkTeaShopDailyShareReward(): number | null {
+  const today = todayKey();
+  const current = readMilkTeaShopProgress();
+  if (current.lastShareRewardDate === today) {
+    return null;
+  }
+  writeMilkTeaShopProgress({
+    ...current,
+    lastShareRewardDate: today,
+  });
+  addCoins(MILK_TEA_SHOP_DAILY_SHARE_REWARD_COINS);
+  return MILK_TEA_SHOP_DAILY_SHARE_REWARD_COINS;
 }
 
 function writeMilkTeaShopProgress(next: MilkTeaShopProgressState): void {
@@ -94,6 +119,7 @@ function normalizeState(input: Partial<MilkTeaShopProgressState>): MilkTeaShopPr
     totalClears: normalizeCount(input.totalClears),
     dailyClears: normalizeCount(input.dailyClears),
     lastPlayDate: typeof input.lastPlayDate === 'string' ? input.lastPlayDate : '',
+    lastShareRewardDate: typeof input.lastShareRewardDate === 'string' ? input.lastShareRewardDate : '',
   };
 }
 

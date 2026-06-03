@@ -1,0 +1,26 @@
+4:3 horizontal WeChat mini game share-card illustration for a casual fruit tea shop management game. Output 1K, will later be center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+Art style:
+- Cute 2D hand-painted casual mobile game, warm cream / honey / peach / mint palette matching a fruit tea shop tray game.
+- Strong clean dark brown outlines, soft cel shading, bright saturated colors, readable at small chat thumbnail size.
+- Important elements in center 84% safe area (outer 8% may be cropped).
+
+Composition (left to right, full bleed warm shop atmosphere):
+- Background: cozy fruit tea shop counter, soft bamboo wall, warm bokeh lights, subtle sparkle stars.
+- Center hero: cream-colored drink tray with six cup slots (3x2), filled with colorful fruit tea cups (pink strawberry, yellow mango, purple grape, green kiwi, orange passionfruit) — shows the core "arrange drinks on tray" gameplay.
+- Left side: cute order panel with checkmarks and a paper order bag sliding out with motion streaks (express "complete orders fast").
+- Right side: floating gold coins and a small "+42" style coin burst (no exact numbers required, just coin sparkle energy).
+- Top area: large bold Chinese title EXACTLY four characters: 果茶过关
+  - bright YELLOW fill, RED-ORANGE outline, dark brown outer outline, soft drop shadow, bouncy baseline
+- Below title: second line EXACTLY eight characters: 脑子好用等你来战
+  - smaller cream-white fill, red outline, readable
+
+Action energy:
+- Soft sparkle stars, light bulb or puzzle-piece accents hinting smart planning (NOT speed lines).
+- One cute smiling bubble-tea mascot cup with blush cheeks cheering.
+- Feeling: player outsmarted the orders and cleared a hard round, inviting friends to try their brain.
+
+Strict constraints:
+- Generate ONLY these Chinese strings exactly: 果茶过关 脑子好用等你来战
+- NO English letters, NO numbers, NO watermark, NO QR code, NO app store badges, NO phone frame.
+- Single coherent illustration, not a collage of separate photos.

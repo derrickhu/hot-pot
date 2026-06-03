@@ -1,8 +1,10 @@
 import * as PIXI from 'pixi.js';
 import { DAILY_LIMITED_LEVELS } from '@/config/dailyLimitedLevels';
+import { pickMilkTeaShopClearShareTitle } from '@/config/milkTeaShopShare';
 import {
   MILK_TEA_DEMO_PRELOAD_PATHS,
   MILK_TEA_DEMO_TEXTURE_KEYS,
+  MILK_TEA_SHOP_CLEAR_SHARE_CARD_PATH,
   milkTeaShopDrinkTextureKey,
 } from '@/config/milkTeaTrayAssets';
 import { getMilkTeaShopLevelDef, type MilkTeaShopLevelDef } from '@/config/milkTeaShopLevels';
@@ -12,7 +14,12 @@ import { Haptics } from '@/core/Haptics';
 import type { Scene } from '@/core/SceneManager';
 import { SceneManager } from '@/core/SceneManager';
 import { analytics } from '@/analytics';
-import { readMilkTeaShopProgress } from '@/game/MilkTeaShopProgress';
+import {
+  canClaimMilkTeaShopDailyShareReward,
+  claimMilkTeaShopDailyShareReward,
+  MILK_TEA_SHOP_DAILY_SHARE_REWARD_COINS,
+  readMilkTeaShopProgress,
+} from '@/game/MilkTeaShopProgress';
 import { settleMilkTeaShopRound, type MilkTeaShopRoundRewardResult } from '@/game/MilkTeaShopRewards';
 import { getCoinBalance, spendCoins } from '@/game/Wallet';
 import { CoinBar, COIN_ICON_TEXTURE_KEY, COIN_ICON_TEXTURE_PATH, createCoinIcon } from '@/gameobjects/CoinBar';
@@ -24,7 +31,7 @@ import {
 import { loadBowlSubpackage, loadMilkTeaDemoSubpackage } from '@/utils/loadBowlSubpackage';
 import { MILK_TEA_SHOP_REWARDED_AD_UNIT_ID, showRewardedAd, warmupRewardedAd } from '@/utils/rewardedAd';
 import { TextureCache } from '@/utils/TextureCache';
-import { shareGame } from '@/utils/wechatShare';
+import { shareGameForReward } from '@/utils/wechatShare';
 import { gameTopBarY, GAME_TOP_BAR_BACK_X, GAME_TOP_BAR_COIN_X } from '@/utils/gameTopBarLayout';
 import { isWxDevtoolsSimulator } from '@/utils/wxMinigameEnv';
 
@@ -679,9 +686,12 @@ export class MilkTeaTrayDemoScene implements Scene {
   }
 
   private createInitialCellBlocker(levelDef: MilkTeaShopLevelDef, row: number, col: number): CellBlocker | null {
-    const fixedUnlockBlocker = this.createFixedUnlockBlocker(row, col);
-    if (fixedUnlockBlocker) {
-      return fixedUnlockBlocker;
+    const unlock = levelDef.unlockCells.find((cell) => cell.row === row && cell.col === col);
+    if (unlock?.kind === 'coin') {
+      return { kind: 'coin', cost: unlock.cost ?? 20 };
+    }
+    if (unlock?.kind === 'ad') {
+      return { kind: 'ad' };
     }
     const def = levelDef.blockers.find((blocker) => blocker.row === row && blocker.col === col);
     if (!def) {
@@ -689,22 +699,6 @@ export class MilkTeaTrayDemoScene implements Scene {
     }
     if (def.kind === 'crate') {
       return { kind: 'crate', seal: def.seal ?? 'full' };
-    }
-    return null;
-  }
-
-  private createFixedUnlockBlocker(row: number, col: number): CellBlocker | null {
-    if (col !== 0 && col !== BOARD_COLS - 1) {
-      return null;
-    }
-    if (row === 3) {
-      return { kind: 'coin', cost: 20 };
-    }
-    if (row === 4) {
-      return { kind: 'coin', cost: 20 };
-    }
-    if (row === 5) {
-      return { kind: 'ad' };
     }
     return null;
   }
@@ -2892,7 +2886,7 @@ export class MilkTeaTrayDemoScene implements Scene {
         : MILK_TEA_DEMO_TEXTURE_KEYS.resultPanelClear,
       result.levelUps > 0 ? 520 : 500,
     );
-    card.position.set(W / 2, H / 2 - 18);
+    card.position.set(W / 2, H / 2 - 52);
 
     if (result.levelUps > 0) {
       this.mountLevelUpResultContent(card, result);
@@ -2915,7 +2909,126 @@ export class MilkTeaTrayDemoScene implements Scene {
     });
     card.addChild(nextButton);
     root.addChild(card);
+    this.mountClearShareReward(root, W / 2, card.position.y + panelInfo.height / 2 + 58, result);
     this.overlayRoot.addChild(root);
+  }
+
+  private mountClearShareReward(
+    root: PIXI.Container,
+    centerX: number,
+    centerY: number,
+    result: MilkTeaShopRoundRewardResult,
+  ): void {
+    let canClaim = canClaimMilkTeaShopDailyShareReward();
+    let busy = false;
+
+    const shareButton = this.createShareRewardButton();
+    shareButton.position.set(centerX, centerY);
+    root.addChild(shareButton);
+
+    const rewardRow = new PIXI.Container();
+    rewardRow.position.set(centerX, centerY + 62);
+    root.addChild(rewardRow);
+
+    const coinIcon = createCoinIcon(14);
+    coinIcon.position.set(-58, 0);
+    rewardRow.addChild(coinIcon);
+
+    const rewardHint = new PIXI.Text('', {
+      fontFamily: 'PingFang SC, Microsoft YaHei, Arial, sans-serif',
+      fontSize: 24,
+      fill: 0xffffff,
+      fontWeight: '900',
+      stroke: 0x3b2316,
+      strokeThickness: 4,
+      lineJoin: 'round',
+    });
+    rewardHint.anchor.set(0, 0.5);
+    rewardHint.resolution = 2;
+    rewardHint.position.set(-38, 0);
+    rewardRow.addChild(rewardHint);
+
+    const refresh = (): void => {
+      const showRewardHint = canClaim;
+      rewardRow.visible = showRewardHint;
+      if (showRewardHint) {
+        rewardHint.text = `+${MILK_TEA_SHOP_DAILY_SHARE_REWARD_COINS}（今日0/1）`;
+      }
+      shareButton.alpha = 1;
+      shareButton.eventMode = !busy ? 'static' : 'none';
+      shareButton.cursor = !busy ? 'pointer' : 'default';
+    };
+    refresh();
+
+    shareButton.on('pointertap', () => {
+      if (busy) {
+        return;
+      }
+      if (!canClaim) {
+        AudioManager.playButtonSound();
+        void shareGameForReward({
+          title: pickMilkTeaShopClearShareTitle(result.levelUps),
+          imageUrl: MILK_TEA_SHOP_CLEAR_SHARE_CARD_PATH,
+          query: 'from=share&entry=milk_tea_shop_clear',
+        });
+        return;
+      }
+      busy = true;
+      refresh();
+      AudioManager.playButtonSound();
+      void (async () => {
+        const shareResult = await shareGameForReward({
+          title: pickMilkTeaShopClearShareTitle(result.levelUps),
+          imageUrl: MILK_TEA_SHOP_CLEAR_SHARE_CARD_PATH,
+          query: 'from=share&entry=milk_tea_shop_clear',
+        });
+        if (shareResult === 'unavailable') {
+          this.showToolToast('请在微信小游戏中分享');
+        } else if (shareResult === 'failed') {
+          this.showToolToast('分享未完成，请稍后再试');
+        } else {
+          const coins = claimMilkTeaShopDailyShareReward();
+          if (coins) {
+            canClaim = false;
+            this.coinBar.refresh();
+            this.coinBar.bump();
+            this.showToolToast(`分享成功，金币 +${coins}`);
+            analytics.track('milk_tea_shop_clear_share', {
+              shop_level: this.currentRound.shopLevel,
+              coins,
+              claimed: true,
+            });
+          } else {
+            canClaim = false;
+            this.showToolToast('今日分享奖励已领取');
+          }
+        }
+        busy = false;
+        refresh();
+      })();
+    });
+  }
+
+  private createShareRewardButton(): PIXI.Container {
+    const root = new PIXI.Container();
+    root.eventMode = 'static';
+    root.cursor = 'pointer';
+    const tex = TextureCache.get(MILK_TEA_DEMO_TEXTURE_KEYS.shareRewardButton);
+    if (tex) {
+      const sprite = new PIXI.Sprite(tex);
+      sprite.anchor.set(0.5);
+      const scale = Math.min(1, 300 / tex.width, 88 / tex.height);
+      sprite.scale.set(scale);
+      root.hitArea = new PIXI.Rectangle(
+        (-tex.width * scale) / 2,
+        (-tex.height * scale) / 2,
+        tex.width * scale,
+        tex.height * scale,
+      );
+      root.addChild(sprite);
+      return root;
+    }
+    return this.createPillButton('分享', 230, 70, 0x9be45c, 0x6c7a19);
   }
 
   private mountClearResultContent(card: PIXI.Container, result: MilkTeaShopRoundRewardResult): void {
@@ -2964,42 +3077,48 @@ export class MilkTeaTrayDemoScene implements Scene {
     const currentDef = getMilkTeaShopLevelDef(result.state.shopLevel);
     const unlocked = this.drinkDefs.slice(previousDef.unlockedDrinkCount, currentDef.unlockedDrinkCount).slice(0, 2);
     const shown = unlocked.length > 0 ? unlocked : this.activeDrinks.slice(0, 1);
-    shown.forEach((drink, index) => {
-      const row = this.createUnlockDrinkRow(drink);
-      row.position.set(0, 72 + index * 34);
-      card.addChild(row);
-    });
+    if (shown.length > 0) {
+      this.mountLevelUpUnlockSection(card, shown, 64);
+    }
   }
 
-  private createUnlockDrinkRow(drink: DrinkDef): PIXI.Container {
-    const root = new PIXI.Container();
-    const cupHeight = 46;
-    const gap = 6;
+  private mountLevelUpUnlockSection(card: PIXI.Container, drinks: DrinkDef[], topY: number): void {
+    const section = new PIXI.Container();
+    section.position.set(0, topY);
+
+    const cupHeight = 96;
+    const columnStep = drinks.length > 1 ? 108 : 0;
 
     const prefix = this.createResultText('新饮品解锁：', 22, 0xa35c23, 3);
-    prefix.anchor.set(0, 0.5);
-    root.addChild(prefix);
+    prefix.anchor.set(0, 0);
+    prefix.position.set(-156, 6);
+    section.addChild(prefix);
 
-    const cup = this.createDrinkVisual(drink.id, cupHeight, 40);
+    const drinksWrap = new PIXI.Container();
+    drinks.forEach((drink, index) => {
+      const column = this.createUnlockDrinkColumn(drink, cupHeight);
+      column.position.set(index * columnStep, 0);
+      drinksWrap.addChild(column);
+    });
+    drinksWrap.position.set(72, 30);
+    section.addChild(drinksWrap);
+    card.addChild(section);
+  }
+
+  private createUnlockDrinkColumn(drink: DrinkDef, cupHeight: number): PIXI.Container {
+    const root = new PIXI.Container();
+    const maxWidth = 92;
+    const nameGap = 2;
+
+    const cup = this.createDrinkVisual(drink.id, cupHeight, maxWidth);
+    cup.position.set(0, 0);
     root.addChild(cup);
 
-    const name = this.createResultText(drink.name, 20, 0x7a421d, 2);
-    name.anchor.set(0, 0.5);
+    const name = this.createResultText(drink.name, 21, 0x7a421d, 2);
+    name.anchor.set(0.5, 0);
+    name.position.set(0, cupHeight * 0.5 + nameGap);
     root.addChild(name);
 
-    let cursorX = 0;
-    prefix.position.set(cursorX, 0);
-    cursorX += prefix.width + gap;
-
-    const cupBounds = cup.getLocalBounds();
-    const cupHalfW = Math.max(cupBounds.width, cupHeight * 0.45) * 0.5;
-    cup.position.set(cursorX + cupHalfW, 0);
-    cursorX += cupHalfW * 2 + gap;
-
-    name.position.set(cursorX, 0);
-    cursorX += name.width;
-
-    root.pivot.set(cursorX / 2, 0);
     return root;
   }
 
