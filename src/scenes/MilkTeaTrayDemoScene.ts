@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { DAILY_LIMITED_LEVELS } from '@/config/dailyLimitedLevels';
-import { pickMilkTeaShopClearShareTitle } from '@/config/milkTeaShopShare';
+import { pickMilkTeaShopCellUnlockShareTitle, pickMilkTeaShopClearShareTitle } from '@/config/milkTeaShopShare';
 import {
   MILK_TEA_DEMO_PRELOAD_PATHS,
   MILK_TEA_DEMO_TEXTURE_KEYS,
   MILK_TEA_SHOP_CLEAR_SHARE_CARD_PATH,
+  MILK_TEA_SHOP_JIANGHU_RESCUE_SHARE_CARD_PATH,
   milkTeaShopDrinkTextureKey,
 } from '@/config/milkTeaTrayAssets';
 import { getMilkTeaShopLevelDef, type MilkTeaShopLevelDef } from '@/config/milkTeaShopLevels';
@@ -42,7 +43,8 @@ type CrateSealState = 'full' | 'half';
 type CellBlocker =
   | { kind: 'crate'; seal: CrateSealState }
   | { readonly kind: 'coin'; readonly cost: number }
-  | { readonly kind: 'ad' };
+  | { readonly kind: 'ad' }
+  | { readonly kind: 'share' };
 
 interface PixiEventsHost {
   domElement?: HTMLElement;
@@ -693,6 +695,9 @@ export class MilkTeaTrayDemoScene implements Scene {
     if (unlock?.kind === 'ad') {
       return { kind: 'ad' };
     }
+    if (unlock?.kind === 'share') {
+      return { kind: 'share' };
+    }
     const def = levelDef.blockers.find((blocker) => blocker.row === row && blocker.col === col);
     if (!def) {
       return null;
@@ -1174,6 +1179,17 @@ export class MilkTeaTrayDemoScene implements Scene {
       return root;
     }
 
+    if (blocker.kind === 'share') {
+      const shareTex = TextureCache.get(MILK_TEA_DEMO_TEXTURE_KEYS.shareRewardButton);
+      if (shareTex) {
+        const button = new PIXI.Sprite(shareTex);
+        button.anchor.set(0.5);
+        button.scale.set(Math.min(124 / shareTex.width, 68 / shareTex.height));
+        root.addChild(button);
+        return root;
+      }
+    }
+
     const unlockSheet = TextureCache.get(MILK_TEA_DEMO_TEXTURE_KEYS.unlockButtonSheet);
     const unlockTex = unlockSheet ? this.createSheetFrameTexture(unlockSheet, blocker.kind === 'coin' ? 1 : 0, 2) : TextureCache.get(MILK_TEA_DEMO_TEXTURE_KEYS.unlockButton);
     if (unlockTex) {
@@ -1196,6 +1212,9 @@ export class MilkTeaTrayDemoScene implements Scene {
 
     if (blocker.kind === 'coin') {
       this.mountCoinUnlockLabel(root, blocker.cost);
+    } else if (blocker.kind === 'share') {
+      const text = this.createSmallLabel('分享', 22, 0xffffff, 0x4f4a50);
+      root.addChild(text);
     } else {
       const camera = new PIXI.Graphics();
       camera.beginFill(0xffffff, 0.95);
@@ -1482,6 +1501,10 @@ export class MilkTeaTrayDemoScene implements Scene {
       void this.unlockAdCellByRewardedVideo(cellIndex);
       return;
     }
+    if (cell.blocker.kind === 'share') {
+      void this.unlockShareCell(cellIndex);
+      return;
+    }
     if (cell.blocker.kind === 'coin') {
       const cost = cell.blocker.cost;
       const balance = getCoinBalance();
@@ -1508,6 +1531,33 @@ export class MilkTeaTrayDemoScene implements Scene {
     cell.blocker = null;
     this.setMessage(message);
     this.renderBoard();
+  }
+
+  private async unlockShareCell(cellIndex: number): Promise<void> {
+    if (this.activeToolMode || this.roundStartBannerOpen || this.hasActiveBoardMotion()) {
+      return;
+    }
+    const cell = this.board[cellIndex];
+    if (!cell?.blocker || cell.blocker.kind !== 'share') {
+      return;
+    }
+    const shareResult = await shareGameForReward({
+      title: pickMilkTeaShopCellUnlockShareTitle(),
+      imageUrl: MILK_TEA_SHOP_JIANGHU_RESCUE_SHARE_CARD_PATH,
+      query: 'from=share&entry=milk_tea_shop_cell_unlock',
+    });
+    if (shareResult === 'shared' || shareResult === 'unavailable') {
+      this.applyCellUnlock(cellIndex, '江湖好友已接单，格子解锁！');
+      analytics.track('milk_tea_shop_cell_unlock_share', {
+        cell_index: cellIndex,
+        shop_level: this.currentRound.shopLevel,
+        share_result: shareResult,
+      });
+      return;
+    }
+    if (shareResult === 'failed') {
+      this.showToolToast('分享失败，请稍后再试');
+    }
   }
 
   private async unlockAdCellByRewardedVideo(cellIndex: number): Promise<void> {

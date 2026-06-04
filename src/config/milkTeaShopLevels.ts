@@ -1,4 +1,4 @@
-export type MilkTeaShopBlockerKind = 'crate' | 'coin' | 'ad';
+export type MilkTeaShopBlockerKind = 'crate' | 'coin' | 'ad' | 'share';
 export type MilkTeaShopCrateSeal = 'full' | 'half';
 
 export interface MilkTeaShopCellBlockerDef {
@@ -19,8 +19,9 @@ export interface MilkTeaShopLevelDef {
   /** 每个订单袋内需要的杯数范围，每袋单独随机。 */
   readonly ordersPerBagRange: readonly [number, number];
   readonly blockers: readonly MilkTeaShopCellBlockerDef[];
-  /** 待解锁格：每级固定 3 金币 + 3 广告，位置随等级变化，不与木板箱重叠。 */
+  /** 待解锁格：每级 2 金币 + 1 分享 + 3 广告，位置随等级变化，不与木板箱重叠。 */
   readonly unlockCells: readonly MilkTeaShopCellBlockerDef[];
+  /** 每局过关奖励金币：8 + (level - 1) × 2 */
   readonly roundCoins: number;
 }
 
@@ -46,6 +47,12 @@ const adUnlock = (row: number, col: number): MilkTeaShopCellBlockerDef => ({
   kind: 'ad',
 });
 
+const shareUnlock = (row: number, col: number): MilkTeaShopCellBlockerDef => ({
+  row,
+  col,
+  kind: 'share',
+});
+
 export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
   {
     level: 1,
@@ -55,8 +62,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
     orderBagCount: 1,
     ordersPerBagRange: [3, 3],
     blockers: [crate(1, 1, 'half')],
-    unlockCells: [coinUnlock(2, 0), coinUnlock(3, 0), coinUnlock(4, 3), adUnlock(4, 0), adUnlock(5, 0), adUnlock(5, 3)],
-    roundCoins: 12,
+    unlockCells: [coinUnlock(2, 0), coinUnlock(3, 0), shareUnlock(4, 3), adUnlock(4, 0), adUnlock(5, 0), adUnlock(5, 3)],
+    roundCoins: 8,
   },
   {
     level: 2,
@@ -66,8 +73,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
     orderBagCount: 2,
     ordersPerBagRange: [3, 4],
     blockers: [crate(0, 1, 'half'), crate(1, 3, 'full')],
-    unlockCells: [coinUnlock(2, 0), coinUnlock(3, 0), coinUnlock(2, 3), adUnlock(4, 0), adUnlock(5, 0), adUnlock(5, 3)],
-    roundCoins: 16,
+    unlockCells: [coinUnlock(2, 0), coinUnlock(3, 0), shareUnlock(2, 3), adUnlock(4, 0), adUnlock(5, 0), adUnlock(5, 3)],
+    roundCoins: 10,
   },
   {
     level: 3,
@@ -77,8 +84,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
     orderBagCount: 3,
     ordersPerBagRange: [4, 5],
     blockers: [crate(0, 1, 'half'), crate(0, 2, 'half'), crate(1, 0, 'full'), crate(1, 3, 'full')],
-    unlockCells: [coinUnlock(2, 0), coinUnlock(3, 0), coinUnlock(4, 3), adUnlock(3, 3), adUnlock(5, 0), adUnlock(5, 3)],
-    roundCoins: 20,
+    unlockCells: [coinUnlock(2, 0), coinUnlock(3, 0), shareUnlock(4, 3), adUnlock(3, 3), adUnlock(5, 0), adUnlock(5, 3)],
+    roundCoins: 12,
   },
   {
     level: 4,
@@ -88,8 +95,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
     orderBagCount: 4,
     ordersPerBagRange: [4, 5],
     blockers: [crate(0, 0, 'full'), crate(0, 3, 'half'), crate(2, 1, 'full'), crate(2, 2, 'half')],
-    unlockCells: [coinUnlock(1, 0), coinUnlock(3, 0), coinUnlock(4, 0), adUnlock(4, 3), adUnlock(5, 1), adUnlock(5, 2)],
-    roundCoins: 36,
+    unlockCells: [coinUnlock(1, 0), coinUnlock(3, 0), shareUnlock(4, 0), adUnlock(4, 3), adUnlock(5, 1), adUnlock(5, 2)],
+    roundCoins: 14,
   },
   {
     level: 5,
@@ -99,8 +106,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
     orderBagCount: 5,
     ordersPerBagRange: [4, 5],
     blockers: [crate(0, 1, 'full'), crate(0, 2, 'full'), crate(1, 0, 'half'), crate(2, 3, 'half'), crate(3, 1, 'full')],
-    unlockCells: [coinUnlock(1, 3), coinUnlock(2, 0), coinUnlock(3, 0), adUnlock(3, 3), adUnlock(4, 0), adUnlock(5, 3)],
-    roundCoins: 42,
+    unlockCells: [coinUnlock(1, 3), coinUnlock(2, 0), shareUnlock(3, 0), adUnlock(3, 3), adUnlock(4, 0), adUnlock(5, 3)],
+    roundCoins: 16,
   },
   {
     level: 6,
@@ -117,8 +124,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
       crate(2, 2, 'full'),
       crate(3, 0, 'half'),
     ],
-    unlockCells: [coinUnlock(2, 0), coinUnlock(4, 0), coinUnlock(5, 0), adUnlock(1, 3), adUnlock(3, 3), adUnlock(5, 3)],
-    roundCoins: 48,
+    unlockCells: [coinUnlock(2, 0), coinUnlock(4, 0), shareUnlock(5, 0), adUnlock(1, 3), adUnlock(3, 3), adUnlock(5, 3)],
+    roundCoins: 18,
   },
   {
     level: 7,
@@ -135,8 +142,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
       crate(2, 2, 'full'),
       crate(3, 1, 'half'),
     ],
-    unlockCells: [coinUnlock(0, 0), coinUnlock(3, 0), coinUnlock(4, 3), adUnlock(1, 0), adUnlock(5, 0), adUnlock(5, 3)],
-    roundCoins: 54,
+    unlockCells: [coinUnlock(0, 0), coinUnlock(3, 0), shareUnlock(4, 3), adUnlock(1, 0), adUnlock(5, 0), adUnlock(5, 3)],
+    roundCoins: 20,
   },
   {
     level: 8,
@@ -153,8 +160,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
       crate(2, 0, 'half'),
       crate(3, 2, 'full'),
     ],
-    unlockCells: [coinUnlock(2, 3), coinUnlock(3, 3), coinUnlock(4, 0), adUnlock(0, 1), adUnlock(4, 3), adUnlock(5, 2)],
-    roundCoins: 60,
+    unlockCells: [coinUnlock(2, 3), coinUnlock(3, 3), shareUnlock(4, 0), adUnlock(0, 1), adUnlock(4, 3), adUnlock(5, 2)],
+    roundCoins: 22,
   },
   {
     level: 9,
@@ -171,8 +178,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
       crate(2, 1, 'full'),
       crate(2, 2, 'half'),
     ],
-    unlockCells: [coinUnlock(2, 0), coinUnlock(3, 0), coinUnlock(0, 3), adUnlock(4, 0), adUnlock(5, 1), adUnlock(5, 3)],
-    roundCoins: 66,
+    unlockCells: [coinUnlock(2, 0), coinUnlock(3, 0), shareUnlock(0, 3), adUnlock(4, 0), adUnlock(5, 1), adUnlock(5, 3)],
+    roundCoins: 24,
   },
   {
     level: 10,
@@ -189,8 +196,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
       crate(2, 0, 'full'),
       crate(3, 2, 'half'),
     ],
-    unlockCells: [coinUnlock(2, 3), coinUnlock(4, 0), coinUnlock(5, 0), adUnlock(3, 0), adUnlock(4, 3), adUnlock(5, 3)],
-    roundCoins: 72,
+    unlockCells: [coinUnlock(2, 3), coinUnlock(4, 0), shareUnlock(5, 0), adUnlock(3, 0), adUnlock(4, 3), adUnlock(5, 3)],
+    roundCoins: 26,
   },
   {
     level: 11,
@@ -207,8 +214,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
       crate(2, 1, 'half'),
       crate(2, 2, 'full'),
     ],
-    unlockCells: [coinUnlock(0, 0), coinUnlock(3, 0), coinUnlock(4, 0), adUnlock(2, 3), adUnlock(5, 0), adUnlock(5, 3)],
-    roundCoins: 78,
+    unlockCells: [coinUnlock(0, 0), coinUnlock(3, 0), shareUnlock(4, 0), adUnlock(2, 3), adUnlock(5, 0), adUnlock(5, 3)],
+    roundCoins: 28,
   },
   {
     level: 12,
@@ -225,8 +232,8 @@ export const MILK_TEA_SHOP_LEVELS: readonly MilkTeaShopLevelDef[] = [
       crate(2, 0, 'full'),
       crate(2, 3, 'full'),
     ],
-    unlockCells: [coinUnlock(3, 0), coinUnlock(4, 0), coinUnlock(5, 1), adUnlock(0, 1), adUnlock(3, 3), adUnlock(5, 3)],
-    roundCoins: 84,
+    unlockCells: [coinUnlock(3, 0), coinUnlock(4, 0), shareUnlock(5, 1), adUnlock(0, 1), adUnlock(3, 3), adUnlock(5, 3)],
+    roundCoins: 30,
   },
 ];
 

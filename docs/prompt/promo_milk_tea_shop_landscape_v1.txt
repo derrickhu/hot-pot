@@ -1,0 +1,39 @@
+16:9 horizontal cinematic promotional banner for WeChat mini game "Fruit Tea Shop" (果茶店). Use reference image for gameplay vocabulary only: 4x6 wooden grid board, cream trays with 3x2 fruit tea cups, top order drink strip, side coin/ad unlock cells, cozy bear cafe — redraw as full-bleed key art, NOT a screenshot.
+
+Art style: cute polished 2D casual mobile game advertising art, warm wood and cream palette, bright fruit tea colors, layered depth, readable at thumbnail. NOT photoreal, NOT hard 3D render. NO outer poster frame (full bleed).
+
+## Required Chinese text ONLY
+
+1. Left title card big title: EXACTLY four characters: 果茶营业
+2. Subtitle on red ribbon: EXACTLY four characters: 动脑排单
+
+POP title: bright YELLOW fill, RED-ORANGE outline, brown outer outline, soft shadow.
+Subtitle: cream/white, red outline.
+
+NO other Chinese or text anywhere.
+
+## Layout
+
+LEFT 30% — TITLE CARD:
+- Cream rounded signboard, golden trim, soft shadow.
+- 果茶营业 + 动脑排单
+- Tiny icon stickers around card: boba cup, lemon slice, strawberry, coin sparkle. Icons only, NO words.
+
+RIGHT 70% — GAMEPLAY HERO (no text):
+- Low-angle dramatic view of the 4x6 tan grid board filling most of frame.
+- FOREGROUND: large cream tray with six colorful fruit tea cups (3x2) being placed — golden motion streak.
+- MID: wooden crates blocking some cells as puzzle obstacles ONLY. NO coin unlock, NO ad unlock, NO monetization UI.
+- TOP: horizontal order panel with five drink icons, two checked green — order fulfillment hook.
+- UPPER-RIGHT: cute bear barista peeking from warm cafe background, sun rays.
+- SPARKLES and warm rim light on hero tray — appetizing, clever, satisfying.
+
+## Hard bans
+
+- NO English, NO numbers, NO watermark, NO QR, NO phone frame, NO UI menu text.
+- NO humans except stylized bear mascot.
+- Generate ONLY 果茶营业 and 动脑排单.
+- Single coherent illustration.
+
+## Output
+
+16:9 mother art for later center-crop to 1920x1080 JPG ≤400KB.

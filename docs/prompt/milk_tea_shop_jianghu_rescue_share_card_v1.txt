@@ -1,0 +1,24 @@
+4:3 horizontal WeChat mini game share-card illustration for a casual fruit tea shop puzzle game mode. Output 1K, will later be center-cropped to 5:4 (1000x800). NOT photoreal, NOT hard 3D render.
+
+Art style:
+- Cute 2D hand-painted casual mobile game with a playful wuxia "jianghu rescue" twist: warm cream / honey / peach / mint palette, soft bamboo shop background, strong dark brown outlines, cel shading, bright saturated colors, readable at small chat thumbnail.
+- Important gameplay elements in center 84% safe area (outer 8% may be cropped).
+
+Composition (full bleed, dynamic rescue moment):
+- Background: cozy fruit tea shop with bamboo wall, warm lanterns, subtle mist — NOT dark gritty wuxia, keep cheerful.
+- Center hero gameplay: 4x6 wooden board grid with one cell glowing red-orange "SOS" lock seal, beside it a cream drink tray (3x2 cup slots) packed with colorful fruit tea cups (strawberry pink, mango yellow, grape purple, kiwi green) — shows "unlock grid + arrange drinks on tray" core loop.
+- Top order strip: paper order bag + drink icons with urgent motion streaks and a small hourglass (orders piling up).
+- Left: cute bear barista mascot in tiny jianghu headband, holding a scroll SOS flag, pointing at the locked cell — "call friends for rescue".
+- Right: sparkle rescue beam unlocking one grid slot, floating share/wechat-style friend avatar silhouettes (generic, no logos) rushing to help.
+- Bottom energy: crossed swords replaced by crossed bubble tea straws as a joke; soft sparkle stars, light puzzle-piece accents.
+
+Chinese title (MUST be exact):
+- Top large bold title EXACTLY four characters: 江湖急救
+  - bright YELLOW fill, RED-ORANGE outline, dark brown outer outline, soft drop shadow, bouncy baseline
+- Second line EXACTLY eight characters: 动动脑子救格子
+  - smaller cream-white fill, red outline, readable
+
+Strict constraints:
+- Generate ONLY these Chinese strings exactly: 江湖急救 动动脑子救格子
+- NO English letters, NO numbers, NO watermark, NO QR code, NO app store badges, NO phone frame, NO WeChat logo.
+- Single coherent illustration, not a screenshot collage.

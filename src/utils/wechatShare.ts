@@ -149,9 +149,11 @@ export function shareGameForReward(options: SharePayloadOptions = {}): Promise<S
     imageUrl: options.imageUrl,
     query,
   });
-  const entryPoint = query.includes('milk_tea_shop_clear')
-    ? 'milk_tea_shop_clear_reward'
-    : 'badge_unlock_reward';
+  const entryPoint = query.includes('milk_tea_shop_cell_unlock')
+    ? 'milk_tea_shop_cell_unlock_share'
+    : query.includes('milk_tea_shop_clear')
+      ? 'milk_tea_shop_clear_reward'
+      : 'badge_unlock_reward';
   trackShareAppMessage(payload, entryPoint, {
     reward_type: query.includes('milk_tea_shop_clear') ? 'coins' : 'remove',
     daily_claimed: false,

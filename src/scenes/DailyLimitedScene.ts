@@ -39,6 +39,8 @@ interface CardState {
   id: string;
   fruitId: FruitId;
   columnIndex: number;
+  /** 堆叠区上下半区：0=上块，1=下块；抬起区固定为 0。 */
+  stackBand: number;
   depthIndex: number;
   zone: CardZone;
   removed: boolean;
@@ -78,12 +80,18 @@ interface IceBowlSlotView {
   signature: string;
 }
 
-const CARD_COLS = 9;
+const CARD_COLS = 8;
+const STACK_BANDS = 2;
+const STACK_SLOTS = CARD_COLS * STACK_BANDS;
+const STACK_BLOCK_COLS = 4;
+const STACK_BLOCK_GAP_X = 18;
+/** 上下两排堆叠区之间的垂直间隔（像素）。 */
+const STACK_BAND_GAP_Y = 266;
 const CARD_W = 70;
 const CARD_H = 76;
 const CARD_GAP = 8;
-const STACK_STEP_Y = 17;
-const FLAT_COLS = 9;
+const STACK_STEP_Y = 15;
+const FLAT_COLS = CARD_COLS;
 const FLAT_ROWS = 3;
 const FLAT_CARD_COUNT = FLAT_COLS * FLAT_ROWS;
 const ICE_BOWL_COUNT = 5;
@@ -255,8 +263,8 @@ export class DailyLimitedScene implements Scene {
   private iceBowlsSignature = '';
   // O(1) 目标水果判定，避免 isTargetFruit 每次重新分配数组。
   private targetFruitSet: ReadonlySet<FruitId> = new Set();
-  // 列顶卡片缓存，避免每张卡渲染都扫描整个 cards 数组。
-  private readonly topStackIdByColumn: Array<string | null> = new Array(CARD_COLS).fill(null);
+  // 每列每半区的顶牌缓存（8 列 × 2 块 = 16 张可点）。
+  private readonly topStackIdBySlot: Array<string | null> = new Array(STACK_SLOTS).fill(null);
   // 卡片飞行动画期间，目标位置（暂存槽 / 冰碗）暂时隐藏静态图标，
   // 等飞入 sprite 落位后再露出。计数允许并行点击叠加。
   private readonly bufferIncomingHidden = new Map<number, number>();
@@ -692,16 +700,33 @@ export class DailyLimitedScene implements Scene {
       ...deal.flat.map((fruitId) => ({ fruitId, zone: 'lift' as const })),
       ...deal.stack.map((fruitId) => ({ fruitId, zone: 'stack' as const })),
     ];
+    const stackDepthBySlot = new Array<number>(STACK_SLOTS).fill(0);
     allCards.forEach((entry, index) => {
       const isFlatCard = entry.zone === 'lift';
-      const localIndex = isFlatCard ? index : index - deal.flat.length;
-      const cols = isFlatCard ? FLAT_COLS : CARD_COLS;
-      const columnIndex = localIndex % cols;
-      const depthIndex = Math.floor(localIndex / cols);
+      if (isFlatCard) {
+        const localIndex = index;
+        this.cards.push({
+          id: `flat_${index}`,
+          fruitId: entry.fruitId,
+          columnIndex: localIndex % FLAT_COLS,
+          stackBand: 0,
+          depthIndex: Math.floor(localIndex / FLAT_COLS),
+          zone: entry.zone,
+          removed: false,
+        });
+        return;
+      }
+      const stackIndex = index - deal.flat.length;
+      const slot = stackIndex % STACK_SLOTS;
+      const columnIndex = slot % CARD_COLS;
+      const stackBand = Math.floor(slot / CARD_COLS);
+      const depthIndex = stackDepthBySlot[slot]!;
+      stackDepthBySlot[slot] = depthIndex + 1;
       this.cards.push({
-        id: `${isFlatCard ? 'flat' : 'stack'}_${index}`,
+        id: `stack_${index}`,
         fruitId: entry.fruitId,
         columnIndex,
+        stackBand,
         depthIndex,
         zone: entry.zone,
         removed: false,
@@ -780,25 +805,27 @@ export class DailyLimitedScene implements Scene {
       this.targetFruitSet = new Set(this.level.targets.map((target) => target.fruitId));
     }
 
-    // 重新扫描各列顶部卡片：一局内只在卡片移动 / 移除时需要更新。
-    if (this.topStackIdByColumn.length !== CARD_COLS) {
-      this.topStackIdByColumn.length = CARD_COLS;
+    // 重新扫描各列各半区顶牌：一局内只在卡片移动 / 移除时需要更新。
+    if (this.topStackIdBySlot.length !== STACK_SLOTS) {
+      this.topStackIdBySlot.length = STACK_SLOTS;
     }
-    for (let col = 0; col < CARD_COLS; col += 1) {
-      this.topStackIdByColumn[col] = null;
+    for (let slot = 0; slot < STACK_SLOTS; slot += 1) {
+      this.topStackIdBySlot[slot] = null;
     }
-    const topDepth: number[] = new Array(CARD_COLS).fill(-1);
+    const topDepth: number[] = new Array(STACK_SLOTS).fill(-1);
     for (const card of this.cards) {
       if (card.zone !== 'stack' || card.removed) {
         continue;
       }
       const col = card.columnIndex;
-      if (col < 0 || col >= CARD_COLS) {
+      const band = card.stackBand;
+      if (col < 0 || col >= CARD_COLS || band < 0 || band >= STACK_BANDS) {
         continue;
       }
-      if (card.depthIndex > topDepth[col]!) {
-        topDepth[col] = card.depthIndex;
-        this.topStackIdByColumn[col] = card.id;
+      const slot = col + band * CARD_COLS;
+      if (card.depthIndex > topDepth[slot]!) {
+        topDepth[slot] = card.depthIndex;
+        this.topStackIdBySlot[slot] = card.id;
       }
     }
   }
@@ -926,17 +953,19 @@ export class DailyLimitedScene implements Scene {
 
   private renderCards(): void {
     const boardTop = this.boardTop();
-    const startX = Math.round((Game.logicWidth - (CARD_COLS * CARD_W + (CARD_COLS - 1) * CARD_GAP)) / 2);
+    const startX = this.stackStartX();
     const visibleIds = new Set<string>();
 
-    for (let col = 0; col < CARD_COLS; col += 1) {
-      const topCardId = this.topStackIdByColumn[col] ?? null;
-      const x = startX + col * (CARD_W + CARD_GAP);
+    for (let slot = 0; slot < STACK_SLOTS; slot += 1) {
+      const col = slot % CARD_COLS;
+      const band = Math.floor(slot / CARD_COLS);
+      const topCardId = this.topStackIdBySlot[slot] ?? null;
+      const x = this.stackCardX(startX, col);
       for (const card of this.cards) {
-        if (card.zone !== 'stack' || card.removed || card.columnIndex !== col) {
+        if (card.zone !== 'stack' || card.removed || card.columnIndex !== col || card.stackBand !== band) {
           continue;
         }
-        const y = boardTop + 42 + card.depthIndex * STACK_STEP_Y;
+        const y = this.stackCardY(boardTop, card);
         const clickable = topCardId === card.id;
         const shouldHint = clickable && this.isTargetFruit(card.fruitId);
         // key 包含外观相关的所有维度：只要这些不变，就可以保留旧视图。
@@ -981,8 +1010,8 @@ export class DailyLimitedScene implements Scene {
     // 静态面板只画一次：除非被 onExit / 重置缓存清掉，否则不再重建。
     if (this.liftLayer.children.length === 0) {
       const panel = new PIXI.Graphics();
-      panel.beginFill(0xfffdf3, 0.58);
-      panel.lineStyle(2, 0x9ec872, 0.85);
+      panel.beginFill(0x3d5f7a, 0.52);
+      panel.lineStyle(2, 0x7aa3c8, 0.78);
       panel.drawRoundedRect(panelX, panelY, panelW, panelH, 16);
       panel.endFill();
       this.liftLayer.addChild(panel);
@@ -1164,14 +1193,31 @@ export class DailyLimitedScene implements Scene {
     return root;
   }
 
+  private stackCardY(boardTop: number, card: CardState): number {
+    const bandOffset = card.stackBand >= 1 ? STACK_BAND_GAP_Y : 0;
+    return boardTop + 42 + bandOffset + card.depthIndex * STACK_STEP_Y;
+  }
+
+  private stackTotalWidth(): number {
+    return CARD_COLS * CARD_W + (CARD_COLS - 1) * CARD_GAP + STACK_BLOCK_GAP_X;
+  }
+
+  private stackStartX(): number {
+    return Math.round((Game.logicWidth - this.stackTotalWidth()) / 2);
+  }
+
+  private stackCardX(startX: number, columnIndex: number): number {
+    const blockGap = columnIndex >= STACK_BLOCK_COLS ? STACK_BLOCK_GAP_X : 0;
+    return startX + columnIndex * (CARD_W + CARD_GAP) + blockGap;
+  }
+
   private cardWorldCenter(card: CardState): { x: number; y: number } {
     if (card.zone === 'stack') {
-      const startX = Math.round(
-        (Game.logicWidth - (CARD_COLS * CARD_W + (CARD_COLS - 1) * CARD_GAP)) / 2,
-      );
+      const startX = this.stackStartX();
+      const boardTop = this.boardTop();
       return {
-        x: startX + card.columnIndex * (CARD_W + CARD_GAP) + CARD_W / 2,
-        y: this.boardTop() + 42 + card.depthIndex * STACK_STEP_Y + CARD_H / 2,
+        x: this.stackCardX(startX, card.columnIndex) + CARD_W / 2,
+        y: this.stackCardY(boardTop, card) + CARD_H / 2,
       };
     }
     const totalW = FLAT_COLS * CARD_W + (FLAT_COLS - 1) * CARD_GAP;
@@ -1433,7 +1479,7 @@ export class DailyLimitedScene implements Scene {
     if (!card || card.removed) {
       return;
     }
-    if (card.zone === 'stack' && this.topStackCard(card.columnIndex)?.id !== card.id) {
+    if (card.zone === 'stack' && this.topStackCard(card.columnIndex, card.stackBand)?.id !== card.id) {
       return;
     }
 
@@ -2032,10 +2078,10 @@ export class DailyLimitedScene implements Scene {
     return root;
   }
 
-  private topStackCard(columnIndex: number): CardState | null {
+  private topStackCard(columnIndex: number, stackBand: number): CardState | null {
     let top: CardState | null = null;
     for (const card of this.cards) {
-      if (card.zone !== 'stack' || card.columnIndex !== columnIndex || card.removed) {
+      if (card.zone !== 'stack' || card.columnIndex !== columnIndex || card.stackBand !== stackBand || card.removed) {
         continue;
       }
       if (!top || card.depthIndex > top.depthIndex) {
@@ -2379,15 +2425,16 @@ export class DailyLimitedScene implements Scene {
   }
 
   private compactRemainingStackCards(): void {
-    const stackCards = this.cards
-      .filter((card) => card.zone === 'stack' && !card.removed)
-      .sort((a, b) => (a.depthIndex - b.depthIndex) || (a.columnIndex - b.columnIndex));
-    stackCards.forEach((card, index) => {
-      // 洗牌后必须把剩余堆叠卡重新压紧。之前只换 fruitId，不改原来的
-      // column/depth，已经被点掉的位置会留下空洞，所以看起来像“间距不齐”。
-      card.columnIndex = index % CARD_COLS;
-      card.depthIndex = Math.floor(index / CARD_COLS);
-    });
+    for (let band = 0; band < STACK_BANDS; band += 1) {
+      for (let col = 0; col < CARD_COLS; col += 1) {
+        const stackCards = this.cards
+          .filter((card) => card.zone === 'stack' && !card.removed && card.columnIndex === col && card.stackBand === band)
+          .sort((a, b) => a.depthIndex - b.depthIndex);
+        stackCards.forEach((card, depthIndex) => {
+          card.depthIndex = depthIndex;
+        });
+      }
+    }
   }
 
   private undoLastClick(): void {
@@ -2426,6 +2473,7 @@ export class DailyLimitedScene implements Scene {
         id: `lift_${this.nextLiftCardId}`,
         fruitId,
         columnIndex: slot.columnIndex,
+        stackBand: 0,
         depthIndex: slot.depthIndex,
         zone: 'lift',
         removed: false,
@@ -2444,10 +2492,11 @@ export class DailyLimitedScene implements Scene {
     }
     const lifted = this.buffer.splice(0, this.buffer.length);
     const emptySlots = this.findFlatEmptySlots();
-    const stackDepthByColumn = new Array(CARD_COLS).fill(-1);
+    const stackDepthBySlot = new Array<number>(STACK_SLOTS).fill(-1);
     for (const card of this.cards) {
       if (card.zone === 'stack' && !card.removed) {
-        stackDepthByColumn[card.columnIndex] = Math.max(stackDepthByColumn[card.columnIndex] ?? -1, card.depthIndex);
+        const slot = card.columnIndex + card.stackBand * CARD_COLS;
+        stackDepthBySlot[slot] = Math.max(stackDepthBySlot[slot] ?? -1, card.depthIndex);
       }
     }
     lifted.forEach((fruitId, index) => {
@@ -2457,18 +2506,22 @@ export class DailyLimitedScene implements Scene {
           id: `lift_${this.nextLiftCardId}`,
           fruitId,
           columnIndex: flatSlot.columnIndex,
+          stackBand: 0,
           depthIndex: flatSlot.depthIndex,
           zone: 'lift',
           removed: false,
         });
       } else {
-        const columnIndex = index % CARD_COLS;
-        const depthIndex = (stackDepthByColumn[columnIndex] ?? -1) + 1;
-        stackDepthByColumn[columnIndex] = depthIndex;
+        const slot = index % STACK_SLOTS;
+        const columnIndex = slot % CARD_COLS;
+        const stackBand = Math.floor(slot / CARD_COLS);
+        const depthIndex = (stackDepthBySlot[slot] ?? -1) + 1;
+        stackDepthBySlot[slot] = depthIndex;
         this.cards.push({
           id: `lift_${this.nextLiftCardId}`,
           fruitId,
           columnIndex,
+          stackBand,
           depthIndex,
           zone: 'stack',
           removed: false,
@@ -3327,7 +3380,7 @@ export class DailyLimitedScene implements Scene {
   }
 
   private flatAreaY(): number {
-    return this.boardTop() + this.boardHeight() + 18;
+    return this.boardTop() + this.boardHeight() + 42;
   }
 
   private bufferY(): number {

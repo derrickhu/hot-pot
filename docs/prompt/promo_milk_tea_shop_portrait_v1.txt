@@ -1,0 +1,36 @@
+9:16 vertical promotional poster for a WeChat mini game mode "Fruit Tea Shop" (果茶店). Use the reference image ONLY for gameplay layout inspiration (4x6 wooden board grid, cream drink trays with 3x2 cup slots, colorful fruit tea cups, order strip at top, coin/ad unlock slots on sides, cute bear barista cafe background) — fully redraw as polished advertising key art, NOT a screenshot.
+
+Art style: cute polished 2D hand-painted casual mobile game, warm cream/honey/peach/wood tones, soft outlines, saturated fruit tea colors, cozy sunlit cafe. NOT photoreal, NOT hard 3D render.
+
+## Required Chinese text ONLY (exact character counts)
+
+1. Big bottom scroll title: EXACTLY four characters: 果茶营业
+2. Subtitle on small red ribbon: EXACTLY four characters: 动脑接单
+
+Title style: chunky POP Chinese, bright YELLOW fill, RED-ORANGE outline, dark brown outermost outline, soft drop shadow.
+Subtitle: cream/white fill, red outline on darker red ribbon strip.
+
+## Layout (top to bottom)
+
+1. OUTER FRAME: thick rounded warm honey-yellow / cream poster frame, brown outline. Edge decorations only: boba cup, strawberry, mango slice, lime, grapes, sparkle stars, gold coins. NO text on decorations.
+
+2. INNER ARTWORK (~72%):
+   - TOP: red rounded order panel showing five colorful fruit tea cup icons in a row, one with green checkmark — communicates "fill orders".
+   - CENTER HERO: large cream wooden tray with six cup holes (3 columns x 2 rows) filled with vivid fruit teas (strawberry pink, mango yellow, grape purple, kiwi green, passionfruit orange). Tray sits on the 4x6 tan grid board.
+   - BOARD: several grid cells with cute wooden crates as puzzle obstacles ONLY. NO coin unlock buttons, NO ad/video unlock buttons, NO monetization UI.
+   - RIGHT BACKGROUND: soft-focus cute chubby bear barista in apron behind bamboo cafe counter, warm bokeh lights.
+   - SPARKLE: golden stars and soft glow on completed order area — triumphant cozy mood.
+   - BOTTOM SHELF: two extra trays with drinks ready to place — shows sorting/planning gameplay.
+
+3. BOTTOM TITLE BANNER (~28%): white scroll with 果茶营业 and 动脑接单.
+
+## Hard bans
+
+- NO English letters, NO watermark, NO QR code, NO app store badges, NO phone frame, NO WeChat UI chrome.
+- NO fake/garbled Chinese. Generate ONLY: 果茶营业 动脑接单
+- NO tool button text labels, NO coin numbers, NO Lv numbers in artwork.
+- Single coherent illustration.
+
+## Output
+
+9:16 mother art for later center-crop to 1080x1920 JPG ≤400KB.

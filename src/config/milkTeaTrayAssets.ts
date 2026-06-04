@@ -26,9 +26,11 @@ export const MILK_TEA_DEMO_TEXTURE_KEYS = {
   roundStartBanner: 'milk_tea_demo_round_start_banner',
   shareRewardButton: 'milk_tea_demo_share_reward_button',
   clearShareCard: 'milk_tea_demo_clear_share_card',
+  jianghuRescueShareCard: 'milk_tea_demo_jianghu_rescue_share_card',
 } as const;
 
 export const MILK_TEA_SHOP_CLEAR_SHARE_CARD_PATH = `${MILK_TEA_DEMO_IMAGES_ROOT}/milk_tea_shop_clear_share_card.jpg`;
+export const MILK_TEA_SHOP_JIANGHU_RESCUE_SHARE_CARD_PATH = `${MILK_TEA_DEMO_IMAGES_ROOT}/milk_tea_shop_jianghu_rescue_share_card.jpg`;
 
 const BOWL_GAME_IMAGES_ROOT = 'subpackages/bowl_game/assets/images';
 
@@ -90,6 +92,7 @@ export const MILK_TEA_DEMO_PRELOAD_PATHS: ReadonlyArray<{ key: string; path: str
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.roundStartBanner, path: `${MILK_TEA_DEMO_IMAGES_ROOT}/ui/round_start_banner.png` },
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.shareRewardButton, path: `${BOWL_GAME_IMAGES_ROOT}/badge_share_reward_button.png` },
   { key: MILK_TEA_DEMO_TEXTURE_KEYS.clearShareCard, path: MILK_TEA_SHOP_CLEAR_SHARE_CARD_PATH },
+  { key: MILK_TEA_DEMO_TEXTURE_KEYS.jianghuRescueShareCard, path: MILK_TEA_SHOP_JIANGHU_RESCUE_SHARE_CARD_PATH },
   ...DAILY_LIMITED_LEVELS.map((level) => ({
     key: milkTeaDemoDrinkTextureKey(level.themeId),
     path: milkTeaDemoDrinkImagePath(level.themeId),
