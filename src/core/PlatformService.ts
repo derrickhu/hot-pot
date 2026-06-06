@@ -56,6 +56,19 @@ class PlatformServiceClass {
     }
   }
 
+  /** 异步写入本地存储（避免阻塞主线程） */
+  setStorageAsync(key: string, value: string): void {
+    try {
+      if (this.api?.setStorage) {
+        this.api.setStorage({ key, data: value, fail() {} });
+      } else {
+        this.setStorageSync(key, value);
+      }
+    } catch {
+      // Local cache failure should not block gameplay.
+    }
+  }
+
   removeStorageSync(key: string): void {
     try {
       if (this.api?.removeStorageSync) {
@@ -124,6 +137,30 @@ class PlatformServiceClass {
       this.api?.onHide?.(handler);
     } catch {
       // Lifecycle hook is best-effort.
+    }
+  }
+
+  onShow(callback: (res?: any) => void): void {
+    try {
+      this.api?.onShow?.(callback);
+    } catch {
+      // Lifecycle hook is best-effort.
+    }
+  }
+
+  getLaunchOptionsSync(): any {
+    try {
+      return this.api?.getLaunchOptionsSync?.() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  getEnterOptionsSync(): any {
+    try {
+      return this.api?.getEnterOptionsSync?.() || null;
+    } catch {
+      return null;
     }
   }
 

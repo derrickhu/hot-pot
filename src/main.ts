@@ -1,5 +1,6 @@
 import '@/core/pixiUnsafeEvalPatch';
 import { analytics, EVENT_NAMES, initAnalytics, setAnalyticsUserId } from '@/analytics';
+import { AttributionManager } from '@/analytics/AttributionManager';
 import { AudioManager } from '@/core/AudioManager';
 import { Game } from '@/core/Game';
 import { SceneManager } from '@/core/SceneManager';
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
     Game.init(canvas);
     setupWechatShare();
     initAnalytics();
+    AttributionManager.init();
     // session_start 不在启动时立刻打：那时还没拿到 openid，事件 user_id='' 只挂在 anonymous_id 上，
     // 后端会把同一玩家算成 anonymous + user_id 两个 uk 造成 DAU 双计数。
     // 推迟到 setAnalyticsUserId 之后再打，这样 session_start 就直接带 user_id 入库。
@@ -46,13 +48,17 @@ async function main(): Promise<void> {
     if (CloudSyncManager.userId) {
       // 默认会自动 track 一次 LOGIN 事件并立即 flush，不再等 15s batch
       setAnalyticsUserId(CloudSyncManager.userId);
+      AttributionManager.bindUser(CloudSyncManager.userId);
     }
     // CloudSync 失败时 user_id 仍为空，这里也要兜底打 session_start，避免 DAU 漏统计
     analytics.track(EVENT_NAMES.SESSION_START, {
       entry: 'main',
       // 标记这条事件是否带上了真实 user_id（false=匿名兜底，登录失败的离群样本）
       with_user_id: !!CloudSyncManager.userId,
+      cloud_sync_status: startupSync.status,
+      ...AttributionManager.sessionParams(),
     });
+    void analytics.flush('startup-session-start');
     loadingOverlay.setProgress(0.72);
     AudioManager.initBackgroundMusic();
     Platform.onHide(() => {
