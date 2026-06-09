@@ -151,7 +151,8 @@ function getRewardedAdByUnitId(adUnitId: string): RewardedVideoAd | null {
     return existing;
   }
   try {
-    const ad = wx.createRewardedVideoAd({ adUnitId });
+    // 小游戏端默认全局单例：不传 multiton 时多次 create 返回同一实例，收益只记到首个 adUnitId。
+    const ad = wx.createRewardedVideoAd({ adUnitId, multiton: true });
     rewardedAds.set(adUnitId, ad);
     bindRewardedAdListeners(ad, adUnitId);
     return ad;

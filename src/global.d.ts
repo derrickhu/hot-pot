@@ -68,7 +68,7 @@ declare const wx: {
   }) => void;
   showToast?: (options: { title: string; icon?: string; duration?: number; mask?: boolean }) => void;
   vibrateShort?: (options?: { type?: 'light' | 'medium' | 'heavy'; success?: () => void; fail?: (err: unknown) => void; complete?: () => void }) => void;
-  createRewardedVideoAd?: (options: { adUnitId: string }) => {
+  createRewardedVideoAd?: (options: { adUnitId: string; multiton?: boolean }) => {
     load: () => Promise<void>;
     show: () => Promise<void>;
     onClose: (handler: (res?: { isEnded?: boolean }) => void) => void;
