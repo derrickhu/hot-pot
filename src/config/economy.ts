@@ -37,19 +37,25 @@ export const DAILY_FIRST_FRUIT_SLICE_MIN_SCORE = 0;
 export const GAME_CLUB_DAILY_POST_COINS = 50;
 export const GACHA_PULL_COST = 20;
 
+/** 果切结算金币：按本局最终分数取最高档；曲线偏保守（扭蛋 20 金币/次） */
 export const FRUIT_SLICE_COIN_TIERS: FruitSliceCoinTier[] = [
-  { minScore: 10000, coins: 220, label: '传奇果切' },
-  { minScore: 9000, coins: 195, label: '番香宗师' },
-  { minScore: 8000, coins: 170, label: '木瓜大师' },
-  { minScore: 7000, coins: 145, label: '红晶达人' },
-  { minScore: 6000, coins: 120, label: '绿野高手' },
-  { minScore: 5000, coins: 100, label: '异域宗师' },
-  { minScore: 4000, coins: 85, label: '龙果过关' },
-  { minScore: 3500, coins: 70, label: '高分冲刺' },
-  { minScore: 3000, coins: 52, label: '熟练挑战' },
-  { minScore: 2500, coins: 30, label: '进阶挑战' },
-  { minScore: 2000, coins: 16, label: '稳定发挥' },
-  { minScore: 1500, coins: 7, label: '入门奖励' },
+  { minScore: 15000, coins: 145, label: '羊角至尊' },
+  { minScore: 14000, coins: 135, label: '莲雾臻客' },
+  { minScore: 13000, coins: 125, label: '山楂达人' },
+  { minScore: 12000, coins: 115, label: '杏香宗师' },
+  { minScore: 11000, coins: 105, label: '清梨大师' },
+  { minScore: 10000, coins: 95, label: '传奇果切' },
+  { minScore: 9000, coins: 85, label: '番香宗师' },
+  { minScore: 8000, coins: 75, label: '木瓜大师' },
+  { minScore: 7000, coins: 65, label: '红晶达人' },
+  { minScore: 6000, coins: 55, label: '绿野高手' },
+  { minScore: 5000, coins: 45, label: '异域宗师' },
+  { minScore: 4000, coins: 35, label: '龙果过关' },
+  { minScore: 3500, coins: 28, label: '高分冲刺' },
+  { minScore: 3000, coins: 20, label: '熟练挑战' },
+  { minScore: 2500, coins: 12, label: '进阶挑战' },
+  { minScore: 2000, coins: 6, label: '稳定发挥' },
+  { minScore: 1500, coins: 3, label: '入门奖励' },
   { minScore: 1000, coins: 1, label: '初试奖励' },
 ];
 

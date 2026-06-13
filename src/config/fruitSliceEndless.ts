@@ -38,6 +38,11 @@ export const FRUIT_SLICE_MILESTONES = [
   8000,
   9000,
   10000,
+  11000,
+  12000,
+  13000,
+  14000,
+  15000,
 ] as const;
 
 export const FRUIT_SLICE_PHYSICS: FruitSlicePhysicsConfig = {
@@ -201,6 +206,36 @@ export const FRUIT_SLICE_STAGES: FruitSliceStage[] = [
     fruitIds: ['fig'],
     bonus: 16,
     label: '奇园终章',
+  },
+  {
+    minScore: 11000,
+    fruitIds: ['pear'],
+    bonus: 18,
+    label: '清梨入园',
+  },
+  {
+    minScore: 12000,
+    fruitIds: ['apricot'],
+    bonus: 18,
+    label: '杏染芳华',
+  },
+  {
+    minScore: 13000,
+    fruitIds: ['hawthorn'],
+    bonus: 20,
+    label: '山楂红宴',
+  },
+  {
+    minScore: 14000,
+    fruitIds: ['wax_apple'],
+    bonus: 20,
+    label: '莲雾清泉',
+  },
+  {
+    minScore: 15000,
+    fruitIds: ['yangjiaomi_melon'],
+    bonus: 22,
+    label: '羊角天国',
   },
 ];
 

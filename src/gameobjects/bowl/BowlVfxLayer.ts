@@ -159,6 +159,78 @@ export class BowlVfxLayer extends PIXI.Container {
     });
   }
 
+  /** 搅拌道具：碗心漩涡 + 水花，与水果浮沉动画同频（约 2.8s） */
+  playShuffleStir(x: number, y: number, halfW: number, halfH: number): void {
+    const root = new PIXI.Container();
+    root.position.set(x, y);
+    root.zIndex = 50;
+    this.addChild(root);
+
+    const flash = new PIXI.Graphics();
+    const swirl = new PIXI.Container();
+    root.addChild(flash, swirl);
+
+    const arcCount = 4;
+    const arcs: PIXI.Graphics[] = [];
+    for (let i = 0; i < arcCount; i += 1) {
+      const arc = new PIXI.Graphics();
+      arc.rotation = (Math.PI * 2 * i) / arcCount;
+      swirl.addChild(arc);
+      arcs.push(arc);
+    }
+
+    const droplets: BurstParticle[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const a = (Math.PI * 2 * i) / 10 + Math.random() * 0.2;
+      const d = halfW * 0.18 + Math.random() * halfW * 0.28;
+      const drop = new PIXI.Graphics();
+      drop.beginFill(i % 2 === 0 ? 0xc8f7ff : 0xffffff, 0.88);
+      drop.drawEllipse(0, 0, 4 + Math.random() * 2.5, 2.5 + Math.random() * 1.5);
+      drop.endFill();
+      root.addChild(drop);
+      droplets.push({
+        node: drop,
+        dx: Math.cos(a) * d,
+        dy: Math.sin(a) * d * 0.62,
+        spin: (Math.random() - 0.5) * 0.18,
+      });
+    }
+
+    const duration = 2.75;
+    this.animate(duration, (t) => {
+      const fade = 1 - Math.max(0, (t - 0.22) / 0.78);
+      const pop = Math.sin(Math.min(1, t * 2.4) * Math.PI);
+      const spin = t * Math.PI * 5.6;
+
+      flash.clear();
+      flash.beginFill(0xffffff, 0.28 * pop * fade);
+      flash.drawEllipse(0, 0, halfW * 0.12 + pop * 18, halfH * 0.08 + pop * 10);
+      flash.endFill();
+
+      swirl.rotation = spin;
+      for (let i = 0; i < arcs.length; i += 1) {
+        const arc = arcs[i]!;
+        const rx = halfW * (0.16 + i * 0.05);
+        const ry = halfH * (0.08 + i * 0.025);
+        arc.clear();
+        arc.lineStyle(5.5 - i * 0.6, i % 2 === 0 ? 0x6fd86a : 0x9cf0ff, (0.9 - i * 0.12) * fade);
+        arc.arc(0, 0, rx, -0.55, 1.05, false);
+        arc.scale.set(1, ry / rx);
+      }
+
+      for (const p of droplets) {
+        const move = this.easeOutCubic(Math.min(1, t * 1.15));
+        p.node.x = p.dx * move;
+        p.node.y = p.dy * move - Math.sin(t * Math.PI) * 14;
+        p.node.alpha = fade;
+        p.node.rotation = spin * 0.35 + p.spin;
+      }
+    }, () => {
+      root.removeFromParent();
+      root.destroy({ children: true });
+    });
+  }
+
   private buildSparks(root: PIXI.Container, count: number, color: number, minD: number, maxD: number): BurstParticle[] {
     const sparks: BurstParticle[] = [];
     for (let i = 0; i < count; i += 1) {

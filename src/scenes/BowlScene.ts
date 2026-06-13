@@ -127,7 +127,14 @@ const NON_ORDER_FRUIT_IDS = new Set<FruitId>([ICE_CUBE_ID]);
  * 玩家可主动 Shuffle 立即解冻（顺带打乱碗），或 Remove 直接清槽位。
  */
 const FROZEN_FRUIT_THAW_MS = 30000;
-const SHUFFLE_DEPTH_SWAP_SEC = 1.15;
+const SHUFFLE_DEPTH_SWAP_SEC = 2.85;
+const SHUFFLE_MOVE_PHASE_RATIO = 0.38;
+const SHUFFLE_DEPTH_MAX_SPEED = 0.62;
+const SHUFFLE_DEPTH_TARGET_PULL = 1.45;
+const SHUFFLE_SINK_TARGET_DEPTH = 0.05;
+const SHUFFLE_FLOAT_TARGET_DEPTH = 0.95;
+const SHUFFLE_SOUP_DISTURBANCE_SEC = 2.85;
+const SHUFFLE_SOUP_EDGE_BOOST_SEC = 2.85;
 const SHUFFLE_ICE_RESURFACE_SEC = 22;
 const SHUFFLE_ICE_HOLD_SUBMERGED_RATIO = 0.9;
 const LEVEL_PASS_RATE_HINT_MS = 2800;
@@ -366,6 +373,16 @@ type SoupTapRipple = PIXI.Graphics & {
   spin?: number;
 };
 
+type ShuffleStirPlan = {
+  fromDepth: number;
+  toDepth: number;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  depthStagger: number;
+};
+
 /** 四枚圆盘（左起两单 + 两格解锁）圆心 X，整体在 logicWidth 内居中，避免贴边裁切 */
 function computeOrderPlateCenters(logicWidth: number): [number, number, number, number] {
   const radii = [64, 64, 66, 66] as const;
@@ -558,6 +575,8 @@ export class BowlScene implements Scene {
   private driftAccumSec = 0;
   /** Shuffle 后短暂锁住上下层互换结果，增强搅拌反馈 */
   private shuffleDepthSwapSec = 0;
+  /** 搅拌动画：每颗水果的起止深度与位移，用缓动驱动而非瞬间换位 */
+  private readonly shuffleStirPlans = new Map<FruitItem, ShuffleStirPlan>();
   /** Shuffle 后让冰块先沉底，再逐步浮回上层 */
   private shuffleIceResurfaceSec = 0;
   /** 本关仍需完成的订单数（每完成一盘 xN 订单 −1） */
@@ -743,7 +762,11 @@ export class BowlScene implements Scene {
     if (driftPulse) {
       this.driftAccumSec = 0;
     }
+    const wasShuffling = this.shuffleDepthSwapSec > 0;
     this.shuffleDepthSwapSec = Math.max(0, this.shuffleDepthSwapSec - dt);
+    if (wasShuffling && this.shuffleDepthSwapSec <= 0) {
+      this.shuffleStirPlans.clear();
+    }
     this.shuffleIceResurfaceSec = Math.max(0, this.shuffleIceResurfaceSec - dt);
     this.updateSoupAnimation(dt);
 
@@ -771,11 +794,29 @@ export class BowlScene implements Scene {
       fruit.x += fruit.velocityX * dt;
       fruit.y += fruit.velocityY * dt;
 
+      if (this.shuffleDepthSwapSec > 0 && this.shuffleStirPlans.has(fruit)) {
+        const cx = this.bowlCenter.x;
+        const cy = this.bowlCenter.y;
+        const dx = fruit.x - cx;
+        const dy = fruit.y - cy;
+        const dist = Math.hypot(dx, dy) || 1;
+        const progress = 1 - this.shuffleDepthSwapSec / SHUFFLE_DEPTH_SWAP_SEC;
+        const swirlStrength = (1 - progress) * 62;
+        fruit.velocityX += (-dy / dist) * swirlStrength * dt;
+        fruit.velocityY += (dx / dist) * swirlStrength * dt;
+        fruit.velocityX = Math.max(-FRUIT_DRIFT_MAX_X * 1.35, Math.min(FRUIT_DRIFT_MAX_X * 1.35, fruit.velocityX));
+        fruit.velocityY = Math.max(-FRUIT_DRIFT_MAX_Y * 1.35, Math.min(FRUIT_DRIFT_MAX_Y * 1.35, fruit.velocityY));
+      }
+
       const { hx, hy } = this.getFruitSoupHalfExtents();
       this.keepFruitInsideBowlEllipse(fruit, hx, hy);
 
       const bob = Math.sin(now * FRUIT_BOB_SPEED + fruit.bobSeed);
-      fruit.rotation = Math.sin(now * FRUIT_ROTATION_SPEED + fruit.bobSeed) * 0.036;
+      const shuffleProgress =
+        this.shuffleDepthSwapSec > 0 ? 1 - this.shuffleDepthSwapSec / SHUFFLE_DEPTH_SWAP_SEC : 0;
+      fruit.rotation =
+        Math.sin(now * FRUIT_ROTATION_SPEED + fruit.bobSeed) *
+        (shuffleProgress > 0 ? 0.09 + (1 - shuffleProgress) * 0.08 : 0.036);
       fruit.display.y = bob * 4.6;
       if (
         this.tutorialActive &&
@@ -814,11 +855,11 @@ export class BowlScene implements Scene {
         const iceWobble = Math.sin(now * 0.0006 + fruit.bobSeed * 1.7);
         fruit.zIndex = Math.round(fruit.y * 10 + 1000 + iceWobble * 2000);
       } else if (this.shuffleDepthSwapSec > 0) {
-        /** Shuffle 反馈：短暂锁住「上层/下层互换」的结果，再交还给常规汤面沉浮 */
+        /** 搅拌反馈：按 depth 排序，上浮压下沉，形成交叉换位感 */
         this.applyFruitSoupVisual(fruit);
-        const swapRatio = this.shuffleDepthSwapSec / SHUFFLE_DEPTH_SWAP_SEC;
-        const layerBias = fruit.parent === this.surfaceFruitLayer ? 900 : -900;
-        fruit.zIndex = Math.round(fruit.y * 10 + fruit.depthJitter * 1000 + layerBias * swapRatio);
+        fruit.zIndex = Math.round(
+          fruit.y * 10 + fruit.soupDepth * 2200 + fruit.depthJitter * 800,
+        );
       } else {
         fruit.zIndex = Math.round(
           fruit.y * 10 + fruit.depthJitter * 1000 + fruit.soupDepth * 120,
@@ -827,7 +868,11 @@ export class BowlScene implements Scene {
     }
 
     this.rebalanceSurfaceFruitFill(dt);
-    this.applyFruitSoupDepthPhysics(dt);
+    if (this.shuffleDepthSwapSec > 0) {
+      this.applyShuffleStirAnimation(dt);
+    } else {
+      this.applyFruitSoupDepthPhysics(dt);
+    }
     if (driftPulse) {
       this.applyBowlFruitSeparation();
     }
@@ -1973,10 +2018,18 @@ export class BowlScene implements Scene {
     if (this.soupDisplacementFilter) {
       this.soupDisturbanceSec = Math.max(0, this.soupDisturbanceSec - dt);
       const phase = this.soupRippleTime * 1.1;
-      const tapBoost = this.soupDisturbanceSec > 0 ? (this.soupDisturbanceSec / 0.46) * 7.2 : 0;
+      const shuffleBoost =
+        this.shuffleDepthSwapSec > 0
+          ? (this.shuffleDepthSwapSec / SHUFFLE_DEPTH_SWAP_SEC) * 24
+          : 0;
+      const tapBoost = Math.max(
+        this.soupDisturbanceSec > 0 ? (this.soupDisturbanceSec / 0.46) * 7.2 : 0,
+        shuffleBoost,
+      );
+      const shuffleSpin = this.shuffleDepthSwapSec > 0 ? 0.42 : 0.13;
       this.soupDisplacementSprite.x += (this.soupDisplacementSprite.flowVX ?? 10) * dt;
       this.soupDisplacementSprite.y += (this.soupDisplacementSprite.flowVY ?? 6) * dt;
-      this.soupDisplacementSprite.rotation = Math.sin(phase * 0.48) * 0.13;
+      this.soupDisplacementSprite.rotation = Math.sin(phase * 0.48) * shuffleSpin;
       this.soupDisplacementFilter.scale.set(
         5.4 + tapBoost + Math.sin(phase) * 1.35,
         3.8 + tapBoost * 0.72 + Math.cos(phase * 0.8) * 0.95,
@@ -1985,7 +2038,12 @@ export class BowlScene implements Scene {
         2.3 + tapBoost * 0.42 + Math.sin(phase + 0.7) * 0.62,
         1.7 + tapBoost * 0.3 + Math.cos(phase * 0.7) * 0.42,
       );
-      this.soupDepthVeil.alpha = 0.76 + Math.sin(phase * 0.72) * 0.08;
+      this.soupDepthVeil.alpha =
+        0.76 +
+        Math.sin(phase * 0.72) * 0.08 +
+        (this.shuffleDepthSwapSec > 0
+          ? (this.shuffleDepthSwapSec / SHUFFLE_DEPTH_SWAP_SEC) * 0.14
+          : 0);
     }
     for (let i = 0; i < this.soupFlowSprites.length; i += 1) {
       const sp = this.soupFlowSprites[i] as FlowSprite;
@@ -2706,43 +2764,133 @@ export class BowlScene implements Scene {
     Game.ticker.add(ticker);
   }
 
-  /** 打乱：先解冻所有冻果，再随机换位并交换上下层 */
+  /** 打乱：先解冻所有冻果，再随机换位并驱动上下层交叉浮沉动画 */
   private toolShuffleBowl(): void {
     if (!this.levelDef.allowShuffle) {
       this.toast('本关不可用');
       return;
     }
     this.unfreezeAllFrozenFruits();
+    this.shuffleStirPlans.clear();
     this.shuffleDepthSwapSec = SHUFFLE_DEPTH_SWAP_SEC;
     this.shuffleIceResurfaceSec = SHUFFLE_ICE_RESURFACE_SEC;
-    this.soupDisturbanceSec = Math.max(this.soupDisturbanceSec, 0.7);
-    this.soupEdgeWaveBoostSec = Math.max(this.soupEdgeWaveBoostSec, 0.82);
+    this.soupDisturbanceSec = Math.max(this.soupDisturbanceSec, SHUFFLE_SOUP_DISTURBANCE_SEC);
+    this.soupEdgeWaveBoostSec = Math.max(this.soupEdgeWaveBoostSec, SHUFFLE_SOUP_EDGE_BOOST_SEC);
+    Haptics.medium();
+    const { hx, hy } = this.getSoupVisualHalfExtents();
+    this.bowlVfxLayer.playShuffleStir(this.bowlCenter.x, this.bowlCenter.y + 6, hx, hy);
+    this.spawnShuffleStirRipples();
     const shuffleTargets = this.fruits.filter(
       (fruit) => fruit.phase === 'bowl' && !fruit.picked && !fruit.hiddenReserve,
     );
     const shufflePoints = this.spreadBowlPoints(shuffleTargets.length);
     shuffleTargets.forEach((fruit, index) => {
       const p = shufflePoints[index] ?? this.randomBowlPoint();
-      fruit.position.set(p.x, p.y);
-      fruit.velocityX = this.randomInRange(-14, 14);
-      fruit.velocityY = this.randomInRange(-9, 9);
+      fruit.velocityX = this.randomInRange(-8, 8);
+      fruit.velocityY = this.randomInRange(-6, 6);
+      const depthJitter = (fruit.depthJitter - 0.0005) * 0.06;
+      const depthStagger = (index % 7) * 0.045;
       if (fruit.fruitId === ICE_CUBE_ID) {
         this.moveFruitToSoupLayer(fruit, this.submergedFruitLayer);
         fruit.soupDepth = 0.12;
-        fruit.soupDepthVel = -0.08;
+        fruit.soupDepthVel = 0;
         fruit.targetSoupDepth = 0.12;
       } else if (fruit.parent === this.surfaceFruitLayer) {
-        fruit.targetSoupDepth = 0.16;
-        fruit.soupDepth = 0.14;
-        fruit.soupDepthVel = -0.28;
-        this.moveFruitToSoupLayer(fruit, this.submergedFruitLayer);
+        const fromDepth = Math.max(fruit.soupDepth, 0.78 + depthJitter);
+        fruit.soupDepth = fromDepth;
+        fruit.soupDepthVel = 0;
+        fruit.targetSoupDepth = SHUFFLE_SINK_TARGET_DEPTH + depthJitter;
+        this.shuffleStirPlans.set(fruit, {
+          fromDepth,
+          toDepth: SHUFFLE_SINK_TARGET_DEPTH + depthJitter,
+          fromX: fruit.x,
+          fromY: fruit.y,
+          toX: p.x,
+          toY: p.y,
+          depthStagger,
+        });
       } else if (fruit.parent === this.submergedFruitLayer) {
-        fruit.targetSoupDepth = 0.86;
-        fruit.soupDepth = 0.82;
-        fruit.soupDepthVel = 0.32;
-        this.moveFruitToSoupLayer(fruit, this.surfaceFruitLayer);
+        const fromDepth = Math.min(fruit.soupDepth, 0.22 - depthJitter);
+        fruit.soupDepth = fromDepth;
+        fruit.soupDepthVel = 0;
+        fruit.targetSoupDepth = SHUFFLE_FLOAT_TARGET_DEPTH - depthJitter;
+        this.shuffleStirPlans.set(fruit, {
+          fromDepth,
+          toDepth: SHUFFLE_FLOAT_TARGET_DEPTH - depthJitter,
+          fromX: fruit.x,
+          fromY: fruit.y,
+          toX: p.x,
+          toY: p.y,
+          depthStagger,
+        });
       }
     });
+  }
+
+  private easeInOutCubic(t: number): number {
+    const x = Math.max(0, Math.min(1, t));
+    return x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2;
+  }
+
+  /** 搅拌专用：缓动位移 + 上下浮沉，与汤面特效同频 */
+  private applyShuffleStirAnimation(_dt: number): void {
+    if (this.shuffleStirPlans.size <= 0) {
+      return;
+    }
+    const progress = 1 - this.shuffleDepthSwapSec / SHUFFLE_DEPTH_SWAP_SEC;
+    const moveT = this.easeOutCubic(Math.min(1, progress / SHUFFLE_MOVE_PHASE_RATIO));
+
+    for (const [fruit, plan] of this.shuffleStirPlans) {
+      if (fruit.phase !== 'bowl' || fruit.picked || fruit.hiddenReserve) {
+        continue;
+      }
+      fruit.x = plan.fromX + (plan.toX - plan.fromX) * moveT;
+      fruit.y = plan.fromY + (plan.toY - plan.fromY) * moveT;
+
+      const depthSpan = Math.max(0.08, 1 - plan.depthStagger * 0.85);
+      const depthRaw = Math.max(0, Math.min(1, (progress - plan.depthStagger) / depthSpan));
+      const depthT = this.easeInOutCubic(depthRaw);
+      fruit.soupDepth = plan.fromDepth + (plan.toDepth - plan.fromDepth) * depthT;
+      fruit.soupDepthVel = 0;
+      fruit.targetSoupDepth = plan.toDepth;
+      this.syncFruitLayerFromSoupDepth(fruit);
+      this.applyFruitSoupVisual(fruit, progress, plan);
+    }
+  }
+
+  private spawnShuffleStirRipples(): void {
+    const { hx, hy } = this.getSoupVisualHalfExtents();
+    const cx = this.bowlCenter.x;
+    const cy = this.bowlCenter.y + 4;
+    const waves = [
+      { delay: 0, rx: hx * 0.14, ry: hy * 0.06, duration: 0.92, width: 6.5, alpha: 0.72 },
+      { delay: 0.18, rx: hx * 0.24, ry: hy * 0.1, duration: 1.08, width: 5.2, alpha: 0.64 },
+      { delay: 0.36, rx: hx * 0.34, ry: hy * 0.14, duration: 1.22, width: 4.2, alpha: 0.56 },
+      { delay: 0.54, rx: hx * 0.44, ry: hy * 0.18, duration: 1.36, width: 3.4, alpha: 0.48 },
+      { delay: 0.72, rx: hx * 0.52, ry: hy * 0.21, duration: 1.48, width: 2.8, alpha: 0.4 },
+    ] as const;
+
+    for (const wave of waves) {
+      while (this.soupTapRippleItems.length >= TAP_SOUP_RIPPLE_MAX) {
+        const oldest = this.soupTapRippleItems.shift();
+        oldest?.parent?.removeChild(oldest);
+      }
+      const ripple = new PIXI.Graphics() as SoupTapRipple;
+      ripple.position.set(cx, cy);
+      ripple.rotation = (Math.random() - 0.5) * 0.5;
+      ripple.elapsedSec = 0;
+      ripple.delaySec = wave.delay;
+      ripple.durationSec = wave.duration;
+      ripple.baseRx = wave.rx;
+      ripple.baseRy = wave.ry;
+      ripple.baseAlpha = wave.alpha;
+      ripple.color = 0xe8fbff;
+      ripple.lineWidth = wave.width;
+      ripple.spin = (Math.random() < 0.5 ? -1 : 1) * (0.32 + Math.random() * 0.18);
+      ripple.eventMode = 'none';
+      this.soupTapRippleLayer.addChild(ripple);
+      this.soupTapRippleItems.push(ripple);
+    }
   }
 
   private bowlTextureKey(fruitId: FruitId): string {
@@ -2869,6 +3017,7 @@ export class BowlScene implements Scene {
     this.driftAccumSec = 0;
     this.shuffleDepthSwapSec = 0;
     this.shuffleIceResurfaceSec = 0;
+    this.shuffleStirPlans.clear();
 
     for (const anchor of this.bufferSlotAnchors) {
       anchor.removeChildren();
@@ -4586,10 +4735,13 @@ export class BowlScene implements Scene {
     const step = Math.min(dt, 0.05);
     const damp = Math.exp(-FRUIT_SOUP_DEPTH_DAMPING * step);
     const maxDistSq = FRUIT_SOUP_DEPTH_COLLISION_DIST * FRUIT_SOUP_DEPTH_COLLISION_DIST;
+    const inShuffleAnim = this.shuffleDepthSwapSec > 0;
+    const targetPull = inShuffleAnim ? SHUFFLE_DEPTH_TARGET_PULL : FRUIT_SOUP_DEPTH_TARGET_PULL;
+    const maxSpeed = inShuffleAnim ? SHUFFLE_DEPTH_MAX_SPEED : FRUIT_SOUP_DEPTH_MAX_SPEED;
 
     for (const fruit of active) {
       let force =
-        (fruit.targetSoupDepth - fruit.soupDepth) * FRUIT_SOUP_DEPTH_TARGET_PULL +
+        (fruit.targetSoupDepth - fruit.soupDepth) * targetPull +
         (1 - fruit.soupDepth) * FRUIT_SOUP_DEPTH_BUOYANCY -
         fruit.soupDepth * FRUIT_SOUP_DEPTH_GRAVITY;
       const radius = this.getFruitCollisionRadius(fruit);
@@ -4620,10 +4772,7 @@ export class BowlScene implements Scene {
 
       fruit.soupDepthVel += force * step;
       fruit.soupDepthVel *= damp;
-      fruit.soupDepthVel = Math.max(
-        -FRUIT_SOUP_DEPTH_MAX_SPEED,
-        Math.min(FRUIT_SOUP_DEPTH_MAX_SPEED, fruit.soupDepthVel),
-      );
+      fruit.soupDepthVel = Math.max(-maxSpeed, Math.min(maxSpeed, fruit.soupDepthVel));
       fruit.soupDepth = Math.max(0, Math.min(1, fruit.soupDepth + fruit.soupDepthVel * step));
       this.syncFruitLayerFromSoupDepth(fruit);
       this.applyFruitSoupVisual(fruit);
@@ -4650,6 +4799,10 @@ export class BowlScene implements Scene {
   }
 
   private rebalanceSurfaceFruitFill(dt: number): void {
+    /** 搅拌动画期间不抢写 targetSoupDepth，避免上下层交叉被配额系统拉回 */
+    if (this.shuffleDepthSwapSec > 0) {
+      return;
+    }
     const visibleFruits = this.fruits.filter(
       (fruit) =>
         fruit.phase === 'bowl' &&
@@ -4739,7 +4892,11 @@ export class BowlScene implements Scene {
     }
   }
 
-  private applyFruitSoupVisual(fruit: FruitItem): void {
+  private applyFruitSoupVisual(
+    fruit: FruitItem,
+    shuffleProgress = 0,
+    shufflePlan: ShuffleStirPlan | null = null,
+  ): void {
     const display = fruit.display as PIXI.DisplayObject & { tint?: number };
     if (fruit.hiddenReserve) {
       fruit.alpha = HIDDEN_RESERVE_ALPHA;
@@ -4757,7 +4914,21 @@ export class BowlScene implements Scene {
       if (typeof display.tint === 'number') {
         display.tint = 0xffffff;
       }
-      if (fruit.parent === this.surfaceFruitLayer) {
+      const inShuffleAnim = shuffleProgress > 0 || this.shuffleDepthSwapSec > 0;
+      const plan = shufflePlan ?? (inShuffleAnim ? this.shuffleStirPlans.get(fruit) ?? null : null);
+      const progress =
+        shuffleProgress > 0 ? shuffleProgress : 1 - this.shuffleDepthSwapSec / SHUFFLE_DEPTH_SWAP_SEC;
+      if (inShuffleAnim && plan) {
+        /** 搅拌期间按连续 depth 过渡，并叠加明显上浮/下沉位移 */
+        fruit.applySoupDepthTransition(d);
+        const rising = plan.toDepth > plan.fromDepth;
+        const arc = Math.sin(progress * Math.PI);
+        const lift = rising ? arc * -34 : arc * 26;
+        fruit.display.y = bob + (1 - d) * 8 + lift;
+      } else if (inShuffleAnim) {
+        fruit.applySoupDepthTransition(d);
+        fruit.display.y = bob + (1 - d) * 8;
+      } else if (fruit.parent === this.surfaceFruitLayer) {
         fruit.setSoupDepthVisual('surface');
         fruit.display.y = bob + (1 - d) * 2;
       } else {
